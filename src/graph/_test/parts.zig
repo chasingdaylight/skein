@@ -213,13 +213,12 @@ test "references in narrative text are read and checked" {
     var f: Fixture = undefined;
     f.init();
     defer f.deinit();
-    try f.document("spec/lex.md",
-        "# About %[lex.token]\n\nNarrative that names %[lex.token the token] and\nthen %[no.such].\n\n" ++
-            "%rule[lex.keywords syntax] The keywords, see %[lex.token]:\n\n" ++
-            "- %rule[.as syntax] `as`\n\n  A note under the part: %[lex.gone].\n- its own text: %[lex.token]\n\n" ++
-            "Narrative.\n\n- a list of no item: %[lex.keywords.as]\n\n" ++
-            "```text\n%[in.code]\n```\n\n" ++
-            "%term[lex.token] A token.\n\n%rule[lex.gone removed]\n\n%[lex.forgot] A marker without its type.\n");
+    try f.document("spec/lex.md", "# About %[lex.token]\n\nNarrative that names %[lex.token the token] and\nthen %[no.such].\n\n" ++
+        "%rule[lex.keywords syntax] The keywords, see %[lex.token]:\n\n" ++
+        "- %rule[.as syntax] `as`\n\n  A note under the part: %[lex.gone].\n- its own text: %[lex.token]\n\n" ++
+        "Narrative.\n\n- a list of no item: %[lex.keywords.as]\n\n" ++
+        "```text\n%[in.code]\n```\n\n" ++
+        "%term[lex.token] A token.\n\n%rule[lex.gone removed]\n\n%[lex.forgot] A marker without its type.\n");
     const graph = try f.check();
     try f.expectProblems("spec/lex.md:4:6: error: the text refers to 'no.such', and there is no such item\n" ++
         "spec/lex.md:10:26: error: the text refers to 'lex.gone', which is removed\n" ++
