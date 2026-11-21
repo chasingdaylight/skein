@@ -25,7 +25,7 @@ Plain-text requirements, specifications and traceability kept in git. `docs/desi
 
 ## The backlog: GitHub issues
 
-- Open work is the [issues](https://github.com/chasingdaylight/skein/issues). Each issue is one task, landed in one pull request; split a larger plan into one issue per step.
+- Open work is the [issues](https://github.com/chasingdaylight/skein/issues), and their order is the project [skein Roadmap](https://github.com/orgs/chasingdaylight/projects/1): its rows are in priority order, the next thing to work is the first that is not done, and a new issue goes in at its place with the milestone of its phase. Each issue is one task, landed in one pull request; split a larger plan into one issue per step.
 - The current milestone is the task list in the description of the open `dev` to `main` pull request, in work order; check an issue off there when it lands on `dev`.
 - Labels: `backlog` for what is outside the milestone, `blocked` with a `**Blocked:**` line naming the outside cause, `awaiting input` for a decision emanspeaks makes, `housekeeping` for readability and structure work. `**Needs:**` links the issues that must land first.
 - Pull requests take the release-note labels of `.github/release.yml` (`fix`, `feature`, `performance`, `tests`, `refactor`, `ci`, `skip-changelog`); their titles are the release notes.
@@ -35,7 +35,7 @@ Plain-text requirements, specifications and traceability kept in git. `docs/desi
 
 - `main` and `dev`. Work goes on a branch from `dev` and reaches `dev` through a pull request; `main` only takes releases, through the `dev` to `main` pull request, which emanspeaks merges.
 - A release is made by CI when `main` gets a version (`build.zig.zon`) that has no tag and something a release ships has changed since the last tag (not documentation, the site or CI alone: `docs-only.txt` and `ci-only.txt` in `.github/workflows/`; a pull request into `main` that only changes documentation is linted and tested on one platform): it tags the commit, publishes skein for each platform and the VS Code extension (`editors/vscode/`, one package per platform with that platform's skein in `bin/`, and a universal one; published by `marketplace.yml` and `open-vsx.yml`), and begins the next patch version on `dev`. The version in `editors/vscode/package.json` is the same as in `build.zig.zon`; CI refuses a difference. Never tag or publish by hand.
-- For now agents commit, push and open pull requests with emanspeaks's own git identity and `gh`, with the harness's AI attribution trailer; no GitHub App is installed here yet.
+- On GitHub, agents act as the GitHub App Chasing Daylight Agent, never as emanspeaks: `GH_TOKEN="$(bash /c/scratch/github-apps/app-token.sh chasingdaylight)"` for `gh`, and `bash /c/scratch/github-apps/app-git.sh chasingdaylight <git arguments>` for commits, fetches and pushes, with the harness's AI attribution trailer. Never print, copy or commit anything in `C:scratchgithub-appsasingdaylight`. What an app cannot do stays with emanspeaks: merging `dev` into `main`, the extension registries, and his own repositories (the documentation mirror `emanspeaks/skein-docs`).
 - Commit messages are one short line (about 50 characters), with no body; rationale and test results go in the pull request or the issue.
 - Before a commit, check `git diff --cached` and `git status` so a commit takes only your own changes. emanspeaks's uncommitted edits to `CLAUDE.md`, the LTeX files and the readme go into the next commit.
 - After a merge, delete the branch, locally and on GitHub.
