@@ -1,6 +1,6 @@
 //! Markers with their text on the same line, items in lists, and parts.
 
-// req: items.marker.inline, items.list-entries, items.parts, items.parts.names, items.parts.text
+// req: items.marker.inline, items.list-entries, items.parts, items.parts.names, items.parts.text, items.reference.narrative
 // req: items.marker.words, items.marker.types-only
 const std = @import("std");
 const testing = std.testing;
@@ -207,4 +207,31 @@ test "mistakes in the names of parts and in markers" {
         \\spec/bad.md:18:1: error: a.e: the marker has no text after it
         \\
     );
+}
+
+test "references in narrative text are read and checked" {
+    var f: Fixture = undefined;
+    f.init();
+    defer f.deinit();
+    try f.document("spec/lex.md",
+        "# About %[lex.token]\n\nNarrative that names %[lex.token the token] and\nthen %[no.such].\n\n" ++
+            "%rule[lex.keywords syntax] The keywords, see %[lex.token]:\n\n" ++
+            "- %rule[.as syntax] `as`\n\n  A note under the part: %[lex.gone].\n- its own text: %[lex.token]\n\n" ++
+            "Narrative.\n\n- a list of no item: %[lex.keywords.as]\n\n" ++
+            "```text\n%[in.code]\n```\n\n" ++
+            "%term[lex.token] A token.\n\n%rule[lex.gone removed]\n\n%[lex.forgot] A marker without its type.\n");
+    const graph = try f.check();
+    try f.expectProblems("spec/lex.md:4:6: error: the text refers to 'no.such', and there is no such item\n" ++
+        "spec/lex.md:10:26: error: the text refers to 'lex.gone', which is removed\n" ++
+        "spec/lex.md:25:1: error: the text refers to 'lex.forgot', and there is no such item\n");
+    // what an item says is its own, not narrative
+    try testing.expectEqual(6, graph.mentions.len);
+    try testing.expectEqualStrings("lex.token", graph.mentions[0].target);
+    try testing.expectEqual(1, graph.mentions[0].line);
+    try testing.expectEqual(9, graph.mentions[0].column);
+    try testing.expectEqual(3, graph.mentions[1].line);
+    try testing.expectEqual(22, graph.mentions[1].column);
+    try testing.expectEqualStrings("lex.keywords.as", graph.mentions[4].target);
+    try testing.expectEqual(15, graph.mentions[4].line);
+    try testing.expectEqual(2, f.items.items[0].references.len);
 }

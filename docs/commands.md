@@ -39,6 +39,9 @@ Refers to: lex.token
 
 Referred to by: c.comment
 
+Mentioned in:
+  spec/lex.md:2
+
 Cited by:
   test  tests/comment.zig:1
 

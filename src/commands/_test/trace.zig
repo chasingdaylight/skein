@@ -124,6 +124,7 @@ test "an item as JSON" {
         \\      "lex.comment"
         \\    ],
         \\    "referenced_from": [],
+        \\    "mentioned_in": [],
         \\    "approvals": [],
         \\    "citations": [],
         \\    "text": "Checks %[lex.comment]."

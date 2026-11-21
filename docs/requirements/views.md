@@ -13,7 +13,7 @@ An option skein does not have, an option that does not go with the command, and 
 ## Trace
 
 %req[trace.item]
-`skein trace` shall show one item: its type, category and status, its place, its fingerprint, its attributes, the item it is a part of and its own parts, the links from it and to it with their review states, the items its text refers to and that refer to it, its approvals, and the citations of it.
+`skein trace` shall show one item: its type, category and status, its place, its fingerprint, its attributes, the item it is a part of and its own parts, the links from it and to it with their review states, the items its text refers to and that refer to it, the places in narrative text that refer to it, its approvals, and the citations of it.
 
 %req[trace.closure]
 It shall show everything above the item (what its links lead to, through any number of links) and everything below it (what leads to it), each item once, nearest first, also when links form a loop.

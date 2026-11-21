@@ -108,6 +108,8 @@ Text refers to an item with a marker that has no item type: `%[id]` names an ite
 A line comment is not a %[lex.token]; see %[lex.space white space].
 ```
 
+References work in narrative text as well as in items, so a chapter's introduction, a heading or another document can point at a rule. `skein check` holds them to the same rules, and `skein trace` lists them under "Mentioned in". A reference in an item belongs to what the item says; one in narrative belongs to no item, so it is in no fingerprint and makes nothing suspect.
+
 Nothing inside a code span or a code block is a reference, nor is a percent sign that follows a letter or a digit (`50%[1]`). The double brackets of wikis and site generators (`[[a page]]`) mean nothing to skein, so a document can use both. `skein check` reports a reference to an item that does not exist or is removed. A reference with a colon, `%[other:some.id]`, names an item of another repository; those are not checked yet.
 
 ## Citations in code and tests
@@ -139,7 +141,7 @@ lex.comment.block
 
 - An ID used twice, or not spelled as its type's IDs are.
 - An item type, category, status or verification method that the schema does not have; a missing category.
-- An attribute the type does not declare, of the wrong kind, or with a value that is not allowed; a required attribute that is missing.
+- A reference in text, of an item or narrative, to an item that does not exist or is removed.
 - A link to an item that does not exist, is removed, or is of a type the link cannot point to; a link from a type that cannot have it; a required link that is missing.
 - A reference in text to an item that does not exist or is removed.
 - A marker with nothing after it, one that is not closed or names no item type, a part named with a leading dot where that cannot work, and an item file without front matter.

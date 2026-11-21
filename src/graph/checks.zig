@@ -37,6 +37,22 @@ pub fn run(graph: *const Graph, schema: *const Schema, report: *Report) Error!vo
         try checkLinks(ctx, item, item_type);
         try checkReferences(ctx, item);
     }
+    try checkMentions(ctx);
+}
+
+/// References in narrative text are held to what those in items are
+fn checkMentions(ctx: Context) Error!void {
+    for (ctx.graph.mentions) |m| {
+        if (std.mem.findScalar(u8, m.target, ':') != null) continue;
+        const target = ctx.graph.find(m.target) orelse {
+            try ctx.report.add(m.file, m.line, m.column, "the text refers to '{s}', and there is no such item", .{m.target});
+            continue;
+        };
+        const target_type = ctx.schema.itemType(target.type_name) orelse continue;
+        if (target.isTombstone(target_type)) {
+            try ctx.report.add(m.file, m.line, m.column, "the text refers to '{s}', which is removed", .{m.target});
+        }
+    }
 }
 
 /// The ID, the category, the status and the verification method

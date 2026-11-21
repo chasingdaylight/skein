@@ -43,11 +43,13 @@ pub const Fixture = struct {
     arena: std.heap.ArenaAllocator,
     report: Report,
     items: std.ArrayList(Graph.Item) = .empty,
+    mentions: std.ArrayList(Graph.Mention) = .empty,
 
     pub fn init(self: *Fixture) void {
         self.arena = .init(testing.allocator);
         self.report = .{ .arena = self.arena.allocator() };
         self.items = .empty;
+        self.mentions = .empty;
     }
 
     pub fn deinit(self: *Fixture) void {
@@ -55,7 +57,7 @@ pub const Fixture = struct {
     }
 
     pub fn document(self: *Fixture, file: []const u8, source: []const u8) !void {
-        try documents.read(self.arena.allocator(), &schema, &self.report, file, source, &self.items);
+        try documents.read(self.arena.allocator(), &schema, &self.report, file, source, &self.items, &self.mentions);
     }
 
     pub fn itemFile(self: *Fixture, file: []const u8, source: []const u8, default_type: ?[]const u8) !void {
@@ -65,7 +67,8 @@ pub const Fixture = struct {
 
     /// The graph of what was read, checked
     pub fn check(self: *Fixture) !Graph {
-        const graph = try Graph.init(self.arena.allocator(), self.items.items, &self.report);
+        var graph = try Graph.init(self.arena.allocator(), self.items.items, &self.report);
+        graph.mentions = self.mentions.items;
         try Graph.checks.run(&graph, &schema, &self.report);
         return graph;
     }
