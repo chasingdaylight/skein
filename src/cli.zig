@@ -26,7 +26,7 @@ pub const usage =
     \\Options:
     \\  --root DIR        The project, or a directory inside it (default: here)
     \\  --json            trace, coverage, diff, impact: as JSON
-    \\  --markdown        diff, impact: as Markdown, for a pull request
+    \\  --markdown        coverage, diff, impact: as Markdown, for a pull request
     \\  --profile NAME    coverage, export: only the items of this profile
     \\  --all             review, clear: every link, not those of the items named
     \\  --by NAME         approve: who approves (default: git's user.name)
@@ -79,6 +79,8 @@ pub const Coverage = struct {
     common: Common = .{},
     profile: ?[]const u8 = null,
     json: bool = false,
+    /// as Markdown, for a job summary or a pull request
+    markdown: bool = false,
 };
 
 pub const Diff = struct {
@@ -186,9 +188,10 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .trace = .{ .common = common, .id = words[0], .json = p.flag("--json") } };
     }
     if (eql(name, "coverage")) {
-        if (try p.allow(&.{ "--root", "--json", "--profile" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile" })) |problem| return .{ .misuse = problem };
+        if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
-        return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json") } };
+        return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown") } };
     }
     if (eql(name, "diff") or eql(name, "impact")) {
         const impact = eql(name, "impact");

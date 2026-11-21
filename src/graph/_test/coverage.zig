@@ -1,6 +1,6 @@
 //! Coverage and profiles, on a project on disk.
 
-// req: coverage.expected, coverage.profile, coverage.reports, coverage.parts
+// req: coverage.expected, coverage.profile, coverage.reports, coverage.parts, coverage.markdown
 const std = @import("std");
 const testing = std.testing;
 
@@ -181,6 +181,44 @@ test "an item is covered when each of its parts is" {
         \\    terms
         \\
     , citations);
+}
+
+test "coverage as Markdown" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try project(tmp.dir);
+    const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
+    const out = try coverage_command.run(testing.io, a, .{ .common = .{ .root = root }, .profile = "s0", .markdown = true });
+    try testing.expectEqualStrings(
+        \\## Coverage of example, profile s0
+        \\
+        \\| Expected | Of | Covered | |
+        \\| --- | --- | ---: | ---: |
+        \\| `verifies` links | `rule` items | 2 of 3 | 66% |
+        \\| | syntax | 2 of 2 | 100% |
+        \\| | legality | 0 of 1 | 0% |
+        \\| `test` citations | `rule` items | 2 of 3 | 66% |
+        \\| | syntax | 1 of 2 | 50% |
+        \\| | legality | 1 of 1 | 100% |
+        \\
+        \\<details>
+        \\<summary>1 <code>rule</code> item without a <code>verifies</code> link</summary>
+        \\
+        \\- `lex.d`
+        \\
+        \\</details>
+        \\
+        \\<details>
+        \\<summary>1 <code>rule</code> item without a <code>test</code> citation</summary>
+        \\
+        \\- `lex.b`
+        \\
+        \\</details>
+        \\
+    , out.text);
 }
 
 test "a project that expects nothing says so" {
