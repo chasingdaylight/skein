@@ -117,12 +117,12 @@ const Reader = struct {
         var id = marker.id;
         if (id[0] == '.') {
             const w = whole orelse {
-                try self.report.add(self.file, line, column, "{s}: a name that starts with a dot is a part's, and this item is part of none", .{id});
+                try self.report.add(self.file, line, column, "{s}: an ID that starts with a dot extends the ID of a containing item, and this item is not part of another item", .{id});
                 return at + 1;
             };
             const whole_type = self.schema.itemType(w.item.type_name).?;
             if (item_type.id != .hierarchical or whole_type.id != .hierarchical) {
-                try self.report.add(self.file, line, column, "{s}: a name that starts with a dot needs IDs joined by dots, here and in '{s}'", .{ id, w.item.id });
+                try self.report.add(self.file, line, column, "{s}: an ID that starts with a dot needs hierarchical IDs for this item and for '{s}'", .{ id, w.item.id });
                 return at + 1;
             }
             id = try self.arena.print("{s}{s}", .{ w.item.id, id });
