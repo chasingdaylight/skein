@@ -38,17 +38,17 @@ fn project(dir: std.Io.Dir) !void {
     try write(dir, ".skein/links/refines.toml", "review = true\n");
     try write(dir, ".skein/links/see.toml", "");
     try write(dir, "spec/lex.md",
-        \\rule[lex.comment]
+        \\%rule[lex.comment]
         \\A comment starts with `//`.
         \\
-        \\rule[lex.token]
+        \\%rule[lex.token]
         \\A token is a unit of the text.
     );
     try write(dir, "spec/tests.md",
-        \\test[t.comment] verifies=lex.comment,lex.token see=lex.token
+        \\%test[t.comment verifies=lex.comment,lex.token see=lex.token]
         \\Checks comments.
         \\
-        \\test[t.token] verifies=lex.token
+        \\%test[t.token verifies=lex.token]
         \\Checks tokens.
     );
     try write(dir, "requirements/SRS-001.md", "+++\nid = \"SRS-001\"\n+++\nOne.\n");
@@ -136,10 +136,10 @@ test "a link is suspect when its target changes, and not when it is only laid ou
     try project(run.tmp.dir);
     _ = try run.review(.from, &.{});
 
-    try write(run.tmp.dir, "spec/lex.md", "rule[lex.comment]\r\nA comment   starts\r\nwith `//`.\r\n\r\nrule[lex.token]\r\nA token is a unit of the text.\r\n");
+    try write(run.tmp.dir, "spec/lex.md", "%rule[lex.comment]\r\nA comment   starts\r\nwith `//`.\r\n\r\n%rule[lex.token]\r\nA token is a unit of the text.\r\n");
     try testing.expect(std.mem.startsWith(u8, try run.check(), "skein: example: no problems"));
 
-    try write(run.tmp.dir, "spec/lex.md", "rule[lex.comment]\nA comment starts with `//`.\n\nrule[lex.token]\nA token is the smallest unit of the text.\n");
+    try write(run.tmp.dir, "spec/lex.md", "%rule[lex.comment]\nA comment starts with `//`.\n\n%rule[lex.token]\nA token is the smallest unit of the text.\n");
     try testing.expectEqualStrings(
         \\spec/tests.md:1:1: error: t.comment: verifies: 'lex.token' has changed since the link was reviewed ('skein review t.comment')
         \\spec/tests.md:4:1: error: t.token: verifies: 'lex.token' has changed since the link was reviewed ('skein review t.token')
@@ -159,7 +159,7 @@ test "a record of a link that is gone goes when its file is written again" {
     try project(run.tmp.dir);
     _ = try run.review(.from, &.{});
 
-    try write(run.tmp.dir, "spec/tests.md", "test[t.comment] verifies=lex.comment\nChecks comments.\n\ntest[t.new] verifies=lex.token\nNew.\n");
+    try write(run.tmp.dir, "spec/tests.md", "%test[t.comment verifies=lex.comment]\nChecks comments.\n\n%test[t.new verifies=lex.token]\nNew.\n");
     try testing.expectEqualStrings("skein: 1 link recorded as reviewed\n", try run.review(.from, &.{"t.new"}));
     const records = try run.read(".skein/reviews/spec/tests.md.toml");
     try testing.expect(std.mem.find(u8, records, "\"t.token\"") == null);

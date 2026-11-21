@@ -28,14 +28,14 @@ fn project(dir: std.Io.Dir) !void {
     try write(dir, ".skein/links/verifies.toml", "from = [\"case\"]\nreview = true\n");
     try write(dir, ".skein/profiles/s0.toml", "[where]\nstage = \"s0\"\n");
     try write(dir, "spec/lex.md",
-        \\rule[lex.comment] syntax stage=s0
+        \\%rule[lex.comment syntax stage=s0]
         \\A comment starts with `//`, and ends
         \\with the "line".
         \\
-        \\rule[lex.token] syntax stage=s1
+        \\%rule[lex.token syntax stage=s1]
         \\A token.
         \\
-        \\case[c.comment] verifies=lex.comment,no.such runner=unit
+        \\%case[c.comment verifies=lex.comment,no.such runner=unit]
         \\Checks comments.
     );
     try write(dir, "tests/a.zig", "// spec: lex.comment, lex.token\n");
@@ -72,10 +72,10 @@ test "items as CSV: one column per attribute, and the text" {
     defer tmp.cleanup();
     try project(tmp.dir);
     try testing.expectEqualStrings(
-        "id,type,category,status,verification,file,line,fingerprint,runner,stage,text\n" ++
-            "lex.comment,rule,syntax,draft,,spec/lex.md,1,FP,,s0,\"A comment starts with `//`, and ends\nwith the \"\"line\"\".\"\n" ++
-            "lex.token,rule,syntax,draft,,spec/lex.md,5,FP,,s1,A token.\n" ++
-            "c.comment,case,,draft,,spec/lex.md,8,FP,unit,,Checks comments.\n",
+        "id,type,category,status,verification,part_of,file,line,fingerprint,runner,stage,text\n" ++
+            "lex.comment,rule,syntax,draft,,,spec/lex.md,1,FP,,s0,\"A comment starts with `//`, and ends\nwith the \"\"line\"\".\"\n" ++
+            "lex.token,rule,syntax,draft,,,spec/lex.md,5,FP,,s1,A token.\n" ++
+            "c.comment,case,,draft,,,spec/lex.md,8,FP,unit,,Checks comments.\n",
         try withoutFingerprints(a, try run(a, tmp.dir, .items, null)),
     );
 }

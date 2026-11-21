@@ -97,7 +97,7 @@ test "a project's citations are found and checked" {
     );
     try write(tmp.dir, ".skein/types/rule.toml", "");
     try write(tmp.dir, ".skein/types/term.toml", "");
-    try write(tmp.dir, "spec/lex.md", "rule[lex.comment]\nA comment.\n\nterm[lex.token]\nA token.\n\nrule[lex.old] status=removed\n");
+    try write(tmp.dir, "spec/lex.md", "%rule[lex.comment]\nA comment.\n\n%term[lex.token]\nA token.\n\n%rule[lex.old removed]\n");
     try write(tmp.dir, "tests/comment.zig", "// spec: lex.comment\n// spec: lex.token, no.such\n// spec: lex.old\n");
     try write(tmp.dir, "tests/deep/.skein-cites", "lex.comment\n");
     try write(tmp.dir, "tests/deep/more.zig", "// no citation of its own");

@@ -53,7 +53,7 @@ A link points up, from an item to what it rests on: a test to the rule it verifi
 
 ## `skein coverage`
 
-Counts, of the items that should be linked to or cited, how many are, and lists the ones that are not:
+Counts, of the items that should be linked to or cited, how many are, and lists the ones that are not. An item with [parts](writing-items.md#parts-items-inside-an-item) also counts when every one of its parts does:
 
 ```text
 Coverage of example
@@ -100,7 +100,7 @@ Changed (2):
   lex.space  (rule)  status: approved -> deprecated, attributes  spec/lex.md:8
 ```
 
-An item is changed in its **content** when its fingerprint is different, so a paragraph that was only rewrapped is not listed. Its status, links, attributes and verification method are named when they differ. An item given the status of a removed item counts as removed.
+An item is changed in its **content** when its fingerprint is different, so a paragraph that was only rewrapped is not listed. A change to a part is also a change to the content of its whole. Its status, links, attributes and verification method are named when they differ. An item given the status of a removed item counts as removed.
 
 ## `skein impact [REV]`
 
@@ -131,7 +131,7 @@ Writes the project's graph to standard output, for other tools.
 | `WHAT` | Gives |
 | --- | --- |
 | `json` (the default) | Everything as one JSON document: the item types and link types, and every item with its status, fingerprint, attributes, links both ways with their review state, references, approvals, citations and text. |
-| `items` | CSV, one row per item: ID, type, category, status, verification, file, line, fingerprint, a column for each attribute, and the text. |
+| `items` | CSV, one row per item: ID, type, category, status, verification, the item it is a part of, file, line, fingerprint, a column for each attribute, and the text. |
 | `links` | CSV, one row per link: from, its type, the link type, to, its type, and the review state. A traceability matrix in its long form, ready for a pivot table. |
 | `citations` | CSV, one row per citation: the citation set, file, line, the item and its type. |
 

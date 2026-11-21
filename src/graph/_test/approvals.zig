@@ -30,7 +30,7 @@ fn project(dir: std.Io.Dir) !void {
     try write(dir, ".skein/types/rule.toml", "approval = [\"approved\"]\n");
     try write(dir, "requirements/SRS-001.md", "+++\nid = \"SRS-001\"\nstatus = \"approved\"\n+++\nThe software shall start.\n");
     try write(dir, "requirements/SRS-002.md", "+++\nid = \"SRS-002\"\n+++\nA draft needs no approval.\n");
-    try write(dir, "spec/a.md", "rule[a.rule] status=approved\nA rule.\n");
+    try write(dir, "spec/a.md", "%rule[a.rule approved]\nA rule.\n");
 }
 
 const Run = struct {

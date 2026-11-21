@@ -56,7 +56,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Review, direction: Dir
             const state = try reviews.stateOf(arena, schema, &ws.graph, item, link) orelse continue;
             if (state == .reviewed) continue;
             const target = ws.graph.find(link.target).?;
-            const fp = try fingerprint.of(arena, target, schema.itemType(target.type_name).?);
+            const fp = try fingerprint.of(arena, &ws.graph, schema, target);
             try reviews.put(arena, item.id, link.type_name, link.target, &fp);
             const file = try Reviews.fileOf(arena, item);
             if (!Schema.names.contains(files.items, file)) try files.append(arena, file);

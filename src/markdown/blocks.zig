@@ -20,7 +20,8 @@ pub const Block = struct {
         /// YAML between `---` lines at the top of the file, as site
         /// generators and Doorstop write: not skein's, and passed over
         yaml_front_matter,
-        /// a line that makes the next block an item (Marker.zig)
+        /// what makes the next block an item (Marker.zig): the start of a
+        /// line, up to the closing bracket
         marker,
         heading,
         paragraph,
@@ -39,10 +40,11 @@ const Line = struct {
     end: usize,
 };
 
-/// The blocks of `source`, in order. `marker_types` are the item types
-/// whose names start a marker line.
-pub fn scan(arena: std.mem.Allocator, source: []const u8, marker_types: []const []const u8) std.mem.Allocator.Error![]const Block {
-    var s: Scanner = .{ .arena = arena, .src = source, .types = marker_types };
+/// The blocks of `source`, in order. A marker (Marker.zig) at the start of
+/// a line is a block of its own: the text after it on its line, if any,
+/// starts the next block, a paragraph.
+pub fn scan(arena: std.mem.Allocator, source: []const u8) std.mem.Allocator.Error![]const Block {
+    var s: Scanner = .{ .arena = arena, .src = source };
     try s.splitLines();
     try s.run();
     return s.blocks.items;
@@ -51,7 +53,6 @@ pub fn scan(arena: std.mem.Allocator, source: []const u8, marker_types: []const 
 const Scanner = struct {
     arena: std.mem.Allocator,
     src: []const u8,
-    types: []const []const u8,
     lines: std.ArrayList(Line) = .empty,
     blocks: std.ArrayList(Block) = .empty,
 
@@ -95,8 +96,13 @@ const Scanner = struct {
                 continue;
             }
             const kind = self.kindAt(i);
+            if (kind == .marker) {
+                i = try self.marker(i);
+                continue;
+            }
             const last = switch (kind) {
-                .marker, .heading, .thematic_break => i,
+                .marker => unreachable,
+                .heading, .thematic_break => i,
                 .code => self.codeEnd(i),
                 .html => self.htmlEnd(i),
                 .list => self.listEnd(i),
@@ -105,6 +111,31 @@ const Scanner = struct {
             try self.add(kind, i, last);
             i = last + 1;
         }
+    }
+
+    /// Adds the marker that line `i` starts with, and the paragraph that
+    /// the rest of the line starts, if there is text there; the first line
+    /// after them
+    fn marker(self: *Scanner, i: usize) !usize {
+        const l = self.lines.items[i];
+        const line = self.src[l.start..l.end];
+        const len = Marker.extent(line);
+        try self.blocks.append(self.arena, .{
+            .kind = .marker,
+            .first_line = @intCast(i + 1),
+            .last_line = @intCast(i + 1),
+            .text = line[0..len],
+        });
+        const rest = std.mem.trimStart(u8, line[len..], " \t");
+        if (rest.len == 0) return i + 1;
+        const last = self.plainEnd(i, .paragraph);
+        try self.blocks.append(self.arena, .{
+            .kind = .paragraph,
+            .first_line = @intCast(i + 1),
+            .last_line = @intCast(last + 1),
+            .text = self.src[l.end - rest.len .. self.lines.items[last].end],
+        });
+        return last + 1;
     }
 
     /// Adds the front matter, if the file starts with it; the first line
@@ -147,7 +178,7 @@ const Scanner = struct {
         if (indent >= 4) return .code;
         const s = line[indent..];
         if (isFence(s) != null) return .code;
-        if (indent == 0 and self.isMarker(line)) return .marker;
+        if (indent == 0 and Marker.startsOne(line)) return .marker;
         if (isHeading(s)) return .heading;
         if (isThematicBreak(s)) return .thematic_break;
         if (s[0] == '>') return .quote;
@@ -155,14 +186,6 @@ const Scanner = struct {
         if (s[0] == '|') return .table;
         if (s[0] == '<' and s.len > 1 and (std.ascii.isAlphabetic(s[1]) or s[1] == '/' or s[1] == '!')) return .html;
         return .paragraph;
-    }
-
-    fn isMarker(self: *const Scanner, line: []const u8) bool {
-        // only the shape matters here, so nothing is kept
-        var buf: [1024]u8 = undefined;
-        var fba: std.heap.FixedBufferAllocator = .init(&buf);
-        const m = Marker.parse(fba.allocator(), line, self.types) catch return true;
-        return m != null;
     }
 
     /// The last line of a paragraph, quote or table that starts at `i`:
@@ -242,7 +265,7 @@ const Scanner = struct {
                 continue;
             }
             const indent = indentOf(line);
-            if (indent == 0 and (self.isMarker(line) or isHeading(line) or isThematicBreak(line))) break;
+            if (indent == 0 and (Marker.startsOne(line) or isHeading(line) or isThematicBreak(line))) break;
             last = j;
         }
         return last;
@@ -257,7 +280,7 @@ fn isFrontMatterFence(line: []const u8) bool {
     return std.mem.eql(u8, std.mem.trimEnd(u8, line, " \t"), "+++");
 }
 
-fn indentOf(line: []const u8) usize {
+pub fn indentOf(line: []const u8) usize {
     var n: usize = 0;
     for (line) |c| switch (c) {
         ' ' => n += 1,
@@ -298,7 +321,7 @@ fn isThematicBreak(s: []const u8) bool {
 }
 
 /// `- `, `* `, `+ `, `1. ` or `1) `
-fn isListStart(line: []const u8) bool {
+pub fn isListStart(line: []const u8) bool {
     const s = std.mem.trimStart(u8, line, " ");
     if (s.len == 0) return false;
     if (s[0] == '-' or s[0] == '*' or s[0] == '+') return s.len == 1 or s[1] == ' ' or s[1] == '\t';

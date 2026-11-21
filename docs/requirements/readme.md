@@ -1,6 +1,6 @@
 # The requirements of skein
 
-What skein is required to do, written in skein's own format: each paragraph under a `req[...]` marker is a requirement, and the rest is narrative. skein's tests cite the requirements they check (`// req:` and the IDs, in the test files under `src/`), so that
+What skein is required to do, written in skein's own format: each paragraph with a `%req[...]` marker is a requirement, and the rest is narrative. skein's tests cite the requirements they check (`// req:` and the IDs, in the test files under `src/`), so that
 
 ```text
 skein check

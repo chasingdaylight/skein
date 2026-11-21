@@ -61,7 +61,7 @@ pub fn compute(arena: std.mem.Allocator, old: Side, new: Side) Error![]const Cha
             try removed.append(arena, c);
         } else if (!gone_before and !gone_now) {
             var c = change;
-            c.what = try differences(arena, before.?, old.schema, item, new.schema, &c.content);
+            c.what = try differences(arena, before.?, old, item, new, &c.content);
             if (c.what.len > 0) try changed.append(arena, c);
         }
     }
@@ -85,16 +85,16 @@ fn isGone(item: *const Item, schema: *const Schema) bool {
 
 /// What is different about an item, in words; sets `content` when its
 /// fingerprint is
-fn differences(arena: std.mem.Allocator, a: *const Item, a_schema: *const Schema, b: *const Item, b_schema: *const Schema, content: *bool) Error![]const []const u8 {
+fn differences(arena: std.mem.Allocator, a: *const Item, old: Side, b: *const Item, new: Side, content: *bool) Error![]const []const u8 {
     var out: std.ArrayList([]const u8) = .empty;
-    const a_type = a_schema.itemType(a.type_name);
-    const b_type = b_schema.itemType(b.type_name);
+    const a_type = old.schema.itemType(a.type_name);
+    const b_type = new.schema.itemType(b.type_name);
     if (!std.mem.eql(u8, a.type_name, b.type_name)) {
         try out.append(arena, try arena.print("type: {s} -> {s}", .{ a.type_name, b.type_name }));
     }
     if (a_type != null and b_type != null) {
-        const fa = try fingerprint.of(arena, a, a_type.?);
-        const fb = try fingerprint.of(arena, b, b_type.?);
+        const fa = try fingerprint.of(arena, old.graph, old.schema, a);
+        const fb = try fingerprint.of(arena, new.graph, new.schema, b);
         if (!std.mem.eql(u8, &fa, &fb)) {
             content.* = true;
             try out.append(arena, "content");

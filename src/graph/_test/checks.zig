@@ -12,15 +12,15 @@ test "items that keep every rule give no problems" {
     f.init();
     defer f.deinit();
     try f.document("spec/lex.md",
-        \\rule[lex.comment.line] legality stage=s0 since=2027-03-01 weight=2 final=true
+        \\%rule[lex.comment.line legality stage=s0 since=2027-03-01 weight=2 final=true]
         \\A line comment is not a [[lex.token]]; see [[other:some.rule]].
         \\
-        \\term[lex.token]
+        \\%term[lex.token]
         \\A token is a unit of the source text.
         \\
-        \\rule[lex.old] status=removed
+        \\%rule[lex.old removed]
         \\
-        \\test[t.lex.comment] verifies=lex.comment.line,SRS-001 see=other:thing
+        \\%test[t.lex.comment verifies=lex.comment.line,SRS-001 see=other:thing]
         \\Checks line comments.
     );
     try f.itemFile("requirements/SRS-001.md", "+++\nid = \"SRS-001\"\npriority = \"high\"\nverification = \"analysis\"\n+++\nThe software shall start.\n", "srs");
@@ -36,13 +36,13 @@ test "IDs: used twice, or not as the type spells them" {
     f.init();
     defer f.deinit();
     try f.document("spec/a.md",
-        \\term[lex.token]
+        \\%term[lex.token]
         \\One.
         \\
-        \\term[lex.token]
+        \\%term[lex.token]
         \\Two.
         \\
-        \\term[Lex.Token]
+        \\%term[Lex.Token]
         \\Three.
     );
     try f.itemFile("requirements/x.md", "+++\nid = \"REQ-1\"\npriority = \"low\"\n+++\nText.\n", "srs");
@@ -60,9 +60,9 @@ test "a removed item keeps its ID taken" {
     f.init();
     defer f.deinit();
     try f.document("spec/a.md",
-        \\term[lex.old] status=removed
+        \\%term[lex.old removed]
         \\
-        \\term[lex.old]
+        \\%term[lex.old]
         \\The ID used again.
     );
     _ = try f.check();
@@ -77,22 +77,23 @@ test "categories, statuses and verification methods" {
     f.init();
     defer f.deinit();
     try f.document("spec/a.md",
-        \\rule[a.none]
+        \\%rule[a.none]
         \\A rule needs a category.
         \\
-        \\rule[a.wrong] semantics status=frozen
+        \\%rule[a.wrong semantics frozen]
         \\Neither is known.
         \\
-        \\term[a.term] syntax verification=test
+        \\%term[a.term syntax verification=test]
         \\A term has neither.
     );
     _ = try f.check();
     try f.expectProblems(
         \\spec/a.md:1:1: error: a.none: a 'rule' needs a category
-        \\spec/a.md:4:1: error: a.wrong: 'frozen' is not a status of a 'rule'
-        \\spec/a.md:4:1: error: a.wrong: 'semantics' is not a category of a 'rule'
+        \\spec/a.md:4:1: error: a.wrong: 'frozen' is neither a category nor a status of a 'rule'
+        \\spec/a.md:4:1: error: a.wrong: 'semantics' is neither a category nor a status of a 'rule'
+        \\spec/a.md:4:1: error: a.wrong: a 'rule' needs a category
+        \\spec/a.md:7:1: error: a.term: 'syntax' is neither a category nor a status of a 'term'
         \\spec/a.md:7:1: error: a.term: 'test' is not a verification method of a 'term'
-        \\spec/a.md:7:1: error: a.term: a 'term' has no categories, so 'syntax' is none
         \\
     );
 }
@@ -102,7 +103,7 @@ test "attributes: unknown, of the wrong kind, missing" {
     f.init();
     defer f.deinit();
     try f.document("spec/a.md",
-        \\rule[a.b] syntax stage=s2 since=March weight=heavy final=yes shape=round
+        \\%rule[a.b syntax stage=s2 since=March weight=heavy final=yes shape=round]
         \\Text.
     );
     try f.itemFile("requirements/SRS-001.md", "+++\nid = \"SRS-001\"\n+++\nText.\n", "srs");
@@ -124,21 +125,21 @@ test "links: to nothing, to the wrong type, from the wrong type, missing, to a r
     f.init();
     defer f.deinit();
     try f.document("spec/a.md",
-        \\term[a.term]
+        \\%term[a.term]
         \\A term.
         \\
-        \\term[a.gone] status=removed
+        \\%term[a.gone removed]
         \\
-        \\rule[a.rule] syntax verifies=a.term see=a.gone,a.rule
+        \\%rule[a.rule syntax verifies=a.term see=a.gone,a.rule]
         \\A rule cannot verify.
         \\
-        \\test[t.one] verifies=a.term,no.such
+        \\%test[t.one verifies=a.term,no.such]
         \\A test of a term, and of nothing.
         \\
-        \\test[t.two]
+        \\%test[t.two]
         \\A test of nothing at all.
         \\
-        \\test[t.old] status=retired
+        \\%test[t.old retired]
     );
     _ = try f.check();
     try f.expectProblems(
@@ -158,9 +159,9 @@ test "references in text: to nothing, to a removed item" {
     f.init();
     defer f.deinit();
     try f.document("spec/a.md",
-        \\term[a.gone] status=removed
+        \\%term[a.gone removed]
         \\
-        \\term[a.term]
+        \\%term[a.term]
         \\See [[a.gone]] and
         \\also [[no.such|that one]], but not `[[in.code]]`.
     );

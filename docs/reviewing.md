@@ -8,10 +8,12 @@ Every item has a fingerprint: a hash of what it says.
 
 | Part of it | Not part of it |
 | --- | --- |
-| The item's text | Its status |
+| The item's own text | Its status |
 | Its type and its category | Its links |
 | The attributes its type marks `normative = true` | Its other attributes |
-| | Its ID and where it is written |
+| The fingerprints of its parts, in order | Its ID and where it is written |
+
+Fingerprints form a tree, as the hashes of files and directories do in git: an item with [parts](writing-items.md#parts-items-inside-an-item) is hashed over its own text and its parts' fingerprints, not over their text again. So a change to a part changes that part, its whole, and every whole above, and no other item. Unlike a directory in git, a whole does not hash the names of its parts: giving a part another ID, or another status, changes nothing that is said.
 
 The text is taken without its layout: runs of spaces and line ends count as one space, so rewrapping a paragraph, changing line endings or re-indenting a list changes nothing. Inside code blocks the lines are kept, because there they can matter.
 

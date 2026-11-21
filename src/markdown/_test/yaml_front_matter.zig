@@ -9,7 +9,7 @@ const Kind = blocks.Block.Kind;
 
 fn kinds(arena: std.mem.Allocator, source: []const u8) ![]const Kind {
     var out: std.ArrayList(Kind) = .empty;
-    for (try blocks.scan(arena, source, &.{"rule"})) |b| try out.append(arena, b.kind);
+    for (try blocks.scan(arena, source)) |b| try out.append(arena, b.kind);
     return out.items;
 }
 
@@ -21,16 +21,16 @@ test "YAML front matter is one block, and what follows is read as ever" {
         \\---
         \\title: "Lexical structure"
         \\tags: ["spec"]
-        \\rule[not.a.marker]
+        \\%rule[not.a.marker]
         \\---
         \\
         \\## Comments
         \\
-        \\rule[lex.comment]
+        \\%rule[lex.comment]
         \\A comment.
     ;
     try testing.expectEqualSlices(Kind, &.{ .yaml_front_matter, .heading, .marker, .paragraph }, try kinds(a, source));
-    const all = try blocks.scan(a, source, &.{"rule"});
+    const all = try blocks.scan(a, source);
     try testing.expectEqual(5, all[0].last_line);
     try testing.expectEqual(9, all[2].first_line);
 }
