@@ -29,7 +29,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 
 ## 2. Principles
 
-1. **Plain text in git is the only source of truth.** Every item, link, review and baseline is in files under version control. Everything else is generated.
+1. **Plain text in git is the only source of truth.** Every item, link, review, baseline, schedule, date, estimate and assignment is in files under version control; there is no database. Everything else is generated. So all of it can be edited offline, with any editor or tool, and reviewed and merged like code.
 2. **Forge-neutral.** skein works with nothing but a git repository. Integrations with GitHub, GitLab and Forgejo are adapters; the core never relies on a feature one of the three lacks (section 7).
 3. **Schema-driven.** A project declares its item types, their attributes, the links allowed between them and the rules they must satisfy. skein has no built-in notion of "requirement" or "test".
 4. **Prose-friendly.** An item can be a file of its own or a paragraph inside a document, so a specification reads as a document while every paragraph stays an item.
@@ -39,7 +39,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 
 ## 3. Concepts
 
-- **Project:** a git repository (or a directory in one) with a `skein` configuration at its root.
+- **Project:** a git repository with a `.skein/` directory at its root. A project can span several repositories, one of which holds what they share (section 10.5).
 - **Schema:** the project's item types, attributes, link types and rules.
 - **Item type:** a kind of item, for example `need`, `srs`, `design`, `test` for srapnol, or `proposal`, `rule`, `test` for Cesium. A type declares its ID pattern, its attributes, which links it may or must have, and its categories if any (for Cesium's rules: syntax, legality, dynamic semantics, implementation-defined, undefined, informative).
 - **Item:** one identified piece of text with a type, attributes and links. Its **fingerprint** is a hash of its normative content (text and attributes the schema marks as normative), used to detect change.
@@ -53,7 +53,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 
 ### 4.1 Configuration and schema
 
-One file at the project root declares the item directories and documents, the schema, the citation patterns and the outputs. Format: an open question (section 13), with ZON as the recommendation: native to Zig, no extra parser, and small.
+A `.skein/` directory at the repository root holds skein's own files (emanspeaks, 2026-11-21): the configuration (item directories and documents, the schema, citation patterns, outputs, the forge and the other repositories of the project), and the data that belongs to no item file and that the forge does not hold, such as reviews of links, resources and calendars, time logs, and the last synced state of forge issues. Items and documents themselves live wherever the project wants them (`docs/`, `spec/`, beside the code); `.skein/` is for skein's bookkeeping. The format of its files is an open question (section 13), with ZON as the recommendation: native to Zig, no extra parser, and small.
 
 ### 4.2 Item files
 
@@ -135,7 +135,7 @@ skein plans and tracks the work as well as describing the product, taking from O
 
 ### 10.2 Resources
 
-- A resources file lists the people (and, where wanted, roles or teams), each with a capacity (hours per week, or a share of full time) and a calendar of working days, holidays and absences. Projects with more than one repository can share one resources file.
+- A resources file lists the people (and, where wanted, roles or teams), each with a capacity (hours per week, or a share of full time) and a calendar of working days, holidays and absences. It lives in `.skein/`, in the planning repository when the project has several (section 10.5).
 - From assignments and effort skein computes each person's load per week, shows it next to their capacity, and reports overallocation in `check` and as a chart.
 - People are identified by a handle the project chooses (for example their forge user name), mapped per forge by the adapter, so a plan moves between forges unchanged.
 
@@ -149,7 +149,21 @@ skein plans and tracks the work as well as describing the product, taking from O
 
 ### 10.4 Forge issues
 
-Discussion stays in the forge, so a work item can be linked to an issue. The adapter keeps the two in step: `skein sync` reads the issue's state, assignees and labels and writes changes into the item's file as a commit, and can create or update issues from items. The direction of each field (which side is authoritative) is set in the configuration. Because the result is always files in git, the history the charts need is in git too, whatever the forge. Projects that do not want issues use items alone.
+Discussion stays in the forge, so a work item can be linked to an issue, and an issue can be a work item of its own without a separate file. Either way, git holds the plan:
+
+- What the forge does not hold (dates, durations, estimates, dependencies with lags, effort, capacity) is only in git: in the item's file, or in `.skein/` for an issue that has no file.
+- What the forge does hold (title, open or closed, assignees, labels, milestone) is read through the adapter, and `skein sync` writes it into `.skein/` as a commit. So the whole plan, its history included, is in git: the charts, `check` and offline work need no forge, and moving to another forge loses nothing.
+- `skein sync` can also write the other way, creating or updating issues from items. The configuration says, field by field, which side wins when both changed.
+
+Projects that do not want issues use items alone.
+
+### 10.5 Projects of several repositories
+
+A project spread over several repositories (a compiler, a website, an editor extension, like Cesium's) can have one **planning repository** that holds what they share: the resources and calendars, work that spans repositories (milestones, roadmaps, epics), and the cross-repository views. Cesium's workspace repository is a natural one.
+
+- Each repository's `.skein/` names the planning repository, and the planning repository's names the others, by a short project name and a location: a path to a local checkout (a sibling or a submodule) or a remote URL that skein clones. skein reads them as git repositories, never through a forge's API, so this works offline and on any forge, and can mix forges.
+- Items and issues in other repositories are cited by a qualified reference (`cesium:expr.as.narrow`, `vscode-cesium#24`), checked by `check` like local ones; the forge adapter turns issue references into links.
+- A repository can also be used alone: without the planning repository at hand, `check` reports cross-repository references as unresolved instead of failing on them, unless the configuration requires them.
 
 ## 11. Migration
 
@@ -171,9 +185,8 @@ Discussion stays in the forge, so a work item can be linked to an issue. The ada
 2. **Paragraph marker syntax** in documents, for example a trailing `{#lex.comment.line .legality}` attribute (Pandoc and Markdown-attribute style), a leading `r[lex.comment.line]` line (Rust Reference style), or an HTML comment. Recommendation: the trailing attribute form; it reads well, many tools already know it, and it carries a category without a second marker.
 3. **ID scheme per project:** readable hierarchical IDs (recommended for specifications) and numbered IDs (`SRS-012`, as srapnol uses) both supported, chosen per item type in the schema.
 4. **Zig version:** the latest official release at the time of each skein release (0.17.1 today), pinned per release.
-5. **Name of the configuration file and directories** (`skein.zon`? `.skein/`?).
-6. **Where the plan's truth lives when a forge is used:** work items in git, with `skein sync` mirroring them to and from issues field by field (recommended: the only way the plan stays forge-neutral and its history stays in git), or issues as the truth for status and assignees, with skein reading them and keeping only dates, estimates and dependencies in git.
-7. **Planning's place in the phases:** after rendering (recommended, since its views are rendered pages), or earlier, if Cesium's roadmap should move from the GitHub Project to skein soon.
+5. **Names inside `.skein/`** (for example `config.zon`, `resources.zon`, `sync/`), settled with the first code.
+6. **Planning's place in the phases:** after rendering (recommended, since its views are rendered pages), or earlier, if Cesium's roadmap should move from the GitHub Project to skein soon.
 
 ## 14. Requirements of skein itself
 
