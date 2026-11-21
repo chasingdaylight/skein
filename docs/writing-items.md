@@ -102,13 +102,13 @@ The same keys work in a marker and in front matter:
 
 ## References in text
 
-Text refers to an item by its ID in double brackets, with the words to show after a bar when the ID itself should not appear:
+Text refers to an item with a marker that has no item type: `%[id]` names an item where `%type[id]` declares one. Words after the ID are shown in its place when the ID itself should not appear:
 
 ```markdown
-A line comment is not a [[lex.token]]; see [[lex.space|white space]].
+A line comment is not a %[lex.token]; see %[lex.space white space].
 ```
 
-Nothing inside a code span or a code block is a reference. `skein check` reports a reference to an item that does not exist or is removed. A reference with a colon, `[[other:some.id]]`, names an item of another repository; those are not checked yet.
+Nothing inside a code span or a code block is a reference, nor is a percent sign that follows a letter or a digit (`50%[1]`). The double brackets of wikis and site generators (`[[a page]]`) mean nothing to skein, so a document can use both. `skein check` reports a reference to an item that does not exist or is removed. A reference with a colon, `%[other:some.id]`, names an item of another repository; those are not checked yet.
 
 ## Citations in code and tests
 

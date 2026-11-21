@@ -1,6 +1,7 @@
-//! References to items in prose: `[[lex.comment.line]]`, or with the words
-//! to show, `[[lex.comment.line|line comments]]`. Nothing inside a code
-//! span or a code block is a reference.
+//! References to items in prose: `%[lex.comment.line]`, or with the words
+//! to show after the ID, `%[lex.comment.line line comments]`. It is a
+//! marker without an item type: one that names an item and declares none.
+//! Nothing inside a code span or a code block is a reference.
 
 const std = @import("std");
 
@@ -10,7 +11,7 @@ pub const Reference = struct {
     target: []const u8,
     /// the words to show in place of the ID, when given
     display: ?[]const u8 = null,
-    /// of the opening brackets in the text that was searched
+    /// of the percent sign in the text that was searched
     offset: usize,
 };
 
@@ -32,8 +33,10 @@ fn findInline(arena: std.mem.Allocator, text: []const u8, base: usize, out: *std
         switch (text[i]) {
             '\\' => i += 2,
             '`' => i = skipCodeSpan(text, i),
-            '[' => {
-                if (i + 1 < text.len and text[i + 1] == '[') {
+            '%' => {
+                // not after a letter or a digit: `50%[1]` is a number and a note
+                const stands_alone = i == 0 or !std.ascii.isAlphanumeric(text[i - 1]);
+                if (stands_alone and i + 1 < text.len and text[i + 1] == '[') {
                     if (parseAt(text, i)) |found| {
                         var r = found.reference;
                         r.offset = base + i;
@@ -68,22 +71,23 @@ fn skipCodeSpan(text: []const u8, i: usize) usize {
     return i + n;
 }
 
-/// The reference whose `[[` is at `i`; null when what follows is not one
+/// The reference whose `%[` is at `i`; null when what follows is not one
 fn parseAt(text: []const u8, i: usize) ?struct { reference: Reference, end: usize } {
     const start = i + 2;
-    const close = std.mem.findPos(u8, text, start, "]]") orelse return null;
-    const inner = text[start..close];
+    const close = std.mem.findScalarPos(u8, text, start, ']') orelse return null;
+    const inner = std.mem.trim(u8, text[start..close], " ");
     if (std.mem.findScalar(u8, inner, '\n') != null or std.mem.findScalar(u8, inner, '[') != null) return null;
-    const bar = std.mem.findScalar(u8, inner, '|');
-    const target = std.mem.trim(u8, if (bar) |b| inner[0..b] else inner, " ");
+    // the ID is the first word, as in a marker
+    const space = std.mem.findScalar(u8, inner, ' ');
+    const target = if (space) |s| inner[0..s] else inner;
     if (target.len == 0) return null;
     for (target) |c| {
         if (!std.ascii.isAlphanumeric(c) and c != '.' and c != '-' and c != '_' and c != ':') return null;
     }
-    const display: ?[]const u8 = if (bar) |b| std.mem.trim(u8, inner[b + 1 ..], " ") else null;
+    const display: ?[]const u8 = if (space) |s| std.mem.trim(u8, inner[s + 1 ..], " ") else null;
     return .{
-        .reference = .{ .target = target, .display = if (display) |d| (if (d.len > 0) d else null) else null, .offset = 0 },
-        .end = close + 2,
+        .reference = .{ .target = target, .display = display, .offset = 0 },
+        .end = close + 1,
     };
 }
 
@@ -114,7 +118,7 @@ fn expectTargets(text: []const u8, expected: []const []const u8) !void {
 test "references, with and without words to show" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);
     defer arena.deinit();
-    const text = "A [[lex.token]] is read, as [[ lex.space | white space ]] is not.\nSee [[SRS-012]].";
+    const text = "A %[lex.token] is read, as %[ lex.space  white space ] is not.\nSee %[SRS-012].";
     const got = try find(arena.allocator(), text);
     try testing.expectEqual(3, got.len);
     try testing.expectEqualStrings("lex.token", got[0].target);
@@ -128,17 +132,25 @@ test "references, with and without words to show" {
 }
 
 test "nothing in code is a reference" {
-    try expectTargets("Write `[[not.this]]` or ``a ` [[nor.this]]`` but [[this.one]].", &.{"this.one"});
-    try expectTargets("Text [[a.b]].\n\n```\n[[in.a.block]]\n```\n\n    [[indented.code]]\n\nMore [[c.d]].", &.{ "a.b", "c.d" });
-    try expectTargets("An unclosed ` backtick, then [[still.found]].", &.{"still.found"});
+    try expectTargets("Write `%[not.this]` or ``a ` %[nor.this]`` but %[this.one].", &.{"this.one"});
+    try expectTargets("Text %[a.b].\n\n```\n%[in.a.block]\n```\n\n    %[indented.code]\n\nMore %[c.d].", &.{ "a.b", "c.d" });
+    try expectTargets("An unclosed ` backtick, then %[still.found].", &.{"still.found"});
 }
 
 test "what looks like a reference and is not" {
-    try expectTargets("\\[[escaped]] and [[]] and [[two words]] and [[open", &.{});
-    try expectTargets("a[[1, 2], [3, 4]] is an array", &.{});
-    try expectTargets("[[split\nover.lines]]", &.{});
+    try expectTargets("\\%[escaped] and %[] and %[two, words] and %[open", &.{});
+    try expectTargets("a rise of 50%[1] and x%[i]", &.{});
+    try expectTargets("%[split\nover.lines]", &.{});
+    // the brackets of other tools are theirs: a page of a wiki, a link
+    try expectTargets("See [[lexical]], [[spec/index|the start]] and [a link][ref].", &.{});
+}
+
+test "a reference at the start of a paragraph declares nothing" {
+    try expectTargets("%[lex.token] is the word for it.", &.{"lex.token"});
+    const marker = @import("Marker.zig");
+    try testing.expect(!marker.startsOne("%[lex.token] is the word for it."));
 }
 
 test "a reference into another repository" {
-    try expectTargets("See [[compiler:expr.as.narrow]].", &.{"compiler:expr.as.narrow"});
+    try expectTargets("See %[compiler:expr.as.narrow].", &.{"compiler:expr.as.narrow"});
 }

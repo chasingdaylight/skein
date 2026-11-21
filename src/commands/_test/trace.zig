@@ -32,10 +32,10 @@ fn project(dir: std.Io.Dir) !void {
         \\A token.
         \\
         \\%rule[lex.comment syntax stage=s0 see=lex.token]
-        \\A comment is not a [[lex.token]].
+        \\A comment is not a %[lex.token].
         \\
         \\%case[c.comment verifies=lex.comment]
-        \\Checks [[lex.comment]].
+        \\Checks %[lex.comment].
         \\
         \\%case[c.other verifies=lex.comment]
         \\Checks more.
@@ -126,7 +126,7 @@ test "an item as JSON" {
         \\    "referenced_from": [],
         \\    "approvals": [],
         \\    "citations": [],
-        \\    "text": "Checks [[lex.comment]]."
+        \\    "text": "Checks %[lex.comment]."
         \\  },
         \\  "above": [
         \\    "lex.comment",

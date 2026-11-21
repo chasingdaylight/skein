@@ -65,7 +65,7 @@ The items of a project shall be read from every source, in the order of the sour
 ## References and citations
 
 %req[items.reference]
-In an item's text, `[[id]]` and `[[id|words]]` shall be a reference to the item `id`, with its line and column. Nothing inside a code span or a code block is a reference.
+In an item's text, a marker without an item type, `%[id]` or `%[id words]`, shall be a reference to the item `id`, with its line and column and the words to show in place of the ID. Nothing inside a code span or a code block is a reference, nor is a percent sign after a letter or a digit. Double brackets (`[[page]]`) are not skein's and are left to other tools.
 
 %req[items.citation]
 A citation set shall name a directory, the ends of the names of the files to read, and a marker; in each such file, the IDs after the marker on a line are citations of those items by that set. A full stop after an ID, or a word that is no ID, ends them.

@@ -13,7 +13,7 @@ test "items that keep every rule give no problems" {
     defer f.deinit();
     try f.document("spec/lex.md",
         \\%rule[lex.comment.line legality stage=s0 since=2027-03-01 weight=2 final=true]
-        \\A line comment is not a [[lex.token]]; see [[other:some.rule]].
+        \\A line comment is not a %[lex.token]; see %[other:some.rule].
         \\
         \\%term[lex.token]
         \\A token is a unit of the source text.
@@ -162,8 +162,8 @@ test "references in text: to nothing, to a removed item" {
         \\%term[a.gone removed]
         \\
         \\%term[a.term]
-        \\See [[a.gone]] and
-        \\also [[no.such|that one]], but not `[[in.code]]`.
+        \\See %[a.gone] and
+        \\also %[no.such that one], but not `%[in.code]`.
     );
     _ = try f.check();
     try f.expectProblems(

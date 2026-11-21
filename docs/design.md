@@ -76,7 +76,7 @@ Not everything is verified by an automated test. The schema can give an item a v
 
 ### 4.6 References in prose
 
-Text refers to items inline: a rule cites another rule, a sentence uses a defined term, a requirement points at a design element. An inline reference names the target's ID in a short plain-text form (settled with the first code, alongside the paragraph marker). `check` verifies every one, the renderer turns them into links and builds each item's "referenced by" list, and renaming an ID updates them. Defined terms are items of a type the schema declares, so a glossary is a filtered list.
+Text refers to items inline: a rule cites another rule, a sentence uses a defined term, a requirement points at a design element. An inline reference is a marker without a type (emanspeaks, 2026-11-21): `%[id]`, or `%[id words]` to show the words in place of the ID. It leaves the double brackets of wikis and site generators to those tools. `check` verifies every one, the renderer turns them into links and builds each item's "referenced by" list, and renaming an ID updates them. Defined terms are items of a type the schema declares, so a glossary is a filtered list.
 
 ### 4.7 External standards
 

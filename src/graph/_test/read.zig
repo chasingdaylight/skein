@@ -17,7 +17,7 @@ test "a document's markers and the text that belongs to each" {
         \\This chapter is narrative until a marker.
         \\
         \\%rule[lex.comment.line legality stage=s0 see=lex.token]
-        \\A line comment starts with `//`. It is not a [[lex.token]].
+        \\A line comment starts with `//`. It is not a %[lex.token].
         \\
         \\%rule[lex.keywords syntax]
         \\
@@ -45,7 +45,7 @@ test "a document's markers and the text that belongs to each" {
     try testing.expectEqualStrings("s0", comment.attribute("stage").?);
     try testing.expectEqualStrings("spec/lex.md", comment.file);
     try testing.expectEqual(5, comment.line);
-    try testing.expectEqualStrings("A line comment starts with `//`. It is not a [[lex.token]].", comment.text);
+    try testing.expectEqualStrings("A line comment starts with `//`. It is not a %[lex.token].", comment.text);
     try testing.expectEqualStrings("see", comment.links[0].type_name);
     try testing.expectEqualStrings("lex.token", comment.links[0].target);
     try testing.expectEqualStrings("lex.token", comment.references[0].target);
@@ -120,7 +120,7 @@ test "an item file: front matter and text" {
         \\
         \\The software shall record the time of each measurement.
         \\
-        \\See [[SRS-001]].
+        \\See %[SRS-001].
     , "srs");
     try f.expectProblems("");
     const item = f.items.items[0];
@@ -131,7 +131,7 @@ test "an item file: front matter and text" {
     try testing.expectEqualStrings("high", item.attribute("priority").?);
     try testing.expectEqual(2, item.links.len);
     try testing.expect(std.mem.startsWith(u8, item.text, "The software shall"));
-    try testing.expect(std.mem.endsWith(u8, item.text, "[[SRS-001]]."));
+    try testing.expect(std.mem.endsWith(u8, item.text, "%[SRS-001]."));
     try testing.expectEqual(11, item.references[0].line);
 }
 
