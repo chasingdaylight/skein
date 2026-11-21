@@ -6,11 +6,17 @@ skein holds the threads of a project together: what is needed, what is decided, 
 
 It is for projects that want the rigor of requirements management without a database or a proprietary tool: from a language specification written as atomic, numbered paragraphs (like the Ferrocene Language Specification) to a NASA-style V-model of system requirements, software requirements, design and tests.
 
-**Status:** early. The core and the command line work: a project's schema, items in documents and in files of their own, citations in code and tests, and the commands `check`, `trace`, `coverage`, `diff`, `impact`, `review`, `clear`, `approve`, `export` and `import`. Rendering documents and sites, test results, planning and the editor support are to come; `docs/design.md` describes all of it.
+**Status:** early. The core and the command line work: a project's schema, items in documents and in files of their own, citations in code and tests, and the commands `check`, `trace`, `coverage`, `diff`, `impact`, `review`, `clear`, `approve`, `export`, `import`, and `render` (Markdown for a site generator). Rendering HTML sites and documents by itself, test results, planning and the editor support are to come; `docs/design.md` describes all of it.
+
+## Installing
+
+Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as one program for Linux, macOS and Windows (x86_64 and arm64), with a `SHA256SUMS` file. Unpack the archive for your platform and put `bin/skein` on your `PATH`; it needs nothing else.
+
+For VS Code and editors built on it, the extension [skein](editors/vscode/readme.md) (`chasingdaylight.skein`, on the Visual Studio Marketplace and Open VSX) highlights markers and references in Markdown.
 
 ## Trying it
 
-Build with Zig 0.17.1 (`zig build`; the binary is `zig-out/bin/skein`), then in one of the examples:
+Or build with Zig 0.17.1 (`zig build`; the binary is `zig-out/bin/skein`). Then in one of the examples:
 
 ```text
 cd examples/requirements

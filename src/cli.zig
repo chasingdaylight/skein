@@ -12,6 +12,7 @@ pub const usage =
     \\  diff [REV [REV]]  Show the items added, removed or changed since a commit
     \\  impact [REV]      Show what the changes since a commit reach
     \\  export [WHAT]     Write the graph as JSON, or items, links or citations as CSV
+    \\  render --out DIR  Write the documents as Markdown for a site generator
     \\  import doorstop DIR...
     \\                    Turn Doorstop documents into skein items, in place
     \\  import csv FILE --type TYPE --to DIR
@@ -36,6 +37,8 @@ pub const usage =
     \\                    import csv: the columns of the IDs and the text
     \\                    (default: id, text)
     \\  --replace         import csv: write over item files that are there
+    \\  --out DIR         render: where the rendered files go
+    \\  --format NAME     render: markdown (the default, and the only one yet)
     \\
 ;
 
@@ -49,6 +52,7 @@ pub const Command = union(enum) {
     diff: Diff,
     /// `export`
     exporting: Export,
+    render: Render,
     import: Import,
     review: Review,
     clear: Review,
@@ -103,6 +107,12 @@ pub const Export = struct {
     };
 };
 
+pub const Render = struct {
+    common: Common = .{},
+    /// the directory the rendered files go to, from where skein is run
+    out: []const u8,
+};
+
 pub const Import = struct {
     common: Common = .{},
     format: Format = .doorstop,
@@ -147,6 +157,8 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--id-column", .takes_value = true },
     .{ .name = "--text-column", .takes_value = true },
     .{ .name = "--replace", .takes_value = false },
+    .{ .name = "--out", .takes_value = true },
+    .{ .name = "--format", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -192,6 +204,15 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
             return .{ .misuse = "export: json, items, links or citations" };
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
+    }
+    if (eql(name, "render")) {
+        if (try p.allow(&.{ "--root", "--out", "--format" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "render takes no items" };
+        if (p.value("--format")) |format| {
+            if (!eql(format, "markdown")) return .{ .misuse = "render: the only format yet is markdown" };
+        }
+        const out = p.value("--out") orelse return .{ .misuse = "render: say where the files go, with --out DIR" };
+        return .{ .render = .{ .common = common, .out = out } };
     }
     if (eql(name, "import")) {
         const forms = "import: doorstop DIR..., or csv FILE --type TYPE --to DIR";
@@ -416,6 +437,14 @@ test "export takes what to export" {
     try testing.expectEqual(.links, e.what);
     try testing.expectEqualStrings("s0", e.profile.?);
     try testing.expectEqualStrings("export: json, items, links or citations", (try f.run(&.{ "export", "everything" })).misuse);
+}
+
+test "render needs a place to write to" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    try testing.expectEqualStrings("site", (try f.run(&.{ "render", "--out", "site", "--format", "markdown" })).render.out);
+    try testing.expectEqualStrings("render: say where the files go, with --out DIR", (try f.run(&.{"render"})).misuse);
+    try testing.expectEqualStrings("render: the only format yet is markdown", (try f.run(&.{ "render", "--out", "x", "--format", "html" })).misuse);
 }
 
 test "import takes a format and what to import" {

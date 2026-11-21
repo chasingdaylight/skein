@@ -142,6 +142,29 @@ Writes the project's graph to standard output, for other tools.
 
 The output is the same for the same project, byte for byte, so an export can be kept and compared. The JSON is what `skein trace --json` gives for one item, for all of them.
 
+## `skein render --out DIR`
+
+Writes the documents and item files of the project as Markdown for a site generator (Quartz, MkDocs, Jekyll, Hugo), into `DIR`, each under the path it has in the project. Use it as a step before the generator runs, and point the generator at `DIR`.
+
+A source such as
+
+```markdown
+%rule[lex.comment syntax final] A comment is not a %[lex.token]; see %[lex.space white space].
+```
+
+is written as
+
+```markdown
+<a id="lex.comment"></a>**[lex.comment](#lex.comment)** *(syntax, final)* A comment is not a [lex.token](terms.md#lex.token); see [white space](#lex.space).
+```
+
+- **Markers** become an anchor and the ID, linked to itself, so every item can be linked to and its ID can be copied from the page.
+- **References** become links to the item, in the same document or another, in items and in narrative text alike.
+- **Item files** get YAML front matter with the ID as the title, which site generators read, in place of the TOML front matter.
+- **Everything else** is written unchanged. Only Markdown files are written; images and other files stay where the generator already finds them.
+
+The project itself is not changed. `DIR` is created when needed and is best kept out of git. skein rendering HTML by itself is planned; this command is for projects that already publish with a generator.
+
 ## `skein import doorstop DIR...`
 
 Turns Doorstop documents into skein items, where they are; see [importing](importing.md).
