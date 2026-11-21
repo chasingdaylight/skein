@@ -216,14 +216,48 @@ jobs:
           tar -C "$RUNNER_TEMP" -xzf "dist/skein-v$VERSION-x86_64-linux.tar.gz"
           test "$("$RUNNER_TEMP/skein-v$VERSION-x86_64-linux/bin/skein" version)" = "$VERSION"
 
-      # a pre-release until the language server is in it; the mark is set
-      # here, since the registries read it from the package
+      # One package per platform, each with the skein built for it in bin/,
+      # and the universal one, without a program, for the platforms that
+      # have none. Alpine takes the Linux program, which is static. They are
+      # pre-releases until the language server is in the extension; the mark
+      # is set here, since the registries read it from the package.
       - name: The VS Code extension
         working-directory: editors/vscode
         run: |
-          npx --yes "@vscode/vsce@$VSCE_VERSION" package --pre-release \
-            --out "$GITHUB_WORKSPACE/dist/skein-vscode-v$VERSION.vsix"
-          npx --yes "@vscode/vsce@$VSCE_VERSION" ls
+          vsce() { npx --yes "@vscode/vsce@$VSCE_VERSION" "$@"; }
+          while read -r platform target; do
+            rm -rf bin
+            mkdir bin
+            cp "$GITHUB_WORKSPACE/out/skein-v$VERSION-$target/bin/"skein* bin/
+            rm -f bin/*.pdb
+            vsce package --pre-release --target "$platform" \
+              --out "$GITHUB_WORKSPACE/dist/skein-vscode-v$VERSION-$platform.vsix"
+          done << 'EOF'
+          win32-x64 x86_64-windows
+          win32-arm64 aarch64-windows
+          linux-x64 x86_64-linux
+          linux-arm64 aarch64-linux
+          alpine-x64 x86_64-linux
+          alpine-arm64 aarch64-linux
+          darwin-x64 x86_64-macos
+          darwin-arm64 aarch64-macos
+          EOF
+          rm -rf bin
+          vsce package --pre-release \
+            --out "$GITHUB_WORKSPACE/dist/skein-vscode-v$VERSION-universal.vsix"
+          ls -l "$GITHUB_WORKSPACE"/dist/*.vsix
+
+      # the program is in the package for this runner, and can be run
+      - name: The packaged program runs
+        run: |
+          mkdir "$RUNNER_TEMP/vsix"
+          unzip -q "dist/skein-vscode-v$VERSION-linux-x64.vsix" -d "$RUNNER_TEMP/vsix"
+          test "$("$RUNNER_TEMP/vsix/extension/bin/skein" version)" = "$VERSION"
+          test -f "$RUNNER_TEMP/vsix/extension/extension.js"
+          if unzip -l "dist/skein-vscode-v$VERSION-universal.vsix" | grep -q 'extension/bin/'; then
+            echo "::error::the universal package carries a program"
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v7
         with:
@@ -281,10 +315,12 @@ jobs:
               exit 1
             fi
           done
-          if [ ! -f "dist/skein-vscode-v$VERSION.vsix" ]; then
-            echo "::error::no VS Code extension at version $VERSION"
-            exit 1
-          fi
+          for p in universal win32-x64 win32-arm64 linux-x64 linux-arm64 alpine-x64 alpine-arm64 darwin-x64 darwin-arm64; do
+            if [ ! -f "dist/skein-vscode-v$VERSION-$p.vsix" ]; then
+              echo "::error::no $p VS Code extension package at version $VERSION"
+              exit 1
+            fi
+          done
 
       - name: Tag the tested commit
         run: |
@@ -347,7 +383,7 @@ jobs:
               sed -i -E "s/^(\s*\.version = \")[^\"]+(\",)/\1$next\2/" build.zig.zon
               sed -i -E "s/^(\s*\"version\": \")[^\"]+(\",)/\1$next\2/" editors/vscode/package.json
               printf '# Changelog\n\n## %s (unreleased)\n\n' "$next" > changelog.head
-              tail -n +3 editors/vscode/CHANGELOG.md >> changelog.head
+              tail -n +3 editors/vscode/CHANGELOG.md | sed "s/ (unreleased)$//" >> changelog.head
               mv changelog.head editors/vscode/CHANGELOG.md
               git commit -qam "Begin v$next development [skip ci]"
             fi

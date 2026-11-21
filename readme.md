@@ -12,7 +12,7 @@ It is for projects that want the rigor of requirements management without a data
 
 Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as one program for Linux, macOS and Windows (x86_64 and arm64), with a `SHA256SUMS` file. Unpack the archive for your platform and put `bin/skein` on your `PATH`; it needs nothing else.
 
-For VS Code and editors built on it, the extension [skein](editors/vscode/readme.md) (`chasingdaylight.skein`, on the Visual Studio Marketplace and Open VSX) highlights markers and references in Markdown.
+For VS Code and editors built on it, the extension [skein](editors/vscode/readme.md) (`chasingdaylight.skein`, on the Visual Studio Marketplace and Open VSX) highlights markers and references in Markdown and carries the `skein` program for its platform, on the `PATH` of its terminals.
 
 ## Trying it
 

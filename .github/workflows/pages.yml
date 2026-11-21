@@ -76,3 +76,32 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  # The mirror is another repository's Pages site, under another domain,
+  # which builds this repository itself. A commit there starts its build and
+  # records what it built. It is made with a deploy key that can write to
+  # that repository and nothing else (the secret MIRROR_DEPLOY_KEY).
+  mirror:
+    name: Start the mirror's build
+    needs: deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: emanspeaks/skein-docs
+          ssh-key: ${{ secrets.MIRROR_DEPLOY_KEY }}
+
+      - name: Record the commit to build
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          printf '%s\n' "$GITHUB_SHA" > source.txt
+          git add source.txt
+          if git diff --cached --quiet; then
+            echo "The mirror already has this commit."
+            exit 0
+          fi
+          git commit -q -m "Build chasingdaylight/skein@${GITHUB_SHA::7}"
+          git push -q

@@ -1,7 +1,7 @@
 {
   "name": "skein",
   "displayName": "skein",
-  "description": "Highlights skein's item markers and references in Markdown.",
+  "description": "Highlights skein's item markers and references in Markdown, and brings the skein program.",
   "version": "0.1.1",
   "publisher": "chasingdaylight",
   "license": "MIT",
@@ -18,6 +18,10 @@
   "engines": {
     "vscode": "^1.147.0"
   },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "categories": [
     "Programming Languages",
     "Other"
@@ -38,6 +42,24 @@
           "text.html.markdown"
         ]
       }
-    ]
+    ],
+    "commands": [
+      {
+        "command": "skein.showVersion",
+        "title": "Show Version",
+        "category": "skein"
+      }
+    ],
+    "configuration": {
+      "title": "skein",
+      "properties": {
+        "skein.path": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "markdownDescription": "The `skein` program to use in place of the one this extension carries: the full path of the file. Its directory is put first on the `PATH` of new terminals."
+        }
+      }
+    }
   }
 }

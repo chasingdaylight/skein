@@ -16,7 +16,7 @@ skein: example: no problems (24 items of 2 types, 1 link types, 1 profiles, 31 c
 
 ## Getting it
 
-Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as one program for Linux, macOS and Windows, with nothing else to install. For VS Code there is the extension `chasingdaylight.skein`, which highlights markers and references in Markdown.
+Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as one program for Linux, macOS and Windows, with nothing else to install. For VS Code there is the extension `chasingdaylight.skein`, which highlights markers and references in Markdown and brings the `skein` program with it, on the `PATH` of its terminals.
 
 ## The documentation
 
