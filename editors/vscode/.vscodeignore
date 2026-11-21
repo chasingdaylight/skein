@@ -1,0 +1,7 @@
+# Only what the extension needs at run time goes into the VSIX
+**
+!package.json
+!syntaxes/skein.injection.tmLanguage.json
+!readme.md
+!CHANGELOG.md
+!LICENSE

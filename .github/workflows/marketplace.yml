@@ -1,0 +1,66 @@
+# Publishes a release's VS Code extension package to the Visual Studio
+# Marketplace, as zfls's and vscode-cesium's marketplace.yml do.
+#
+# No stored token: Marketplace Trusted Publishing. The `chasingdaylight`
+# publisher has a Trusted Publishing policy for this repository and this
+# workflow file (marketplace.yml), so `vsce publish --oidc` exchanges the
+# workflow's GitHub OIDC token for a short-lived Marketplace credential. The
+# CI workflow starts it after publishing a release; it can also be run by
+# hand (Actions > Publish to the Marketplace > Run workflow, on main) to
+# publish, or finish publishing, any released version.
+#
+# Until the language server is in the extension, every version is a
+# pre-release: `--pre-release`, which the package was made with.
+name: Publish to the Marketplace
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Released version to publish, without the v (e.g. 0.1.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: marketplace-${{ inputs.version }}
+  cancel-in-progress: false
+
+env:
+  # 4.1.0 is the first release with --oidc
+  VSCE_VERSION: 4.1.1
+  NODE_VERSION: 24
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  publish:
+    name: Publish chasingdaylight.skein v${{ inputs.version }} to the Marketplace
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download the release's extension package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" \
+            --dir dist --pattern "skein-vscode-v$VERSION.vsix"
+          ls dist
+
+      # --skip-duplicate: a version already published counts as published,
+      # so a run can simply be repeated
+      - name: Publish (Trusted Publishing)
+        run: |
+          npx --yes "@vscode/vsce@$VSCE_VERSION" publish --oidc --pre-release --skip-duplicate \
+            --packagePath "dist/skein-vscode-v$VERSION.vsix"

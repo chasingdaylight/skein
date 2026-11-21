@@ -10,8 +10,10 @@ name: CI
 # skips the checks; the "CI" job, the check main's ruleset requires, passes
 # then too.
 #
-# Tagging releases from build.zig.zon's version, as zfls and rstd do, comes
-# with the first release.
+# A push to main of a version (build.zig.zon) that has no tag yet is released:
+# the commit is tagged, a GitHub release gets skein for each platform and the
+# VS Code extension, the extension is published to the Marketplace and to Open
+# VSX (marketplace.yml, open-vsx.yml), and the next version is begun on dev.
 
 on:
   push:
@@ -33,6 +35,9 @@ defaults:
     shell: bash
 
 env:
+  NODE_VERSION: 24
+  # 4.1.0 is the first release with --oidc; marketplace.yml uses the same
+  VSCE_VERSION: 4.1.1
   ZIG_VERSION: 0.17.1
 
 jobs:
@@ -69,6 +74,43 @@ jobs:
           if [ "$ci" = false ]; then
             echo "Only files of no-ci.txt changed; skipping the checks." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
+
+  # The version, from build.zig.zon, and whether this run releases it: a push
+  # to main of a version that has no tag yet.
+  version:
+    name: Version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+      sha: ${{ steps.version.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Read the version
+        id: version
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          version=$(sed -nE 's/^\s*\.version = "([^"]+)",/\1/p' build.zig.zon)
+          extension=$(sed -nE 's/^\s*"version": "([^"]+)",/\1/p' editors/vscode/package.json)
+          if [ -z "$version" ] || [ "$version" != "$extension" ]; then
+            echo "::error::build.zig.zon has version '$version' and editors/vscode/package.json has '$extension'; they must be the same"
+            exit 1
+          fi
+          release=false
+          if [ "$EVENT" = push ] && [ "$GITHUB_REF" = refs/heads/main ] \
+            && ! git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
+            release=true
+          fi
+          {
+            echo "version=$version"
+            echo "release=$release"
+            echo "sha=$GITHUB_SHA"
+          } >> "$GITHUB_OUTPUT"
+          echo "v$version, release: $release" | tee -a "$GITHUB_STEP_SUMMARY"
 
   test:
     name: Test ${{ matrix.os }}
@@ -119,12 +161,68 @@ jobs:
       - name: Markdown
         run: npx --yes markdownlint-cli2@0.24.2 "**/*.md"
 
+  # What a release publishes: skein for each platform, built on one runner
+  # (Zig compiles for all of them), and the VS Code extension.
+  package:
+    name: Package
+    needs: [changes, version]
+    if: needs.changes.outputs.ci == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: randyos-org/setup-zig@node24  # v2.2.1 on Node.js 24, until upstream releases it
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: skein for each platform
+        run: |
+          mkdir -p dist
+          # the Linux programs are static (musl), so they run on any distribution
+          for target in x86_64-linux-musl aarch64-linux-musl x86_64-macos aarch64-macos x86_64-windows aarch64-windows; do
+            name="skein-v$VERSION-${target%-musl}"
+            zig build -Dtarget="$target" -Doptimize=ReleaseSafe --prefix "out/$name"
+            cp LICENSE readme.md "out/$name/"
+            case "$target" in
+              *windows) (cd out && zip -q -r "../dist/$name.zip" "$name") ;;
+              *) tar -C out -czf "dist/$name.tar.gz" "$name" ;;
+            esac
+          done
+          ls -l dist
+
+      - name: The program for this runner runs
+        run: |
+          tar -C "$RUNNER_TEMP" -xzf "dist/skein-v$VERSION-x86_64-linux.tar.gz"
+          test "$("$RUNNER_TEMP/skein-v$VERSION-x86_64-linux/bin/skein" version)" = "$VERSION"
+
+      # a pre-release until the language server is in it; the mark is set
+      # here, since the registries read it from the package
+      - name: The VS Code extension
+        working-directory: editors/vscode
+        run: |
+          npx --yes "@vscode/vsce@$VSCE_VERSION" package --pre-release \
+            --out "$GITHUB_WORKSPACE/dist/skein-vscode-v$VERSION.vsix"
+          npx --yes "@vscode/vsce@$VSCE_VERSION" ls
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist
+          if-no-files-found: error
+
   ci:
     name: CI
     # the one check main's ruleset requires: passes when every job passed or
     # was skipped for a change that needs none
     if: always()
-    needs: [changes, test, lint]
+    needs: [changes, version, test, lint, package]
     runs-on: ubuntu-24.04
     steps:
       - name: Check the jobs
@@ -133,4 +231,137 @@ jobs:
         run: |
           for r in $RESULTS; do
             case "$r" in success | skipped) ;; *) echo "::error::a job ended as $r"; exit 1 ;; esac
+          done
+
+  release:
+    name: Release v${{ needs.version.outputs.version }}
+    needs: [version, test, lint, package]
+    if: >-
+      ${{ !cancelled() && needs.version.outputs.release == 'true'
+      && needs.test.result == 'success' && needs.lint.result == 'success'
+      && needs.package.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      SHA: ${{ needs.version.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      - name: Check the packages
+        run: |
+          ls -l dist
+          for f in x86_64-linux.tar.gz aarch64-linux.tar.gz x86_64-macos.tar.gz aarch64-macos.tar.gz x86_64-windows.zip aarch64-windows.zip; do
+            if [ ! -f "dist/skein-v$VERSION-$f" ]; then
+              echo "::error::no skein-v$VERSION-$f"
+              exit 1
+            fi
+          done
+          if [ ! -f "dist/skein-vscode-v$VERSION.vsix" ]; then
+            echo "::error::no VS Code extension at version $VERSION"
+            exit 1
+          fi
+
+      - name: Tag the tested commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "skein v$VERSION" "$SHA"
+          git push origin "v$VERSION"
+          (cd dist && sha256sum -- * > SHA256SUMS)
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          name: skein v${{ needs.version.outputs.version }}
+          files: dist/*
+          generate_release_notes: true
+          # 0.x: everything may still change
+          prerelease: ${{ startsWith(needs.version.outputs.version, '0.') }}
+
+  # The next version is begun on dev: main keeps the version it released. A
+  # separate job, so that a push dev refuses does not stop the publishing.
+  begin-next-version:
+    name: Merge v${{ needs.version.outputs.version }} into dev and begin the next version
+    needs: [version, release]
+    if: ${{ !cancelled() && needs.release.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      SHA: ${{ needs.version.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          fetch-depth: 0
+
+      # A fast-forward when dev has not moved, else a merge commit
+      - name: Merge into dev and begin the next version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          tagged() { git rev-parse -q --verify "refs/tags/v$1" >/dev/null; }
+          for attempt in 1 2 3; do
+            git fetch -q --tags origin dev
+            git checkout -q -B dev origin/dev
+            if ! git merge -q -m "Merge v$VERSION into dev [skip ci]" "$SHA"; then
+              git merge --abort
+              echo "::error::v$VERSION conflicts with dev; merge main into dev by hand and set the next version"
+              exit 1
+            fi
+            version=$(sed -nE 's/^\s*\.version = "([^"]+)",/\1/p' build.zig.zon)
+            if tagged "$version"; then
+              next=$version
+              while tagged "$next"; do
+                IFS=. read -r ma mi pa <<< "$next"
+                next="$ma.$mi.$((pa + 1))"
+              done
+              sed -i -E "s/^(\s*\.version = \")[^\"]+(\",)/\1$next\2/" build.zig.zon
+              sed -i -E "s/^(\s*\"version\": \")[^\"]+(\",)/\1$next\2/" editors/vscode/package.json
+              printf '# Changelog\n\n## %s (unreleased)\n\n' "$next" > changelog.head
+              tail -n +3 editors/vscode/CHANGELOG.md >> changelog.head
+              mv changelog.head editors/vscode/CHANGELOG.md
+              git commit -qam "Begin v$next development [skip ci]"
+            fi
+            if git push -q origin dev; then exit 0; fi
+            echo "dev moved while merging; trying again"
+          done
+          echo "::error::could not push to dev"
+          exit 1
+
+  publish-extension:
+    name: Publish VS Code extension v${{ needs.version.outputs.version }}
+    needs: [version, release]
+    if: ${{ !cancelled() && needs.release.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # Each registry has its own workflow, which takes the package from the
+    # release: open-vsx.yml, the workflow Open VSX trusts by name, and
+    # marketplace.yml, the one the Marketplace's Trusted Publishing policy
+    # names. Both can also be run by hand for any released version.
+    permissions:
+      actions: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - name: Start publishing to Open VSX and the Marketplace
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for wf in open-vsx.yml marketplace.yml; do
+            gh workflow run "$wf" --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f version="$VERSION"
           done
