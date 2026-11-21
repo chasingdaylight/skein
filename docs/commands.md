@@ -143,6 +143,10 @@ The output is the same for the same project, byte for byte, so an export can be 
 
 Turns Doorstop documents into skein items, where they are; see [importing](importing.md).
 
+## `skein import csv FILE --type TYPE --to DIR`
+
+Makes an item file in `DIR` of each row of a CSV file; see [importing](importing.md).
+
 ## `skein review ID...` and `skein clear ID...`
 
 Record that links have been reviewed; see [reviewing](reviewing.md). `review` takes the items whose links you looked at, `clear` the items that changed. `--all` takes every link.

@@ -12,6 +12,10 @@ pub const usage =
     \\  diff [REV [REV]]  Show the items added, removed or changed since a commit
     \\  impact [REV]      Show what the changes since a commit reach
     \\  export [WHAT]     Write the graph as JSON, or items, links or citations as CSV
+    \\  import doorstop DIR...
+    \\                    Turn Doorstop documents into skein items, in place
+    \\  import csv FILE --type TYPE --to DIR
+    \\                    Make an item file in DIR of each row of a CSV file
     \\  review ID...      Record the links of these items as reviewed
     \\  clear ID...       Record the links to these items as reviewed
     \\  approve ID...     Record an approval of these items as they are now
@@ -26,6 +30,12 @@ pub const usage =
     \\  --all             review, clear: every link, not those of the items named
     \\  --by NAME         approve: who approves (default: git's user.name)
     \\  --on DATE         approve: when, as 2027-03-01 (default: today)
+    \\  --type TYPE       import csv: the item type of the rows
+    \\  --to DIR          import csv: where the item files go
+    \\  --id-column NAME, --text-column NAME
+    \\                    import csv: the columns of the IDs and the text
+    \\                    (default: id, text)
+    \\  --replace         import csv: write over item files that are there
     \\
 ;
 
@@ -96,10 +106,18 @@ pub const Export = struct {
 pub const Import = struct {
     common: Common = .{},
     format: Format = .doorstop,
-    /// from the project's root, with forward slashes
+    /// from the project's root, with forward slashes: the directories of
+    /// the Doorstop documents, or the CSV file
     paths: []const []const u8,
+    /// csv: the item type of the rows
+    item_type: ?[]const u8 = null,
+    /// csv: the directory the item files go to
+    to: ?[]const u8 = null,
+    id_column: ?[]const u8 = null,
+    text_column: ?[]const u8 = null,
+    replace: bool = false,
 
-    pub const Format = enum { doorstop };
+    pub const Format = enum { doorstop, csv };
 };
 
 pub const Review = struct {
@@ -124,6 +142,11 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--all", .takes_value = false },
     .{ .name = "--by", .takes_value = true },
     .{ .name = "--on", .takes_value = true },
+    .{ .name = "--type", .takes_value = true },
+    .{ .name = "--to", .takes_value = true },
+    .{ .name = "--id-column", .takes_value = true },
+    .{ .name = "--text-column", .takes_value = true },
+    .{ .name = "--replace", .takes_value = false },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -171,11 +194,30 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
     }
     if (eql(name, "import")) {
-        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
-        if (words.len == 0) return .{ .misuse = "import: doorstop DIR..." };
-        const format = std.meta.stringToEnum(Import.Format, words[0]) orelse return .{ .misuse = "import: doorstop DIR..." };
-        if (words.len < 2) return .{ .misuse = "import doorstop: name the directories of the Doorstop documents" };
-        return .{ .import = .{ .common = common, .format = format, .paths = words[1..] } };
+        const forms = "import: doorstop DIR..., or csv FILE --type TYPE --to DIR";
+        if (words.len == 0) return .{ .misuse = forms };
+        const format = std.meta.stringToEnum(Import.Format, words[0]) orelse return .{ .misuse = forms };
+        switch (format) {
+            .doorstop => {
+                if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+                if (words.len < 2) return .{ .misuse = "import doorstop: name the directories of the Doorstop documents" };
+                return .{ .import = .{ .common = common, .format = format, .paths = words[1..] } };
+            },
+            .csv => {
+                if (try p.allow(&.{ "--root", "--type", "--to", "--id-column", "--text-column", "--replace" })) |problem| return .{ .misuse = problem };
+                if (words.len != 2) return .{ .misuse = "import csv: name one CSV file" };
+                return .{ .import = .{
+                    .common = common,
+                    .format = format,
+                    .paths = words[1..],
+                    .item_type = p.value("--type"),
+                    .to = p.value("--to"),
+                    .id_column = p.value("--id-column"),
+                    .text_column = p.value("--text-column"),
+                    .replace = p.flag("--replace"),
+                } };
+            },
+        }
     }
     if (eql(name, "review") or eql(name, "clear")) {
         if (try p.allow(&.{ "--root", "--all" })) |problem| return .{ .misuse = problem };
@@ -382,7 +424,7 @@ test "import takes a format and what to import" {
     try testing.expectEqual(.doorstop, i.format);
     try testing.expectEqual(2, i.paths.len);
     try testing.expectEqualStrings("docs/srs", i.paths[1]);
-    try testing.expectEqualStrings("import: doorstop DIR...", (try f.run(&.{"import"})).misuse);
-    try testing.expectEqualStrings("import: doorstop DIR...", (try f.run(&.{ "import", "excel", "x" })).misuse);
+    try testing.expect(std.mem.startsWith(u8, (try f.run(&.{"import"})).misuse, "import: doorstop DIR..."));
+    try testing.expect(std.mem.startsWith(u8, (try f.run(&.{ "import", "excel", "x" })).misuse, "import: doorstop DIR..."));
     try testing.expectEqualStrings("import doorstop: name the directories of the Doorstop documents", (try f.run(&.{ "import", "doorstop" })).misuse);
 }

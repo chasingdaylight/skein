@@ -45,3 +45,27 @@ Run `skein check`. Things to look at by hand:
 - `doorstop-status`: Doorstop projects often keep a status of their own. If it is the item's lifecycle, make its values the item type's `statuses` and rename the key to `status` in the items.
 - `verification-method` or the like: skein has `verification`, with the methods the item type allows.
 - Doorstop's `references` point from an item to the code. skein reads the other direction, a citation in the code (`// Implements SRS-012.`), which cannot go stale unnoticed; see [writing items](writing-items.md).
+
+## From a CSV file
+
+```text
+skein import csv requirements.csv --type srs --to docs/requirements
+```
+
+Each row becomes an item file in the directory: for requirements that arrive from a spreadsheet or an export of another tool, and for a standard the project must comply with, kept as items of its own that the project's items link to.
+
+The first row names the columns:
+
+| Column | Becomes |
+| --- | --- |
+| `id` (or the one `--id-column` names) | the item's ID, and its file's name |
+| `text` (or the one `--text-column` names) | the item's text |
+| `status`, `category`, `verification` | that |
+| a column named after a link type | links: the IDs in the cell, separated by commas, semicolons or spaces |
+| any other column | an attribute, named as the column in lowercase, with `-` for spaces |
+
+Empty cells are left out. Names are matched without regard to case, so `ID` and `Text` are found. The file is CSV as spreadsheets write it: fields in quotes may hold commas, quotes (doubled) and line ends; semicolons are taken as the delimiter when the first line has more of them than commas.
+
+When the project has no item type of the name given, one is made: with an attribute for each such column, and the ID scheme the IDs show (`SWE-013`: numbered; `sys.start`: hierarchical). When it has one, the type is left as it is, and `skein check` says what the items do not fit. The directory is added to the project's sources unless it is one already.
+
+Nothing is written unless every row can be an item. An item file that is already there stops the import, unless `--replace` is given: that is how a newer export of the same list is brought in, and `git diff` then shows what changed in it.
