@@ -17,8 +17,8 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 
 ### First users
 
-- **Cesium** (cesiumlang): a language specification in the FLS style (prose made of atomic, categorized, numbered paragraphs), design proposals accepted by merge, conformance tests that cite rules, several implementations whose results are tracked per rule.
-- **srapnol** (emanspeaks/srapnol): a NASA NPR 7150.2D documentation set kept today as Doorstop trees (system requirements, software requirements, design, test procedures) and narrative documents. Migrating it proves that skein is general.
+- **A programming-language specification** in the FLS style (prose made of atomic, categorized, numbered paragraphs), with design proposals accepted by merge, conformance tests that cite rules, and several implementations whose results are tracked per rule.
+- **A NASA NPR 7150.2D documentation set** kept today as Doorstop trees (system requirements, software requirements, design, test procedures) and narrative documents. Serving both proves that skein is general.
 - Other projects of emanspeaks's, hosted on GitHub, GitLab or Forgejo.
 
 ### Non-goals
@@ -36,13 +36,13 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 4. **Prose-friendly.** An item can be a file of its own or a paragraph inside a document, so a specification reads as a document while every paragraph stays an item.
 5. **Cheap for people and agents.** Small text files, readable IDs, one obvious place for everything; no generated file is ever edited by hand.
 6. **Deterministic.** The same inputs (the files, and the forge data where it is used) give byte-identical outputs, so generated files diff cleanly and CI can check them.
-7. **One binary, one codebase.** Zig, built with the latest official release at the time of each skein release (0.17.1 now), pinned per release (emanspeaks, 2026-11-21); no runtime dependencies, on Windows, Linux and macOS. skein must be usable where outside dependencies need special approval, because a dependency that is downloaded and updated over the years is a supply-chain risk (emanspeaks, 2026-11-21). So nothing is fetched at build time or run time, and nothing is run as a separate tool: what skein takes from other projects is copied into its repository as a fork that skein maintains. Each piece is read before it goes in, recorded with its origin (project, commit) and license, and updated only on purpose, by a reviewed change. One day skein may be rewritten in Cesium.
+7. **One binary, one codebase.** Zig, built with the latest official release at the time of each skein release (0.17.1 now), pinned per release (emanspeaks, 2026-11-21); no runtime dependencies, on Windows, Linux and macOS. skein must be usable where outside dependencies need special approval, because a dependency that is downloaded and updated over the years is a supply-chain risk (emanspeaks, 2026-11-21). So nothing is fetched at build time or run time, and nothing is run as a separate tool: what skein takes from other projects is copied into its repository as a fork that skein maintains. Each piece is read before it goes in, recorded with its origin (project, commit) and license, and updated only on purpose, by a reviewed change.
 
 ## 3. Concepts
 
 - **Project:** a git repository with a `.skein/` directory at its root. A project can span several repositories, one of which holds what they share (section 10.5).
 - **Schema:** the project's item types, attributes, link types and rules.
-- **Item type:** a kind of item, for example `need`, `srs`, `design`, `test` for srapnol, or `proposal`, `rule`, `test` for Cesium. A type declares its ID pattern, its attributes, which links it may or must have, and its categories if any (for Cesium's rules: syntax, legality, dynamic semantics, implementation-defined, undefined, informative).
+- **Item type:** a kind of item, for example `need`, `srs`, `design`, `test` for a requirements set, or `proposal`, `rule`, `test` for a language specification. A type declares its ID pattern, its attributes, which links it may or must have, and its categories if any (for a specification's rules: syntax, legality, dynamic semantics, implementation-defined, undefined, informative).
 - **Item:** one identified piece of text with a type, attributes and links. Its **fingerprint** is a hash of its normative content (text and attributes the schema marks as normative), used to detect change. The content is normalized first (line endings, runs of white space, wrapping), so reformatting a file changes no fingerprint.
 - **Status:** every item has one, from a lifecycle the schema declares (for example draft, approved, deprecated, removed). A removed item leaves a tombstone, so its ID is never used again and old citations of it can be explained.
 - **Link:** a typed, directed reference from one item to another (`derives-from`, `implements`, `verifies`, `introduced-by`, ...). skein records the fingerprint of its target when it was last reviewed (section 6); when the target changes, the link becomes **suspect** until someone reviews it again.
@@ -51,7 +51,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 - **Result:** the outcome of a test for an implementation, imported from a test run, attached to the items the test cites.
 - **Verification record:** evidence that an item is satisfied by a method other than an automated test (analysis, inspection, demonstration, a manual test procedure that was run): who, when, of which version, with what outcome, and where the evidence is.
 - **Approval:** a record in git that a named person approved an item at a given fingerprint (section 6).
-- **Profile:** a named selection of items (for example Cesium's stage `S0`, or a software class of NPR 7150.2D), for which documents, coverage and compliance can be produced separately.
+- **Profile:** a named selection of items (for example one stage of a language that is defined in stages, or a software class of NPR 7150.2D), for which documents, coverage and compliance can be produced separately.
 - **Baseline:** a named, immutable state of the item graph, against which changes and coverage are compared: a git tag (section 6).
 
 ## 4. Sources
@@ -62,15 +62,15 @@ A `.skein/` directory at the repository root holds skein's own files (emanspeaks
 
 ### 4.2 Item files
 
-An item of its own is a Markdown file with a front-matter block (ID, type, attributes, links) and a body. This is close to Doorstop's Markdown items, so srapnol's trees can be converted mechanically (section 11).
+An item of its own is a Markdown file with a front-matter block (ID, type, attributes, links) and a body. This is close to Doorstop's Markdown items, so Doorstop trees can be converted mechanically (section 11).
 
 ### 4.3 Paragraph items in documents
 
-In a document, any paragraph or list item can be an item by carrying a marker with its ID and, where the type has categories, its category. Links and attributes go in a compact form after the marker or in a short block below the paragraph. The marker is a line of its own before the paragraph (emanspeaks, 2026-11-21), as in the Rust Reference (`r[lex.comment.line]`), carrying the ID and the category: with one line per paragraph, a marker at the end of the line would be out of sight. It is plain text, cheap to type, readable in a raw view on any forge, and easy to find with grep; its exact spelling is settled with the first code. IDs are readable and hierarchical (`lex.comment.line`, `expr.as.narrow`), as in the Rust Reference, or numbered (`SRS-012`), as srapnol's are; the scheme is chosen per item type in the schema (emanspeaks, 2026-11-21). They are never random.
+In a document, any paragraph or list item can be an item by carrying a marker with its ID and, where the type has categories, its category. Links and attributes go in a compact form after the marker or in a short block below the paragraph. The marker is a line of its own before the paragraph (emanspeaks, 2026-11-21), as in the Rust Reference (`r[lex.comment.line]`), carrying the ID and the category: with one line per paragraph, a marker at the end of the line would be out of sight. It is plain text, cheap to type, readable in a raw view on any forge, and easy to find with grep; its exact spelling is settled with the first code. IDs are readable and hierarchical (`lex.comment.line`, `expr.as.narrow`), as in the Rust Reference, or numbered (`SRS-012`), as Doorstop's are; the scheme is chosen per item type in the schema (emanspeaks, 2026-11-21). They are never random.
 
 ### 4.4 Citations in code and tests
 
-Comments in source and test files cite items, with a configurable pattern per file type (for example `// spec: expr.as.narrow` in a Cesium test, `/// Implements SRS-012.` in a Zig doc comment). A directory can carry a file that cites items for every test inside it. skein checks that every citation names an existing item of an allowed type.
+Comments in source and test files cite items, with a configurable pattern per file type (for example `// spec: expr.as.narrow` in a conformance test, `/// Implements SRS-012.` in a Zig doc comment). A directory can carry a file that cites items for every test inside it. skein checks that every citation names an existing item of an allowed type.
 
 Later: code examples inside documents can be marked as tested, and `skein` extracts them for the project's own test driver, so the examples in a specification cannot go stale.
 
@@ -139,17 +139,17 @@ A capability that only one forge has (for example GitHub Projects fields or issu
 
 - **The renderer is forked from Zine** (MIT) and merged in (emanspeaks, 2026-11-21), copied in piece by piece as skein needs it rather than all at once. Zine 0.14.1 builds on about a dozen other projects (SuperMD, SuperHTML, Ziggy and Scripty by the same author; a C Markdown parser, cmark-gfm; an image library, a syntax highlighter, a time library and more), and skein expects to take most of them in time, each under the rule of principle 7.
 - **The Markdown parser** is the first piece, since skein must parse Markdown in any case to find paragraph items. cmark-gfm can stay as C code that Zig compiles, be converted to Zig, or be replaced by a parser of skein's own; all three are acceptable, and the choice is made when that code is written.
-- The output is plain HTML and CSS; `skein render` can also write plain Markdown pages for another generator (Quartz, or one written in Cesium for cesiumlang.org later).
+- The output is plain HTML and CSS; `skein render` can also write plain Markdown pages for another site generator.
 - Search, backlinks and a broken-reference check are skein's own, built from the graph.
 - **Documents for delivery:** each document can also be rendered as one self-contained HTML file with a print style sheet (title page, numbered sections, page headers, a change record from the baselines), which any browser prints to PDF. Projects that hand over documents, as NPR 7150.2D work does, need this more than a site.
-- **Profiles and editions:** a document or the whole site can be rendered for one profile (only what applies to `S0`, or to one software class), and, later, for several baselines side by side, so readers can pick the edition that matches a release.
+- **Profiles and editions:** a document or the whole site can be rendered for one profile (only what applies to one stage, or to one software class), and, later, for several baselines side by side, so readers can pick the edition that matches a release.
 - **Charts and diagrams that skein computes** (trace graphs, Gantt charts, burndown and burnup, resource load) are drawn by skein itself as static SVG, so they are deterministic, diff cleanly, and need no JavaScript or outside tool.
 - **Mermaid** blocks written by hand in documents (flowcharts, sequence and state diagrams) are kept as they are. VS Code and all three forges draw them in their own Markdown views; on the rendered site they are drawn by a copy of mermaid.js that is vendored in skein's repository and shipped with the site (emanspeaks, 2026-11-21), never loaded from a content delivery network, and updated when skein chooses. Mermaid's own command-line renderer is not used, since it needs Node.js and a headless browser. skein can also export its own graphs as Mermaid source, for pasting into issues and pull requests, which all three forges render.
 
 ## 9. Interactivity
 
 1. **A language server** (`skein lsp`) for the item and document sources in any editor: go to definition on an ID, find references, completion of IDs and link targets, hover previews, diagnostics from `check`, rename of an ID across files.
-2. **A VS Code extension** on top of it is skein's graphical interface (emanspeaks, 2026-11-21): the item tree, trace views, coverage, forms for items, and the interactive planning views (section 10), where dragging a bar in the Gantt chart or a card on a board writes the change to the item's file. The extension is thin, as those of zfls and vscode-cesium are: its TypeScript only connects VS Code to the `skein` binary, which holds the logic and draws the views, so other editors can use the same server. The packages an extension must take from npm are the one outside dependency that cannot be avoided for now; keeping the TypeScript to that connection keeps them to the minimum.
+2. **A VS Code extension** on top of it is skein's graphical interface (emanspeaks, 2026-11-21): the item tree, trace views, coverage, forms for items, and the interactive planning views (section 10), where dragging a bar in the Gantt chart or a card on a board writes the change to the item's file. The extension is thin, as a language-server extension should be: its TypeScript only connects VS Code to the `skein` binary, which holds the logic and draws the views, so other editors can use the same server. The packages an extension must take from npm are the one outside dependency that cannot be avoided for now; keeping the TypeScript to that connection keeps them to the minimum.
 3. **No hosted application in the first scope.** People who edit (authors, project managers) have VS Code; everyone else reads the rendered documents, schedules and charts, which are static files that any web server, or a file share, can serve. A hosted web interface that edits the same files is a backlog feature (emanspeaks, 2026-11-21).
 
 ## 10. Planning
@@ -208,24 +208,24 @@ The mirror is per checkout by default (ignored by git, rebuilt by `skein mirror`
 
 ### 10.5 Projects of several repositories
 
-A project spread over several repositories (a compiler, a website, an editor extension, like Cesium's) can have one **planning repository** that holds what they share: the resources and calendars, work that spans repositories (milestones, roadmaps, epics), and the cross-repository views. Cesium's workspace repository is a natural one.
+A project spread over several repositories (a compiler, a website, an editor extension) can have one **planning repository** that holds what they share: the resources and calendars, work that spans repositories (milestones, roadmaps, epics), and the cross-repository views.
 
 - Each repository's `.skein/` names the planning repository, and the planning repository's names the others, by a short project name and a location: a path to a local checkout (a sibling or a submodule) or a remote URL. The repositories can be on different forges.
-- **Issues, milestones and pull requests** in other repositories are cited by a qualified reference (`vscode-cesium#24`). They are forge objects, so they are resolved live through the adapter like the repository's own, with nothing to pin (emanspeaks, 2026-11-21).
-- **Items, code and tests** in other repositories are things in git, cited by a qualified reference (`cesium:expr.as.narrow`) and tied to a commit: the configuration records the commit of the other repository that references were last checked against, so a check can be repeated, and `check` reports what changed there since.
+- **Issues, milestones and pull requests** in other repositories are cited by a qualified reference (`editor#24`). They are forge objects, so they are resolved live through the adapter like the repository's own, with nothing to pin (emanspeaks, 2026-11-21).
+- **Items, code and tests** in other repositories are things in git, cited by a qualified reference (`compiler:expr.as.narrow`) and tied to a commit: the configuration records the commit of the other repository that references were last checked against, so a check can be repeated, and `check` reports what changed there since.
 - A repository can also be used alone: without the planning repository at hand, `check` reports cross-repository references as unresolved instead of failing on them, unless the configuration requires them.
 
 ## 11. Migration
 
-- **Doorstop:** `skein import doorstop` converts a Doorstop tree (items, links, reviewed fingerprints, `references`) into skein items and a schema, so srapnol can switch without losing history or reviews.
-- **Cesium:** the specification draft and the S0 grammar on cesiumlang.org, the reference pages, and the bootstrap and differential test corpora move into skein's format; the decision records become proposals for emanspeaks's review.
+- **Doorstop:** `skein import doorstop` converts a Doorstop tree (items, links, reviewed fingerprints, `references`) into skein items and a schema, so a project can switch without losing history or reviews.
+- **Existing prose:** a specification or reference already written as Markdown pages is brought in by adding markers to its paragraphs, and existing tests by adding citations, a chapter at a time; what is not yet marked stays narrative text.
 
 ## 12. Phases
 
 1. **This design**, accepted by merge.
-2. **Core and CLI:** configuration and schema, item files and paragraph items, references in prose, statuses and tombstones, citations, profiles, `check`, `trace`, `coverage`, `review`/`clear`, `approve`, `diff` and `impact`, `export` (JSON, CSV), `import` (Doorstop, CSV). Proven on Cesium's S0 chapter and its bootstrap tests, and on an import of srapnol's Doorstop trees. From here, skein's own requirements are written in skein.
+2. **Core and CLI:** configuration and schema, item files and paragraph items, references in prose, statuses and tombstones, citations, profiles, `check`, `trace`, `coverage`, `review`/`clear`, `approve`, `diff` and `impact`, `export` (JSON, CSV), `import` (Doorstop, CSV). Proven on one chapter of a language specification with its tests, and on an import of an existing set of Doorstop trees. From here, skein's own requirements are written in skein.
 3. **Rendering and results:** `render` (site and documents for delivery), result import and verification records, external standards and compliance matrices, baselines, the forge adapter for GitHub with CI output.
-4. **Planning, first part:** work items, scheduling and the critical path, Gantt, burndown and burnup, boards and the roadmap as rendered pages; the GitHub adapter's planning fields. Proven on skein's own work and on Cesium's roadmap.
+4. **Planning, first part:** work items, scheduling and the critical path, Gantt, burndown and burnup, boards and the roadmap as rendered pages; the GitHub adapter's planning fields. Proven on skein's own work and on one other project's roadmap.
 5. **Editing:** `new`/`move`/`link`, the language server, the VS Code extension with forms and interactive planning views.
 6. **Planning, second part:** resources, calendars and load, time spent, releveling, overlays and `skein apply`.
 7. **Wider:** GitLab and Forgejo adapters, the full mirror with `sync` and `publish` between forges, ReqIF export, tested examples, editions side by side, measurements over time. Backlog: a hosted web interface.
