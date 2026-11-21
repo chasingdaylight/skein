@@ -166,3 +166,21 @@ test "a schema's parts are checked against each other" {
         \\
     );
 }
+
+test "names that skein reads itself, or that a link type has" {
+    var f: Fixture = undefined;
+    f.init();
+    defer f.deinit();
+    _ = try Schema.ItemType.read(try f.reader("[attributes.status]\n"), "rule");
+    const schema: Schema = .{
+        .types = &.{.{ .name = "rule", .attributes = &.{.{ .name = "verifies" }} }},
+        .links = &.{ .{ .name = "verifies" }, .{ .name = "category" } },
+    };
+    try schema.validate(&f.report, ".skein");
+    try f.expectProblems(
+        \\.skein/links/category.toml: error: skein reads the key 'category' itself, so no link type can have the name
+        \\.skein/types/rule.toml: error: attributes.verifies: a link type has this name, so no attribute can
+        \\x.toml: error: attributes.status: skein reads this key itself, so no attribute can have the name
+        \\
+    );
+}

@@ -6,7 +6,7 @@ pub const usage =
     \\Usage: skein <command> [options]
     \\
     \\Commands:
-    \\  check      Check the project: its configuration and schema
+    \\  check      Check the project: its configuration, schema and items
     \\  help       Show this text
     \\  version    Show skein's version
     \\

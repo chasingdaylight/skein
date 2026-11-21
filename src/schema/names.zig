@@ -28,3 +28,7 @@ test valid {
     try std.testing.expect(!valid("0rule"));
     try std.testing.expect(!valid("a b"));
 }
+
+/// The keys of a marker or of front matter that skein reads itself, so
+/// that no attribute or link type may be named so
+pub const reserved = [_][]const u8{ "id", "type", "status", "category", "verification" };

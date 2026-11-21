@@ -4,6 +4,7 @@ const std = @import("std");
 const Io = std.Io;
 
 const cli = @import("../cli.zig");
+const Graph = @import("../graph/Graph.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 
@@ -27,6 +28,13 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Outcome {
 
     var report: Report = .{ .arena = arena };
     const project = try Project.load(io, arena, root, &report);
+    // items are read against the schema: a broken one would only add noise
+    var items: usize = 0;
+    if (report.ok()) {
+        const graph = try Graph.load(io, arena, root, &project, &report);
+        try Graph.checks.run(&graph, &project.schema, &report);
+        items = graph.items.len;
+    }
     if (!report.ok()) {
         const problems = try report.render(arena);
         const n = report.problems.items.len;
@@ -36,12 +44,12 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Outcome {
         };
     }
     return .{
-        .text = try arena.print("skein: {s}: no problems ({d} item types, {d} link types, {d} profiles, {d} sources)\n", .{
+        .text = try arena.print("skein: {s}: no problems ({d} items of {d} types, {d} link types, {d} profiles)\n", .{
             if (project.name.len > 0) project.name else root_path,
+            items,
             project.schema.types.len,
             project.schema.links.len,
             project.schema.profiles.len,
-            project.sources.len,
         }),
         .ok = true,
     };
