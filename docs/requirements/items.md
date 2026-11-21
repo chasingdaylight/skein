@@ -11,7 +11,7 @@ skein shall read the block structure of a Markdown file: headings, paragraphs, l
 A file with CRLF line ends shall give the same blocks, the same items and the same fingerprints as the same file with LF line ends.
 
 %req[markdown.yaml-front-matter]
-YAML between `---` lines at the top of a file, as site generators and other tools write it, shall be passed over: it is no item and holds none.
+YAML between `---` lines at the top of a file, as site generators and other tools write it, shall be passed over: frontmatter is no item and holds none.
 
 ## Items in documents
 
@@ -28,7 +28,7 @@ An entry of a list, at any depth, shall be an item when it starts with a marker.
 Only a percent sign, a lowercase name and an opening bracket at the start of a paragraph or of a list entry shall be a marker; the same elsewhere in a line, and anything in a code block, is text. A marker that names no item type of the project is reported.
 
 %req[items.marker.words]
-After the ID, a bare word is the category or the status, whichever of the type's it is, at most one of each; `key=value` gives the status, the verification method, links (when the key is a link type) or an attribute. Several values are separated by commas; a value in double quotes may hold spaces, and a closing bracket.
+After the ID, a bare word shall be read as a category if the item type declares it as one, and otherwise as a status if the item type declares it as one; a marker has at most one of each, and a word that is neither is reported. A word of the form `key=value` gives the status, the verification method, links (when the key is a link type) or an attribute. Several values are separated by commas; a value in double quotes may hold spaces, and a closing bracket.
 
 %req[items.marker.mistakes]
 A marker that is not closed, has no ID, or has words that cannot be read so shall be reported, with its place, and make no item.
@@ -40,7 +40,7 @@ An item's text shall be the rest of its marker's block, or the block after a mar
 An entry with a marker, in a list that is in an item's text, shall be a part of that item: an item of its own, which records its whole, as the whole records its parts in their order. Parts may have parts. An item stands before its parts in the order of items.
 
 %req[items.parts.names]
-A part's ID that starts with a dot shall be its whole's ID followed by it; an ID without the dot is as written. A leading dot on an item that is part of none, or where the IDs of the part's type or of the whole's are not joined by dots, is reported.
+When the ID in the marker of a part starts with a dot, the ID of the part shall be the ID of the containing item followed by what the marker gives: `.as` inside `lex.keywords` is `lex.keywords.as`. An ID without a leading dot is used as written. A leading dot is reported when the item is not a part of another item, and when the item type of the part or of the containing item does not use IDs joined by dots.
 
 %req[items.parts.text]
 A part's text shall be its own, and no part of its whole's text. The whole's own text is its text without its parts: of a list with parts, the entries that do not start with a marker.
@@ -68,7 +68,7 @@ The items of a project shall be read from every source, in the order of the sour
 In an item's text, a marker without an item type, `%[id]` or `%[id words]`, shall be a reference to the item `id`, with its line and column and the words to show in place of the ID. Nothing inside a code span or a code block is a reference, nor is a percent sign after a letter or a digit. Double brackets (`[[page]]`) are not skein's and are left to other tools.
 
 %req[items.reference.narrative]
-A reference in the narrative text of a document, text that is no item's, shall be read too, with its file, line and column: it is checked as one in an item is, and shown with the item it names. It makes nothing suspect and is in no fingerprint.
+A reference in narrative text, which is the text of a document that does not belong to any item, shall be read too, with its file, line and column. It is checked by the same rules as a reference inside an item, and `skein trace` shows it with the item it names. It is not part of any fingerprint and does not make any link suspect.
 
 %req[items.citation]
 A citation set shall name a directory, the ends of the names of the files to read, and a marker; in each such file, the IDs after the marker on a line are citations of those items by that set. A full stop after an ID, or a word that is no ID, ends them.
