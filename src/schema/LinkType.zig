@@ -15,10 +15,13 @@ required: bool = false,
 /// every item of a `to` type should be pointed to by one: `coverage`
 /// counts the ones that are not
 expected: bool = false,
+/// a link of this kind is reviewed: it records its target as last
+/// reviewed, and is suspect when the target has changed since
+review: bool = false,
 
 /// The link type that the table of `r` declares; problems go to its report.
 pub fn read(r: Reader, name: []const u8) Reader.Error!LinkType {
-    try r.known(&.{ "description", "from", "to", "required", "expected" });
+    try r.known(&.{ "description", "from", "to", "required", "expected", "review" });
     return .{
         .name = name,
         .description = try r.string("description") orelse "",
@@ -26,5 +29,6 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!LinkType {
         .to = try r.strings("to"),
         .required = try r.boolean("required", false),
         .expected = try r.boolean("expected", false),
+        .review = try r.boolean("review", false),
     };
 }

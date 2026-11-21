@@ -81,6 +81,7 @@ expected = true
 | `to` | The item types it may point to; leave out for any. |
 | `required` | Every item of a `from` type must have one. |
 | `expected` | Every item of a `to` type should be pointed to by one; coverage counts the ones that are not. |
+| `review` | Links of this type are reviewed: see [reviewing](reviewing.md). |
 
 ## `.skein/profiles/<name>.toml`: a profile
 

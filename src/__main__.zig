@@ -2,7 +2,9 @@ const std = @import("std");
 
 const check = @import("commands/check.zig");
 const cli = @import("cli.zig");
+const review = @import("commands/review.zig");
 const stdio = @import("stdio.zig");
+const Workspace = @import("commands/Workspace.zig");
 
 const version = @import("build_options").version;
 
@@ -11,24 +13,22 @@ pub fn main(init: std.process.Init) !void {
     const arena = init.arena.allocator();
     const argv = try init.minimal.args.toSlice(arena);
 
-    switch (cli.parse(argv[1..])) {
-        .help => try stdio.stdout().writeStreamingAll(io, cli.usage),
-        .version => try stdio.stdout().writeStreamingAll(io, version ++ "\n"),
-        .check => |options| {
-            const outcome = try check.run(io, arena, options);
-            if (outcome.ok) return stdio.stdout().writeStreamingAll(io, outcome.text);
-            try stdio.stderr().writeStreamingAll(io, outcome.text);
-            std.process.exit(1);
+    const outcome: Workspace.Outcome = switch (try cli.parse(arena, argv[1..])) {
+        .help => .{ .text = cli.usage },
+        .version => .{ .text = version ++ "\n" },
+        .check => |options| try check.run(io, arena, options),
+        .review => |options| try review.run(io, arena, options, .from),
+        .clear => |options| try review.run(io, arena, options, .to),
+        .unknown => |name| .{
+            .text = try arena.print("skein: unknown command '{s}'\n\n{s}", .{ name, cli.usage }),
+            .status = .misuse,
         },
-        .unknown => |name| {
-            const msg = try arena.print("skein: unknown command '{s}'\n\n{s}", .{ name, cli.usage });
-            try stdio.stderr().writeStreamingAll(io, msg);
-            std.process.exit(2);
+        .misuse => |problem| .{
+            .text = try arena.print("skein: {s}\n\n{s}", .{ problem, cli.usage }),
+            .status = .misuse,
         },
-        .misuse => |problem| {
-            const msg = try arena.print("skein: {s}\n\n{s}", .{ problem, cli.usage });
-            try stdio.stderr().writeStreamingAll(io, msg);
-            std.process.exit(2);
-        },
-    }
+    };
+    if (outcome.status == .ok) return stdio.stdout().writeStreamingAll(io, outcome.text);
+    try stdio.stderr().writeStreamingAll(io, outcome.text);
+    std.process.exit(@backingInt(outcome.status));
 }

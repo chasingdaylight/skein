@@ -22,6 +22,8 @@ text: []const u8 = "",
 file: []const u8,
 /// where the item is declared: its marker, or 1 for an item file
 line: u32,
+/// whether the item is a paragraph of a document, not a file of its own
+in_document: bool = true,
 
 pub const Attribute = struct {
     name: []const u8,

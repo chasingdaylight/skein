@@ -10,6 +10,7 @@ const documents = @import("documents.zig");
 const item_file = @import("item_file.zig");
 pub const Item = @import("Item.zig");
 pub const checks = @import("checks.zig");
+pub const Reviews = @import("Reviews.zig");
 
 const Graph = @This();
 
@@ -97,4 +98,5 @@ test {
     _ = @import("_test/read.zig");
     _ = @import("_test/checks.zig");
     _ = @import("_test/load.zig");
+    _ = Reviews;
 }
