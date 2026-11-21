@@ -7,10 +7,12 @@ const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 const Schema = @import("../schema/Schema.zig");
 const documents = @import("documents.zig");
+const files = @import("../files.zig");
 const item_file = @import("item_file.zig");
 pub const Item = @import("Item.zig");
 pub const checks = @import("checks.zig");
 pub const Reviews = @import("Reviews.zig");
+pub const Citations = @import("Citations.zig");
 
 const Graph = @This();
 
@@ -42,14 +44,14 @@ pub fn init(arena: std.mem.Allocator, items: []const Item, report: *Report) std.
 pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, report: *Report) std.mem.Allocator.Error!Graph {
     var items: std.ArrayList(Item) = .empty;
     for (project.sources) |source| {
-        const files = listMarkdown(io, arena, root, source.path) catch |e| switch (e) {
+        const paths = files.list(io, arena, root, source.path, &.{".md"}) catch |e| switch (e) {
             error.OutOfMemory => return error.OutOfMemory,
             else => {
                 try report.add(Project.config_file, 0, 0, "sources: cannot read the directory '{s}' ({s})", .{ source.path, @errorName(e) });
                 continue;
             },
         };
-        for (files) |file| {
+        for (paths) |file| {
             const text = root.readFileAlloc(io, file, arena, .limited(1 << 26)) catch |e| switch (e) {
                 error.OutOfMemory => return error.OutOfMemory,
                 else => {
@@ -72,31 +74,11 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proj
     return init(arena, items.items, report);
 }
 
-/// The Markdown files under `dir` (a path from `root`), as paths from
-/// `root` with forward slashes, in order
-fn listMarkdown(io: Io, arena: std.mem.Allocator, root: Io.Dir, dir: []const u8) ![]const []const u8 {
-    var d = try root.openDir(io, dir, .{ .iterate = true });
-    defer d.close(io);
-    var walker = try d.walk(arena);
-    defer walker.deinit();
-    var out: std.ArrayList([]const u8) = .empty;
-    while (try walker.next(io)) |entry| {
-        if (entry.kind != .file or !std.ascii.endsWithIgnoreCase(entry.path, ".md")) continue;
-        const path = try arena.print("{s}/{s}", .{ dir, entry.path });
-        std.mem.replaceScalar(u8, path, '\\', '/');
-        try out.append(arena, path);
-    }
-    std.mem.sort([]const u8, out.items, {}, struct {
-        fn lt(_: void, a: []const u8, b: []const u8) bool {
-            return std.mem.lessThan(u8, a, b);
-        }
-    }.lt);
-    return out.items;
-}
-
 test {
     _ = @import("_test/read.zig");
     _ = @import("_test/checks.zig");
     _ = @import("_test/load.zig");
     _ = Reviews;
+    _ = Citations;
+    _ = files;
 }

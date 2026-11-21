@@ -19,7 +19,29 @@ pub const config_file = dir_name ++ "/config.toml";
 
 name: []const u8 = "",
 sources: []const Source = &.{},
+citations: []const CitationSet = &.{},
 schema: Schema = .{},
+
+/// A place whose files cite items in comments
+pub const CitationSet = struct {
+    /// what the citations are, for coverage: "test", "code"
+    name: []const u8,
+    /// from the project's root, with forward slashes; "." for all of it
+    path: []const u8,
+    /// the ends of the names of the files to read: ".zig", "_test.c"
+    files: []const []const u8,
+    /// what comes before the IDs on a line: "// spec:"
+    marker: []const u8,
+    /// the item types the citations may name; empty when any
+    to: []const []const u8 = &.{},
+};
+
+pub fn citationSet(self: *const Project, name: []const u8) ?*const CitationSet {
+    for (self.citations) |*c| {
+        if (std.mem.eql(u8, c.name, name)) return c;
+    }
+    return null;
+}
 
 /// A place in the repository that holds items
 pub const Source = struct {
@@ -54,11 +76,16 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
         const t = s.item_type orelse continue;
         if (out.schema.itemType(t) == null) try report.add(config_file, 0, 0, "sources: there is no item type '{s}'", .{t});
     }
+    for (out.citations) |c| {
+        for (c.to) |t| {
+            if (out.schema.itemType(t) == null) try report.add(config_file, 0, 0, "citations: there is no item type '{s}'", .{t});
+        }
+    }
     return out;
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources" });
+    try r.known(&.{ "project", "sources", "citations" });
     if (try r.child("project")) |project| {
         try project.known(&.{"name"});
         self.name = try project.string("name") orelse "";
@@ -75,10 +102,7 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
             try s.complain("kind", "expected \"documents\" or \"items\"", .{});
             continue;
         };
-        if (std.Io.Dir.path.isAbsolute(path) or std.mem.find(u8, path, "..") != null or std.mem.findScalar(u8, path, '\\') != null) {
-            try s.complain("path", "a path is written from the project's root, with forward slashes", .{});
-            continue;
-        }
+        if (!try pathOk(s, path)) continue;
         try sources.append(r.arena, .{
             .path = std.mem.trimEnd(u8, path, "/"),
             .kind = kind,
@@ -86,6 +110,39 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
         });
     }
     self.sources = sources.items;
+
+    var citations: std.ArrayList(CitationSet) = .empty;
+    for (try r.children("citations")) |c| {
+        try c.known(&.{ "name", "path", "files", "marker", "to" });
+        const name = try c.string("name") orelse "";
+        const path = try c.string("path") orelse "";
+        const marker = try c.string("marker") orelse "";
+        const files = try c.strings("files");
+        if (!Schema.names.valid(name)) try c.complain("name", "citations need a name: {s}", .{Schema.names.rule});
+        if (path.len == 0) try c.complain("path", "citations need a path", .{});
+        if (std.mem.trim(u8, marker, " \t").len == 0) try c.complain("marker", "citations need a marker, the text that comes before the IDs", .{});
+        if (files.len == 0) try c.complain("files", "citations need the ends of the names of the files to read, like [\".zig\"]", .{});
+        for (citations.items) |other| {
+            if (std.mem.eql(u8, other.name, name)) try c.complain("name", "'{s}' is the name of other citations too", .{name});
+        }
+        if (!Schema.names.valid(name) or path.len == 0 or std.mem.trim(u8, marker, " \t").len == 0 or files.len == 0) continue;
+        if (!try pathOk(c, path)) continue;
+        try citations.append(r.arena, .{
+            .name = name,
+            .path = if (std.mem.eql(u8, path, ".")) path else std.mem.trimEnd(u8, path, "/"),
+            .files = files,
+            .marker = marker,
+            .to = try c.strings("to"),
+        });
+    }
+    self.citations = citations.items;
+}
+
+/// Whether `path` stays inside the project; reports it when not
+fn pathOk(r: Schema.Reader, path: []const u8) Schema.Reader.Error!bool {
+    if (!std.Io.Dir.path.isAbsolute(path) and std.mem.find(u8, path, "..") == null and std.mem.findScalar(u8, path, '\\') == null) return true;
+    try r.complain("path", "a path is written from the project's root, with forward slashes", .{});
+    return false;
 }
 
 /// The things declared by the TOML files of `.skein/<sub>/`, by name

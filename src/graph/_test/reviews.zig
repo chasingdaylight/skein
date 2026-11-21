@@ -102,7 +102,7 @@ test "links of a reviewed kind are reported until they are reviewed" {
     try testing.expectEqualStrings("skein: 2 links recorded as reviewed\n", try run.review(.from, &.{"t.comment"}));
     try testing.expectEqualStrings("skein: 2 links recorded as reviewed\n", try run.review(.from, &.{}));
     try testing.expectEqualStrings("skein: 0 links recorded as reviewed\n", try run.review(.from, &.{}));
-    try testing.expectEqualStrings("skein: example: no problems (6 items of 3 types, 3 link types, 0 profiles)\n", try run.check());
+    try testing.expectEqualStrings("skein: example: no problems (6 items of 3 types, 3 link types, 0 profiles, 0 citations)\n", try run.check());
 }
 
 test "records are kept by document and by directory of item files, sorted" {

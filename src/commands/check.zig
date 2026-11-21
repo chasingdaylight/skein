@@ -17,14 +17,15 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Out
 
     if (ws.report.ok()) {
         try Graph.checks.run(&ws.graph, &ws.project.schema, &ws.report);
+        try ws.citations.check(&ws.project, &ws.graph, &ws.report);
         const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
         try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     }
     if (!ws.report.ok()) return ws.problems();
     const schema = ws.project.schema;
     return .{
-        .text = try arena.print("skein: {s}: no problems ({d} items of {d} types, {d} link types, {d} profiles)\n", .{
-            ws.name(), ws.graph.items.len, schema.types.len, schema.links.len, schema.profiles.len,
+        .text = try arena.print("skein: {s}: no problems ({d} items of {d} types, {d} link types, {d} profiles, {d} citations)\n", .{
+            ws.name(), ws.graph.items.len, schema.types.len, schema.links.len, schema.profiles.len, ws.citations.all.len,
         }),
     };
 }
