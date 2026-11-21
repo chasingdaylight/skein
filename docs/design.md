@@ -83,6 +83,7 @@ A command-line tool, `skein`, with subcommands that each do one thing and fail w
 | `review <id>` / `clear <id>` | Records that an item, or the links to a changed parent, have been reviewed, by updating the stored fingerprints. |
 | `new` / `move` / `link` | Creates items with the next free ID, renames IDs (keeping an alias), adds links; keeps files consistent so no one edits fingerprints by hand. |
 | `apply` | Writes a planning overlay's values to the forge and removes them from `.skein/` (section 10.4). |
+| `mirror` / `sync` / `publish` | Copies the forge's data into a full plain-text mirror, writes offline edits back to the forge, and re-creates mirrored data on another forge (section 10.4). |
 | `import` | Converts Doorstop trees, and imports test results. |
 | `export` | Writes the whole graph as JSON (for other tools and agents); later ReqIF for interchange with DOORS and similar. |
 | `render` | Generates the pages a renderer turns into a site (section 8). |
@@ -154,7 +155,7 @@ Discussion stays in the forge, so a work item can be linked to an issue, and an 
 
 - **The forge is the truth for what it holds.** What it holds depends on the forge: GitHub, GitLab and Forgejo differ in milestones, due dates, weights, dependencies, time tracking and custom fields. Each adapter declares which planning fields its forge stores, and skein reads those through it.
 - **`.skein/` holds only what the forge lacks:** schedules, allocations, lags, capacity, links to milestones or work outside git, and whatever field the chosen forge cannot store. It is keyed by the issue's reference and never repeats a value the forge holds, so with a richer forge `.skein/` holds less. Moving to another forge moves a field between the two sides; `skein` writes the fields the new forge lacks into `.skein/` as part of the move.
-- **No mirror.** Values read from the forge are cached under the build directory, derived and deletable, so the last view of them is available offline; nothing of them is committed except as below. Charts that need the history of forge-held fields (a burndown of closed issues) read it from the forge's issue events, which all three forges keep.
+- **No mirror by default.** Values read from the forge are cached under the build directory, derived and deletable, so the last view of them is available offline; nothing of them is committed except as below, or when a full mirror is chosen. Charts that need the history of forge-held fields (a burndown of closed issues) read it from the forge's issue events, which all three forges keep.
 - **Baselines** record the forge-held values they compare (for example due dates, at the moment a version's plan was frozen), a deliberate, named snapshot rather than a running copy.
 
 #### Overlays and what-if plans
@@ -165,6 +166,15 @@ A branch of the plan can explore a different schedule: other priorities, assignm
 - Views and charts on the branch show the plan with the overlay applied, and can show it beside the current plan.
 - When the plan is adopted, `skein apply` writes the overlay's values to the forge through the adapter and removes them from `.skein/`; a plan that is not adopted is a branch that is never merged.
 - The same mechanism releveling uses: skein proposes reassignments or new dates to remove overallocation as an overlay, for review like any other change.
+
+#### Full mirror and moving between forges
+
+When it is needed, a project or one person can opt into a **full mirror** of the forge's data (emanspeaks, 2026-11-21), for two purposes:
+
+- **Extended offline work.** `skein mirror` copies everything the forge holds for the project's issues and milestones (fields, labels, relations, and optionally the comments) into a forge-neutral plain-text form, in `.skein/mirror/`. Offline, the mirror stands in for the forge: views, `check` and edits work as if it were there. Edits to mirrored values are recorded the same way as overlays, each with the value it was based on. Back online, `skein sync` writes them to the forge, refreshes the mirror, and reports each field that changed on both sides for a decision rather than overwriting either.
+- **Moving between forges.** The mirror is the interchange format: `skein mirror` from the old forge and `skein publish` to the new one, each through its adapter, re-create the issues, labels, milestones and relations, with comments where the target allows. Fields the new forge cannot store move into `.skein/`, so nothing is lost, and fields it can store move out of `.skein/` into the forge. A map from old references to new ones (`github:#24` to `forgejo:#24`) is kept in `.skein/`, so citations in items, code and commits keep resolving.
+
+The mirror is per checkout by default (ignored by git, rebuilt by `skein mirror`), so the default of no duplication in the repository holds. A project can choose to commit it instead, for a team working offline together or to keep an archive that outlives the forge; then the mirror is the truth while offline, and `skein sync` is how it gives that back.
 
 `skein` can also create or update issues from items. Projects that do not want issues use items alone.
 
@@ -188,7 +198,7 @@ A project spread over several repositories (a compiler, a website, an editor ext
 3. **Rendering and results:** `render` for Zine, result import, baselines, the forge adapter for GitHub with CI output.
 4. **Planning:** work items, scheduling and the critical path, resources and load, Gantt, burndown and burnup, boards and the roadmap as rendered pages; the GitHub adapter's planning fields, overlays and `skein apply`. Proven on skein's own work and on Cesium's roadmap.
 5. **Editing:** `new`/`move`/`link`, the language server, the VS Code view.
-6. **Wider:** GitLab and Forgejo adapters, ReqIF export, the web interface with interactive planning views.
+6. **Wider:** GitLab and Forgejo adapters, the full mirror with `sync` and `publish` between forges, ReqIF export, the web interface with interactive planning views.
 
 ## 13. Open questions for emanspeaks
 
@@ -198,6 +208,7 @@ A project spread over several repositories (a compiler, a website, an editor ext
 4. **Zig version:** the latest official release at the time of each skein release (0.17.1 today), pinned per release.
 5. **Names inside `.skein/`** (for example `config.zon`, `resources.zon`, `overlay/`), settled with the first code.
 6. **Planning's place in the phases:** after rendering (recommended, since its views are rendered pages), or earlier, if Cesium's roadmap should move from the GitHub Project to skein soon.
+7. **What the full mirror takes by default:** fields, labels, milestones and relations only (recommended; small, and enough for planning offline), or comments too (needed to move between forges, so `skein mirror` for a move always takes them).
 
 ## 14. Requirements of skein itself
 
