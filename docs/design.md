@@ -15,12 +15,6 @@ It exists because the free options each give up something essential:
 
 skein takes the parts that work: Doorstop's files in git and its suspect links; sphinx-needs's typed items, filters and matrices; the Ferrocene Language Specification's atomic paragraphs with IDs and checksums; the Rust Reference's test annotations; StrictDoc's source-code markers and editing interface; OpenFastTrace's coverage across many levels.
 
-### First users
-
-- **A programming-language specification** in the FLS style (prose made of atomic, categorized, numbered paragraphs), with design proposals accepted by merge, conformance tests that cite rules, and several implementations whose results are tracked per rule.
-- **A NASA NPR 7150.2D documentation set** kept today as Doorstop trees (system requirements, software requirements, design, test procedures) and narrative documents. Serving both proves that skein is general.
-- Other projects of emanspeaks's, hosted on GitHub, GitLab or Forgejo.
-
 ### Non-goals
 
 - **Not a forge.** Discussion, code review and merging stay in the forge's issues and pull or merge requests. skein does plan the work (section 10), keeping the plan in git the way it keeps everything else.
