@@ -18,6 +18,8 @@ statuses: []const []const u8 = &default_statuses,
 tombstone: ?[]const u8 = "removed",
 /// the verification methods an item of the type may name
 verification: []const []const u8 = &.{},
+/// the statuses an item may have only while it is approved as it is
+approval: []const []const u8 = &.{},
 attributes: []const Attribute = &.{},
 
 pub const default_statuses = [_][]const u8{ "draft", "approved", "deprecated", "removed" };
@@ -45,15 +47,19 @@ pub const Attribute = struct {
 
 /// The type that the table of `r` declares; problems go to its report.
 pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
-    try r.known(&.{ "description", "id", "prefix", "digits", "categories", "statuses", "tombstone", "verification", "attributes" });
+    try r.known(&.{ "description", "id", "prefix", "digits", "categories", "statuses", "tombstone", "verification", "approval", "attributes" });
     var out: ItemType = .{ .name = name };
     out.description = try r.string("description") orelse "";
     out.categories = try r.strings("categories");
     out.verification = try r.strings("verification");
+    out.approval = try r.strings("approval");
 
     const statuses = try r.strings("statuses");
     if (statuses.len > 0) out.statuses = statuses;
     if (try r.string("tombstone")) |t| out.tombstone = t;
+    for (out.approval) |s| {
+        if (!names.contains(out.statuses, s)) try r.complain("approval", "'{s}' is not one of the statuses", .{s});
+    }
     if (out.tombstone) |t| {
         if (!names.contains(out.statuses, t)) {
             // the default, with statuses that have no "removed", means none

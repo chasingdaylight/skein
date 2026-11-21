@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const approve = @import("commands/approve.zig");
 const check = @import("commands/check.zig");
 const coverage = @import("commands/coverage.zig");
 const cli = @import("cli.zig");
@@ -21,6 +22,7 @@ pub fn main(init: std.process.Init) !void {
         .check => |options| try check.run(io, arena, options),
         .review => |options| try review.run(io, arena, options, .from),
         .clear => |options| try review.run(io, arena, options, .to),
+        .approve => |options| try approve.run(io, arena, options),
         .trace => |options| try trace.run(io, arena, options),
         .coverage => |options| try coverage.run(io, arena, options),
         .unknown => |name| .{

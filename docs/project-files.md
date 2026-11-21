@@ -76,6 +76,7 @@ normative = false
 | `statuses` | The lifecycle. Default: draft, approved, deprecated, removed. |
 | `tombstone` | The status of a removed item, whose ID stays taken. Default `"removed"`, when the statuses have it. |
 | `verification` | The verification methods an item of the type may name. |
+| `approval` | The statuses an item may have only while it is approved as it is: see [reviewing](reviewing.md). |
 | `attributes.<name>.type` | `"string"` (the default), `"integer"`, `"boolean"` or `"date"`. |
 | `attributes.<name>.values` | The values a string attribute may take. |
 | `attributes.<name>.required` | Whether every item of the type must have it. |

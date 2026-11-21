@@ -86,6 +86,10 @@ Coverage reports; it does not fail. Its exit status is 0 whatever the numbers ar
 
 Record that links have been reviewed; see [reviewing](reviewing.md). `review` takes the items whose links you looked at, `clear` the items that changed. `--all` takes every link.
 
+## `skein approve ID...`
+
+Records that someone approved these items as they are now; see [reviewing](reviewing.md). `--by NAME` says who (default: the name git has for the user), `--on DATE` when (default: today).
+
 ## `skein help`, `skein version`
 
 The usage text, and skein's version.
