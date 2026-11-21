@@ -1,37 +1,37 @@
 # Importing
 
-For their users: `docs/importing.md`.
+The user documentation is in `docs/importing.md`.
 
 %req[import.place]
-An import shall work in the directory it is run in, or the one `--root` names, and shall not look for a project above it: its paths are from that directory. Where there is no project, it makes one.
+An import shall work in the directory it is run in, or in the one `--root` names, and shall not look for a project above it. Its paths are relative to that directory. If there is no project there, the import creates one.
 
 ## From Doorstop
 
 %req[import.doorstop.items]
-`skein import doorstop` shall turn each item of a Doorstop document, kept as Markdown with YAML front matter or as YAML, into a skein item file of the same name, in place. Files of the directory that are not the document's items are left as they are.
+`skein import doorstop` shall convert each item of a Doorstop document, stored as Markdown with YAML front matter or as YAML, into a skein item file of the same name, in place. Files in the directory that are not items of the document are left unchanged.
 
 %req[import.doorstop.type]
-The document's settings shall become an item type with numbered IDs (prefix, digits, separator, and names in the number's place where the document has them), with an attribute for each one its items use; and the directory a source of the project.
+The settings of the document shall become an item type with numbered IDs (prefix, digits, separator, and names in place of numbers where the document uses them), with an attribute for each attribute its items use. The directory shall become a source of the project.
 
 %req[import.doorstop.fields]
-Nothing an item holds shall be lost: its links become `parent` links, an inactive item a removed one, and every attribute an attribute, under its own name or, where skein reads a key of that name itself, under `doorstop-` and its name. Its category is skein's when every active item of the document has one.
+No data of an item shall be lost. Its links become `parent` links, an inactive item becomes a removed item, and every attribute becomes an attribute. An attribute keeps its name, unless skein itself reads a key of that name, in which case it is named `doorstop-` followed by the name. The Doorstop category becomes the skein category when every active item of the document has one.
 
 %req[import.doorstop.reviews]
-A link that Doorstop had a review of shall be recorded as reviewed, as its target is at the import.
+A link that Doorstop recorded as reviewed shall be recorded as reviewed, against the fingerprint its target has at the time of the import.
 
 %req[import.doorstop.refusals]
-A directory that is no Doorstop document, a file that is not what Doorstop writes, and an item type that exists already shall be refused, with nothing of that document changed.
+A directory that is not a Doorstop document, a file that is not in the form Doorstop writes, and an item type that already exists shall each be refused, and nothing of that document shall be changed.
 
 ## From CSV
 
 %req[import.csv.rows]
-`skein import csv` shall make an item file of each row of a CSV file whose first row names the columns: the ID and the text from the columns named for them, the status, category and verification method from columns of those names, links from columns named after link types, and attributes from the others. Empty cells are left out.
+`skein import csv` shall create an item file for each row of a CSV file whose first row names the columns. The ID and the text come from the columns named for them. The status, category and verification method come from columns with those names, links from columns named after link types, and attributes from the remaining columns. Empty cells are left out.
 
 %req[import.csv.reader]
-The file shall be read as spreadsheets write CSV: fields in quotes may hold the delimiter, doubled quotes and line ends; semicolons are the delimiter when the first row has more of them than commas.
+The file shall be read in the form spreadsheets write: a quoted field may contain the delimiter, doubled quotes and line endings. The delimiter is the semicolon when the first row has more semicolons than commas.
 
 %req[import.csv.type]
-When the project has no item type of the name given, one shall be made, with an attribute per such column and the ID scheme the IDs show. An item type that exists is not changed. The directory becomes a source unless it is one.
+When the project has no item type with the given name, one shall be created, with an attribute per attribute column and the ID scheme that the IDs follow. An existing item type is not changed. The directory becomes a source unless it already is one.
 
 %req[import.csv.all-or-nothing]
-Nothing shall be written unless every row can be an item and no item file would be written over; with `--replace`, files that are there are written over.
+Nothing shall be written unless every row can become an item and no existing item file would be overwritten. With `--replace`, existing files are overwritten.

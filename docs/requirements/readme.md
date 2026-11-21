@@ -10,7 +10,7 @@ skein trace check.links
 
 run in this repository say whether the requirements are well formed, which of them have a test, and where a given one is tested.
 
-A requirement that names no status is implemented. One marked `status=planned` describes what `docs/design.md` commits skein to and the code does not do yet; it is here so that the plan is traced too, and it has no test.
+A requirement that names no status is implemented. One marked `planned` describes something `docs/design.md` commits skein to that the code does not do yet. It is here so that the plan is traced too, and it has no test.
 
 | Document | Requirements of |
 | --- | --- |
@@ -23,4 +23,4 @@ A requirement that names no status is implemented. One marked `status=planned` d
 | [importing](importing.md) | `import doorstop`, `import csv`. |
 | [planned](planned.md) | What is to come. |
 
-How these are written: one requirement, one paragraph, one marker. An ID says what the requirement is about and never changes; a requirement that goes away keeps its marker, with `status=removed`. A change to a requirement is a pull request, and merging it is accepting it.
+How these are written: one requirement, one paragraph, one marker. An ID says what the requirement is about and never changes. A requirement that is dropped keeps its marker, with the status `removed`. A change to a requirement is made by a pull request, and merging the pull request accepts the change.

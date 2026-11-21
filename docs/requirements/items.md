@@ -1,77 +1,77 @@
 # Items, references and citations
 
-Described for their users in `docs/writing-items.md`.
+The user documentation is in `docs/writing-items.md`.
 
 ## Reading Markdown
 
 %req[markdown.blocks]
-skein shall read the block structure of a Markdown file: headings, paragraphs, lists (also over blank lines), fenced and indented code, block quotes, tables, HTML blocks and thematic breaks, each with its first and last line. What is inside a code block is never anything else.
+skein shall read the block structure of a Markdown file: headings, paragraphs, lists (including lists with blank lines between entries), fenced and indented code, block quotes, tables, HTML blocks and thematic breaks, each with its first and last line. The content of a code block is never read as anything else.
 
 %req[markdown.line-ends]
 A file with CRLF line ends shall give the same blocks, the same items and the same fingerprints as the same file with LF line ends.
 
 %req[markdown.yaml-front-matter]
-YAML between `---` lines at the top of a file, as site generators and other tools write it, shall be passed over: frontmatter is no item and holds none.
+YAML between `---` lines at the top of a file, as site generators and other tools write it, shall be skipped: frontmatter is not an item and does not contain items.
 
 ## Items in documents
 
 %req[items.marker]
-In a document, a marker at the start of a paragraph or of a list entry shall make it an item: a percent sign, an item type, and in brackets the ID and optionally more words, as in `%rule[lex.comment syntax]`.
+In a document, a marker at the start of a paragraph or of a list entry shall make that paragraph or entry an item. A marker is a percent sign, an item type, and in brackets the ID and optionally more words, as in `%rule[lex.comment syntax]`.
 
 %req[items.marker.inline]
-The item's text shall follow its marker on the same line, or start on the next line.
+The text of an item shall follow the marker on the same line, or start on the next line.
 
 %req[items.list-entries]
 An entry of a list, at any depth, shall be an item when it starts with a marker.
 
 %req[items.marker.types-only]
-Only a percent sign, a lowercase name and an opening bracket at the start of a paragraph or of a list entry shall be a marker; the same elsewhere in a line, and anything in a code block, is text. A marker that names no item type of the project is reported.
+A marker shall be recognized only at the start of a paragraph or of a list entry, as a percent sign, a lowercase name and an opening bracket. The same characters elsewhere in a line, and anything in a code block, are text. A marker that names an item type the project does not have is reported.
 
 %req[items.marker.words]
 After the ID, a bare word shall be read as a category if the item type declares it as one, and otherwise as a status if the item type declares it as one; a marker has at most one of each, and a word that is neither is reported. A word of the form `key=value` gives the status, the verification method, links (when the key is a link type) or an attribute. Several values are separated by commas; a value in double quotes may hold spaces, and a closing bracket.
 
 %req[items.marker.mistakes]
-A marker that is not closed, has no ID, or has words that cannot be read so shall be reported, with its place, and make no item.
+A marker that is not closed, has no ID, or has words that cannot be read as a category, a status or `key=value` shall be reported with its file, line and column, and shall not create an item.
 
 %req[items.text-extent]
-An item's text shall be the rest of its marker's block, or the block after a marker that stands alone, and the lists, code blocks, tables and quotes that follow that block directly. A paragraph after it is no part of it. A marker with no text is reported.
+The text of an item shall be the rest of the block the marker is in (or, when the marker is alone on its line, the block after it), together with the lists, code blocks, tables and quotes that follow that block directly. A paragraph after that is not part of the item. A marker with no text is reported.
 
 %req[items.parts]
-An entry with a marker, in a list that is in an item's text, shall be a part of that item: an item of its own, which records its whole, as the whole records its parts in their order. Parts may have parts. An item stands before its parts in the order of items.
+When a list is in the text of an item, an entry of that list that starts with a marker shall be a part of that item. A part is an item in its own right. It records the item that contains it, and the containing item records its parts in order. Parts may have parts. In the order of items, an item comes before its parts.
 
 %req[items.parts.names]
 When the ID in the marker of a part starts with a dot, the ID of the part shall be the ID of the containing item followed by what the marker gives: `.as` inside `lex.keywords` is `lex.keywords.as`. An ID without a leading dot is used as written. A leading dot is reported when the item is not a part of another item, and when the item type of the part or of the containing item does not use IDs joined by dots.
 
 %req[items.parts.text]
-A part's text shall be its own, and no part of its whole's text. The whole's own text is its text without its parts: of a list with parts, the entries that do not start with a marker.
+The text of a part shall belong to the part only, and not to the containing item. The own text of the containing item is its text without its parts: in a list with parts, only the entries that do not start with a marker.
 
 %req[items.removed]
-A marker with its type's status for removed items shall be an item without text: the marker alone.
+A marker with the status that the item type uses for removed items shall be an item without text: the marker alone.
 
 ## Items as files
 
 %req[items.file]
-A Markdown file that starts with TOML front matter between `+++` lines, in a source of item files, shall be one item: the front matter gives its ID and, unless the source gives one, its type; the rest of the file is its text.
+In a source of item files, a Markdown file that starts with TOML front matter between `+++` lines shall be one item. The front matter gives the ID and, unless the source gives one, the item type. The rest of the file is the text of the item.
 
 %req[items.file.keys]
-The other keys of the front matter shall mean what they mean in a marker: the status, the category, the verification method, links (a string or an array of strings, under a key that is a link type), or an attribute (a string, an integer, a boolean or a date).
+The other keys of the front matter shall have the same meaning as in a marker: the status, the category, the verification method, links (a string or an array of strings, under a key that is a link type), or an attribute (a string, an integer, a boolean or a date).
 
 %req[items.file.not-items]
-In a source of item files, a Markdown file that does not start with front matter is no item and shall be passed over. Front matter that is opened and not closed, or has no ID, is reported.
+In a source of item files, a Markdown file that does not start with front matter is not an item and shall be skipped. Front matter that is opened and not closed, or has no ID, is reported.
 
 %req[items.sources]
-The items of a project shall be read from every source, in the order of the sources, the files by path, and the lines; directories whose names start with a dot, and build outputs, are not read.
+The items of a project shall be read from every source, in the order of the sources, then of the files by path, then of the lines. Directories whose names start with a dot, and build outputs, are not read.
 
 ## References and citations
 
 %req[items.reference]
-In an item's text, a marker without an item type, `%[id]` or `%[id words]`, shall be a reference to the item `id`, with its line and column and the words to show in place of the ID. Nothing inside a code span or a code block is a reference, nor is a percent sign after a letter or a digit. Double brackets (`[[page]]`) are not skein's and are left to other tools.
+In the text of an item, a marker without an item type, `%[id]` or `%[id words]`, shall be a reference to the item `id`. skein records its line and column, and the words to show in place of the ID. Nothing inside a code span or a code block is a reference, and neither is a percent sign directly after a letter or a digit. Double brackets (`[[page]]`) have no meaning in skein and are left to other tools.
 
 %req[items.reference.narrative]
 A reference in narrative text, which is the text of a document that does not belong to any item, shall be read too, with its file, line and column. It is checked by the same rules as a reference inside an item, and `skein trace` shows it with the item it names. It is not part of any fingerprint and does not make any link suspect.
 
 %req[items.citation]
-A citation set shall name a directory, the ends of the names of the files to read, and a marker; in each such file, the IDs after the marker on a line are citations of those items by that set. A full stop after an ID, or a word that is no ID, ends them.
+A citation set shall name a directory, the file name endings of the files to read, and a marker. In each such file, the IDs that follow the marker on a line are citations of those items by that set. The list of IDs ends at a full stop after an ID, or at a word that is not an ID.
 
 %req[items.citation.directory]
-A file named `.skein-cites` shall cite the IDs it lists for the files of its directory and below, for the citation sets that have files there.
+A file named `.skein-cites` shall cite the IDs it lists on behalf of every file in its directory and below, for the citation sets that have files there.

@@ -1,21 +1,21 @@
 # Fingerprints, reviews, suspect links and approvals
 
-When a requirement changes, what was derived from it, and what tests it, may no longer be right. skein finds those places: a link can record what its target said when the link was last reviewed, and `skein check` reports the link as suspect once the target says something else.
+When a requirement changes, the items derived from it and the tests that verify it may no longer be correct. skein finds those places: a link can record the content of its target at the time the link was last reviewed, and `skein check` reports the link as suspect once the content of the target has changed.
 
 ## Fingerprints
 
-Every item has a fingerprint: a hash of what it says.
+Every item has a fingerprint: a hash of its content.
 
 | Part of it | Not part of it |
 | --- | --- |
-| The item's own text | Its status |
+| The own text of the item | Its status |
 | Its type and its category | Its links |
 | The attributes its type marks `normative = true` | Its other attributes |
 | The names and fingerprints of its parts, in order | Its ID and where it is written |
 
-Fingerprints form a tree, as the hashes of files and directories do in git: an item with [parts](writing-items.md#parts-items-inside-an-item) is hashed over its own text and, for each part, the part's name and fingerprint, not over the parts' text again. So a change to a part changes that part, its whole, and every whole above, and no other item. As with a file in git, an item's own ID is not in its own fingerprint, and it is in its whole's: giving a part another ID changes the whole and not the part. The name hashed is the part's ID as the whole knows it: `.as` for `lex.keywords.as` in `lex.keywords`, so renaming the whole alone changes nothing. A part's status is not hashed.
+Fingerprints form a tree, like the hashes of files and directories in git. An item with [parts](writing-items.md#parts-items-inside-an-item) is hashed over its own text and, for each part, the name and the fingerprint of the part; the text of the parts is not hashed again. So a change to a part changes the fingerprint of that part, of the item that contains it, and of every item above that, and of no other item. As with a file in git, the ID of an item is not part of its own fingerprint, but it is part of the fingerprint of the containing item: renaming a part changes the containing item and not the part. The name that is hashed is the ID of the part relative to the containing item (`.as` for `lex.keywords.as` in `lex.keywords`), so renaming only the containing item changes nothing. The status of a part is not hashed.
 
-The text is taken without its layout: runs of spaces and line ends count as one space, so rewrapping a paragraph, changing line endings or re-indenting a list changes nothing. Inside code blocks the lines are kept, because there they can matter.
+The text is hashed without its layout: runs of spaces and line endings count as one space, so rewrapping a paragraph, changing line endings or re-indenting a list changes nothing. Inside code blocks the lines are kept, because there they can matter.
 
 ## Reviewed links
 
@@ -63,7 +63,7 @@ skein approve SRS-012 --by "A. Reviewer"
 
 `--by` may be left out where git knows the user's name (`git config user.name`), and `--on 2027-03-01` gives a day other than today.
 
-An approval is of what the item said then, by its fingerprint. When the item changes, the record stays, and now shows what was approved; the item itself is no longer approved. `skein trace` shows each approval and whether it is of the item as it is.
+An approval applies to the content the item had at that time, identified by its fingerprint. When the item changes, the record is kept and shows what was approved, but the item is no longer approved. `skein trace` shows each approval and whether it applies to the current content.
 
 An item type can make a status depend on it:
 
@@ -72,7 +72,7 @@ An item type can make a status depend on it:
 approval = ["approved"]
 ```
 
-Then `skein check` reports an item that has the status `approved` without an approval of what it says now. So a requirement cannot be changed and stay "approved" unnoticed: either it is approved again, or its status goes back.
+Then `skein check` reports an item that has the status `approved` without an approval of its current content. So a requirement cannot be changed and stay "approved" unnoticed: either it is approved again, or its status goes back.
 
 The records are under `.skein/approvals/`, in files named as the review records are, with one line per item and approver:
 

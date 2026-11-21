@@ -103,7 +103,7 @@ Changed (2):
   lex.space  (rule)  status: approved -> deprecated, attributes  spec/lex.md:8
 ```
 
-An item is changed in its **content** when its fingerprint is different, so a paragraph that was only rewrapped is not listed. A change to a part is also a change to the content of its whole. Its status, links, attributes and verification method are named when they differ. An item given the status of a removed item counts as removed.
+The **content** of an item has changed when its fingerprint is different, so a paragraph that was only rewrapped is not listed. A change to a part is also a change to the content of the item that contains it. A different status, links, attributes or verification method are each named. An item that was given the status of a removed item counts as removed.
 
 ## `skein impact [REV]`
 

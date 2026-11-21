@@ -1,45 +1,45 @@
 # Fingerprints, reviews and approvals
 
-For their users: `docs/reviewing.md`.
+The user documentation is in `docs/reviewing.md`.
 
 ## Fingerprints
 
 %req[fingerprint.content]
-An item's fingerprint shall be a hash of its type, its category, the attributes its type marks as part of what it says, and its text. Its status, its links, its other attributes, its ID and its place are not part of it.
+The fingerprint of an item shall be a hash of its item type, its category, its normative attributes (those the item type marks as part of the content of an item), and its text. The status, the links, the other attributes, the ID and the location of the item are not part of the fingerprint.
 
 %req[fingerprint.parts]
-The fingerprint of an item with parts shall also be over the names and the fingerprints of its parts, in their order, so that a change to what a part says, or to its name, changes its whole's fingerprint, and that of every whole above it. A part's name is what follows its whole's ID when its ID continues that one, and else its ID, so that renaming the whole alone changes nothing. The statuses of the parts are not part of it.
+The fingerprint of an item with parts shall also cover the name and the fingerprint of each part, in order. A change to the content of a part, or to its name, therefore changes the fingerprint of the containing item and of every item that contains that one. The name of a part is the remainder of its ID after the ID of the containing item when the ID of the part extends that ID (`.as`), and otherwise its full ID, so renaming only the containing item changes no fingerprint. The statuses of the parts are not part of the fingerprint.
 
 %req[fingerprint.layout]
-A change of layout alone shall not change a fingerprint: line ends, runs of spaces, and where lines are wrapped. Inside a code block the lines and their indentation are part of what is said; only spaces at their ends are not.
+A change of layout alone shall not change a fingerprint: line endings, runs of spaces, and where lines are wrapped. Inside a code block, the lines and their indentation are part of the content; only trailing spaces are not.
 
 ## Reviewed links
 
 %req[review.per-link-type]
-Reviews shall be asked for per link type. A link of a type that does not ask for them is never reported for want of one.
+Whether links are reviewed shall be set per link type. A link of a type that is not reviewed is never reported as lacking a review.
 
 %req[review.state]
-A link of a reviewed type shall be reported when it was never reviewed, and when its target's fingerprint is no longer the one recorded at its review.
+A link of a reviewed type shall be reported when it was never reviewed, and when the fingerprint of its target is no longer the one recorded at the review.
 
 %req[review.commands]
-`skein review` shall record, for the links of the items named, their targets' fingerprints as they are now; `skein clear` the same for the links to the items named; each also for every link, with `--all`. An ID that names no item is refused.
+`skein review` shall record the current fingerprint of the target of each link of the named items. `skein clear` shall do the same for each link that points to the named items. With `--all`, each does so for every link. An ID that does not name an item is refused.
 
 %req[review.records]
-The review records shall be kept under `.skein/reviews/`, never in the items or beside the documents: one file per document, and one per directory of item files, with one sorted line per link, in TOML. A file left without records is removed.
+The review records shall be kept under `.skein/reviews/`, never in the items or beside the documents. There is one file per document and one per directory of item files, in TOML, with one line per link, sorted. A file with no records left is removed.
 
 %req[review.records.stale]
-When a record file is written, records of links that no longer exist shall be left out of it.
+When a record file is written, the records of links that no longer exist shall be left out.
 
 ## Approvals
 
 %req[approval.record]
-`skein approve` shall record, for each item named, who approved it, on which day, and its fingerprint at that moment. The name is the one given, or the one git has for the user; the day is the one given, or today.
+`skein approve` shall record, for each named item, who approved it, on which day, and the fingerprint of the item at that moment. The name is the one given, or the user name configured in git. The day is the one given, or today.
 
 %req[approval.records]
-The approvals shall be kept under `.skein/approvals/`, in files named as the review records are, with one line per item and approver. Approving again replaces that approver's earlier record.
+The approvals shall be kept under `.skein/approvals/`, in files named in the same way as the review records, with one line per item and approver. A new approval by the same approver replaces the earlier record.
 
 %req[approval.current]
-An approval shall count as of the item as it is only while the item's fingerprint is the one recorded. The record of an earlier version stays, and is shown as such.
+An approval shall count as an approval of the current item only while the fingerprint of the item equals the one recorded. The record of an earlier version is kept, and is shown as an approval of an earlier version.
 
 %req[approval.status]
-An item type may name statuses that need an approval. An item with such a status and no approval of what it says now shall be reported.
+An item type may name statuses that require an approval. An item with such a status and no approval of its current content shall be reported.

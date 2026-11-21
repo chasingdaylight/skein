@@ -198,10 +198,10 @@ test "mistakes in the names of parts and in markers" {
         \\%rule[a.e syntax]
     );
     try f.expectProblems(
-        \\spec/bad.md:1:1: error: .alone: a name that starts with a dot is a part's, and this item is part of none
-        \\spec/bad.md:3:3: error: .entry: a name that starts with a dot is a part's, and this item is part of none
-        \\spec/bad.md:7:3: error: .part: a name that starts with a dot needs IDs joined by dots, here and in 'SRS-001'
-        \\spec/bad.md:11:3: error: .1: a name that starts with a dot needs IDs joined by dots, here and in 'a.b'
+        \\spec/bad.md:1:1: error: .alone: an ID that starts with a dot extends the ID of a containing item, and this item is not part of another item
+        \\spec/bad.md:3:3: error: .entry: an ID that starts with a dot extends the ID of a containing item, and this item is not part of another item
+        \\spec/bad.md:7:3: error: .part: an ID that starts with a dot needs hierarchical IDs for this item and for 'SRS-001'
+        \\spec/bad.md:11:3: error: .1: an ID that starts with a dot needs hierarchical IDs for this item and for 'a.b'
         \\spec/bad.md:13:1: error: a.c: there is no item type 'nothing'
         \\spec/bad.md:15:1: error: %rule[...]: the marker is not closed by ']'
         \\spec/bad.md:18:1: error: a.e: the marker has no text after it
