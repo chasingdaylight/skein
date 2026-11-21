@@ -1,13 +1,19 @@
 //! skein: plain-text requirements, specifications and traceability.
 
 pub const cli = @import("cli.zig");
-pub const toml = @import("toml.zig");
+pub const Project = @import("Project.zig");
+pub const Report = @import("Report.zig");
+pub const Schema = @import("schema/Schema.zig");
 pub const stdio = @import("stdio.zig");
+pub const toml = @import("toml.zig");
 
 pub const main = @import("__main__.zig").main;
 
 test {
     _ = cli;
+    _ = Project;
+    _ = Report;
+    _ = Schema;
     _ = stdio;
     _ = toml;
 }
