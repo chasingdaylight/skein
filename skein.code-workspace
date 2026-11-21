@@ -15,7 +15,7 @@
       "**/.zig-cache/**": true,
       "**/zig-pkg/**": true,
       "**/zig-cache*/**": true,
-      "site/**": true,
+      ".site/**": true,
     },
     "files.associations": {
       ".local-gitignore": "gitignore",

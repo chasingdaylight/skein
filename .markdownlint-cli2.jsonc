@@ -1,6 +1,6 @@
 {
   "ignores": [
-    "site/**",
+    ".site/**",
     "node_modules/**",
     "zig-pkg/**",
     ".zig-cache/**",
