@@ -47,7 +47,7 @@ pub fn read(
         .arena = arena,
         .schema = schema,
         .report = report,
-        .item = .{ .id = id, .type_name = type_name, .file = file, .line = 1 },
+        .item = .{ .id = id, .type_name = type_name, .file = file, .line = 1, .in_document = false },
     };
     for (table.keys()) |key| {
         if (std.mem.eql(u8, key, "id") or std.mem.eql(u8, key, "type")) continue;

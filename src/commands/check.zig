@@ -5,52 +5,26 @@ const Io = std.Io;
 
 const cli = @import("../cli.zig");
 const Graph = @import("../graph/Graph.zig");
-const Project = @import("../Project.zig");
-const Report = @import("../Report.zig");
+const Reviews = @import("../graph/Reviews.zig");
+const Workspace = @import("Workspace.zig");
 
-pub const Outcome = struct {
-    /// for standard output when `ok`, else for standard error
-    text: []const u8,
-    ok: bool,
-};
-
-pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Outcome {
-    const found = Project.findRoot(io, arena, options.root) catch |e| return .{
-        .text = try arena.print("skein: cannot look for a project from '{s}' ({s})\n", .{ options.root, @errorName(e) }),
-        .ok = false,
+pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Outcome {
+    var ws = switch (try Workspace.open(io, arena, options)) {
+        .ok => |ws| ws,
+        .failed => |outcome| return outcome,
     };
-    const root_path = found orelse return .{
-        .text = try arena.print("skein: no project here: no '{s}' directory in '{s}' or above it\n", .{ Project.dir_name, options.root }),
-        .ok = false,
-    };
-    var root = try Io.Dir.cwd().openDir(io, root_path, .{});
-    defer root.close(io);
+    defer ws.close();
 
-    var report: Report = .{ .arena = arena };
-    const project = try Project.load(io, arena, root, &report);
-    // items are read against the schema: a broken one would only add noise
-    var items: usize = 0;
-    if (report.ok()) {
-        const graph = try Graph.load(io, arena, root, &project, &report);
-        try Graph.checks.run(&graph, &project.schema, &report);
-        items = graph.items.len;
+    if (ws.report.ok()) {
+        try Graph.checks.run(&ws.graph, &ws.project.schema, &ws.report);
+        const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
+        try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     }
-    if (!report.ok()) {
-        const problems = try report.render(arena);
-        const n = report.problems.items.len;
-        return .{
-            .text = try arena.print("{s}skein: {d} problem{s}\n", .{ problems, n, if (n == 1) "" else "s" }),
-            .ok = false,
-        };
-    }
+    if (!ws.report.ok()) return ws.problems();
+    const schema = ws.project.schema;
     return .{
         .text = try arena.print("skein: {s}: no problems ({d} items of {d} types, {d} link types, {d} profiles)\n", .{
-            if (project.name.len > 0) project.name else root_path,
-            items,
-            project.schema.types.len,
-            project.schema.links.len,
-            project.schema.profiles.len,
+            ws.name(), ws.graph.items.len, schema.types.len, schema.links.len, schema.profiles.len,
         }),
-        .ok = true,
     };
 }
