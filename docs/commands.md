@@ -184,3 +184,41 @@ Records that someone approved these items as they are now; see [reviewing](revie
 ## `skein help`, `skein version`
 
 The usage text, and skein's version.
+
+## In continuous integration
+
+A CI job needs three lines: get skein, check, and report coverage.
+
+```yaml
+- name: skein
+  run: |
+    echo "::add-matcher::.github/skein-matcher.json"
+    skein check
+    skein coverage --markdown >> "$GITHUB_STEP_SUMMARY"
+```
+
+- **`skein check` fails the job** when the project has problems (exit status 1), and prints each as `file:line:column: error: message`.
+- **Annotations on GitHub:** that form is one GitHub Actions can read. With the problem matcher below saved as `.github/skein-matcher.json`, each problem is shown on its line in the pull request. It needs the project to be at the root of the repository, since the paths are from the project's root.
+- **`skein coverage` never fails the job:** it reports. `--markdown` puts the table in the job's summary.
+
+```json
+{
+  "problemMatcher": [
+    {
+      "owner": "skein",
+      "pattern": [
+        {
+          "regexp": "^(.+?):(\\d+):(\\d+): (error): (.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      ]
+    }
+  ]
+}
+```
+
+To get skein in the job, download the archive of a [release](https://github.com/chasingdaylight/skein/releases) for the runner's platform and check it against the release's `SHA256SUMS`; pin the version, so that a new skein never changes a job by itself.
