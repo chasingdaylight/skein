@@ -1,0 +1,3 @@
+# Review records, written by skein. Do not edit: use 'skein review'.
+"TST-001".verifies."SRS-001" = "2396651c1f476ef0246258c60adebfbd"
+"TST-001".verifies."SRS-002" = "38cdbc204fef312b7dcd24d3fb8585f9"

@@ -1,0 +1,18 @@
+.{
+    .name = .skein,
+    .fingerprint = 0xc45e887a2481d021,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.17.1",
+    // none, and none to come: see docs/design.md, principle 7
+    .dependencies = .{},
+
+    // package hash is computed from files in .paths
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "build",
+        "src",
+        "examples",
+        "LICENSE",
+    },
+}

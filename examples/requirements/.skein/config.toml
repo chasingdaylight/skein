@@ -1,0 +1,26 @@
+[project]
+name = "requirements example"
+
+[[sources]]
+path = "docs/system"
+kind = "items"
+type = "sys"
+
+[[sources]]
+path = "docs/software"
+kind = "items"
+type = "srs"
+
+[[sources]]
+path = "docs/tests"
+kind = "items"
+type = "tst"
+
+# the code says which requirements it implements
+[[citations]]
+name = "code"
+path = "src"
+files = [".c"]
+marker = "Implements "
+to = ["srs"]
+expected = true

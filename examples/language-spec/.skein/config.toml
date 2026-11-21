@@ -1,0 +1,15 @@
+[project]
+name = "language-spec example"
+
+# the specification: documents whose paragraphs are rules and terms
+[[sources]]
+path = "spec"
+
+# the tests say which rules they check
+[[citations]]
+name = "test"
+path = "tests"
+files = [".calc"]
+marker = "# spec:"
+to = ["rule"]
+expected = true

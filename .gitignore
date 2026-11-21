@@ -1,0 +1,11 @@
+# Zig
+.zig-cache*/
+zig-out/
+*.o
+zig-pkg/
+.zigversion
+
+# generated output
+.site/
+
+*.log
