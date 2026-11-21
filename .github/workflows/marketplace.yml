@@ -50,17 +50,25 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Download the release's extension package
+      # the universal package, without a program, which the Marketplace
+      # serves to the platforms with no package of their own, and the
+      # platform packages, each with its skein (v0.1.0 had one package,
+      # without a suffix)
+      - name: Download the release's extension packages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" \
-            --dir dist --pattern "skein-vscode-v$VERSION.vsix"
+            --dir dist --pattern "skein-vscode-v$VERSION*.vsix"
           ls dist
 
       # --skip-duplicate: a version already published counts as published,
-      # so a run can simply be repeated
+      # so a run can simply be repeated and completes what a failed one left
       - name: Publish (Trusted Publishing)
         run: |
-          npx --yes "@vscode/vsce@$VSCE_VERSION" publish --oidc --pre-release --skip-duplicate \
-            --packagePath "dist/skein-vscode-v$VERSION.vsix"
+          failed=0
+          for vsix in dist/*.vsix; do
+            npx --yes "@vscode/vsce@$VSCE_VERSION" publish --oidc --pre-release --skip-duplicate \
+              --packagePath "$vsix" || { echo "::error::publishing $vsix failed"; failed=1; }
+          done
+          exit "$failed"

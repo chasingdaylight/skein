@@ -9,3 +9,4 @@ zig-pkg/
 .site/
 
 *.log
+editors/vscode/bin/

@@ -52,12 +52,19 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Download the release's extension package
+      # The platform packages, each with its skein, as zfls publishes; the
+      # universal package goes to the Marketplace only. A release without
+      # platform packages (v0.1.0) has its one package published here.
+      - name: Download the release's extension packages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" \
-            --dir dist --pattern "skein-vscode-v$VERSION.vsix"
+            --dir dist --pattern "skein-vscode-v$VERSION*.vsix"
+          universal="dist/skein-vscode-v$VERSION-universal.vsix"
+          if ls dist/*.vsix | grep -qvxF "$universal"; then
+            rm -f "$universal"
+          fi
           ls dist
 
       # --skip-duplicate: a version already published counts as published,
@@ -68,13 +75,16 @@ jobs:
           OPENVSX_TOKEN: ${{ secrets.OVSX_PAT }}
         run: |
           ovsx() { npx --yes "ovsx@$OVSX_VERSION" "$@"; }
-          vsix="dist/skein-vscode-v$VERSION.vsix"
-          if ovsx publish "$vsix" --trusted-publishing --skip-duplicate; then
-            exit 0
-          fi
-          if [ -z "$OPENVSX_TOKEN" ]; then
-            echo "::error::trusted publishing was refused and there is no OVSX_PAT secret"
-            exit 1
-          fi
-          echo "::warning::trusted publishing of $vsix was refused; publishing with the OVSX_PAT secret"
-          OVSX_PAT="$OPENVSX_TOKEN" ovsx publish "$vsix" --skip-duplicate
+          failed=0
+          for vsix in dist/*.vsix; do
+            if ovsx publish "$vsix" --trusted-publishing --skip-duplicate; then
+              continue
+            fi
+            if [ -n "$OPENVSX_TOKEN" ]; then
+              echo "::warning::trusted publishing of $vsix was refused; publishing with the OVSX_PAT secret"
+              OVSX_PAT="$OPENVSX_TOKEN" ovsx publish "$vsix" --skip-duplicate && continue
+            fi
+            echo "::error::publishing $vsix failed"
+            failed=1
+          done
+          exit "$failed"
