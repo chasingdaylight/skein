@@ -24,5 +24,6 @@ test {
     _ = toml;
     _ = @import("graph/walk.zig");
     _ = @import("graph/coverage.zig");
+    _ = @import("commands/diff.zig");
     _ = @import("commands/_test/trace.zig");
 }
