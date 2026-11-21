@@ -79,6 +79,7 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
         var list: std.ArrayList(Attribute) = .empty;
         for (attrs.table.keys()) |attr_name| {
             if (!names.valid(attr_name)) try attrs.complain(attr_name, "{s}", .{names.rule});
+            if (names.contains(&names.reserved, attr_name)) try attrs.complain(attr_name, "skein reads this key itself, so no attribute can have the name", .{});
             const a = try attrs.child(attr_name) orelse continue;
             try list.append(r.arena, try readAttribute(a, attr_name));
         }
