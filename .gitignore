@@ -6,7 +6,6 @@ zig-pkg/
 .zigversion
 
 # generated output
-build/
 site/
 
 *.log

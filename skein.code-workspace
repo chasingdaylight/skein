@@ -15,7 +15,6 @@
       "**/.zig-cache/**": true,
       "**/zig-pkg/**": true,
       "**/zig-cache*/**": true,
-      "build/**": true,
       "site/**": true,
     },
     "files.associations": {
