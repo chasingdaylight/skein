@@ -28,6 +28,23 @@ type = "srs"
 | `sources.path` | A directory, from the project's root, with forward slashes. |
 | `sources.kind` | `"documents"` (the default) or `"items"`. |
 | `sources.type` | For `"items"`: the item type of a file that names none. |
+| `citations` | The places whose files cite items in comments. |
+| `citations.name` | What the citations are: `"test"`, `"code"`. Coverage counts by this name. |
+| `citations.path` | A directory, from the project's root; `"."` for all of it. |
+| `citations.files` | The ends of the names of the files to read: `[".zig"]`, `["_test.c"]`. |
+| `citations.marker` | The text that comes before the IDs on a line: `"// spec:"`. |
+| `citations.to` | The item types the citations may name; leave out for any. |
+
+```toml
+[[citations]]
+name = "test"
+path = "tests"
+files = [".zig"]
+marker = "// spec:"
+to = ["rule"]
+```
+
+Directories whose names start with a dot, and `zig-out`, `zig-pkg` and `node_modules`, are never read.
 
 ## `.skein/types/<name>.toml`: an item type
 

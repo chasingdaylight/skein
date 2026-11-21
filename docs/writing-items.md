@@ -84,6 +84,31 @@ A line comment is not a [[lex.token]]; see [[lex.space|white space]].
 
 Nothing inside a code span or a code block is a reference. `skein check` reports a reference to an item that does not exist or is removed. A reference with a colon, `[[other:some.id]]`, names an item of another repository; those are not checked yet.
 
+## Citations in code and tests
+
+Code and tests are not items, but they say which items they implement or check, in a comment. The project names the comment's marker in `.skein/config.toml` (`[[citations]]`), and the rest of the line is IDs, separated by commas or spaces:
+
+```zig
+// spec: lex.comment.line, lex.comment.block
+test "comments" {
+```
+
+```c
+/* Implements SRS-012. */
+```
+
+A full stop after an ID ends the citation, so a sentence can follow. A word that is not an ID ends it too.
+
+A directory can cite items for every file in it and below it, with a file named `.skein-cites`: IDs, one or several on a line, and `#` for comments.
+
+```text
+# every test in this directory checks these
+lex.comment.line
+lex.comment.block
+```
+
+`skein check` reports a citation of an item that does not exist, is removed, or is of a type its citations may not name.
+
 ## What `skein check` reports
 
 - An ID used twice, or not spelled as its type's IDs are.
@@ -92,6 +117,7 @@ Nothing inside a code span or a code block is a reference. `skein check` reports
 - A link to an item that does not exist, is removed, or is of a type the link cannot point to; a link from a type that cannot have it; a required link that is missing.
 - A reference in text to an item that does not exist or is removed.
 - A marker with nothing after it, and an item file without front matter.
+- A citation of an item that does not exist, is removed, or is of a type its citations may not name.
 
 ## How skein reads Markdown
 
