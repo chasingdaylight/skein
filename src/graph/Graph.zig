@@ -10,6 +10,7 @@ const documents = @import("documents.zig");
 const files = @import("../files.zig");
 const item_file = @import("item_file.zig");
 pub const Item = @import("Item.zig");
+pub const Mention = documents.Mention;
 pub const checks = @import("checks.zig");
 pub const Reviews = @import("Reviews.zig");
 pub const Citations = @import("Citations.zig");
@@ -24,6 +25,9 @@ by_id: std.array_hash_map.String(usize) = .empty,
 incoming: std.array_hash_map.String(std.ArrayList(Incoming)) = .empty,
 /// by target: the IDs of the items whose text refers to it, each once
 referrers: std.array_hash_map.String(std.ArrayList([]const u8)) = .empty,
+
+/// the references to items in narrative text, in the order read
+mentions: []const Mention = &.{},
 
 /// A link, with the item it is a link of
 pub const Incoming = struct {
@@ -67,6 +71,7 @@ pub fn init(arena: std.mem.Allocator, items: []const Item, report: *Report) std.
 /// go to `report`, and what could be read is still returned.
 pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, report: *Report) std.mem.Allocator.Error!Graph {
     var items: std.ArrayList(Item) = .empty;
+    var mentions: std.ArrayList(Mention) = .empty;
     for (project.sources) |source| {
         const paths = files.list(io, arena, root, source.path, &.{".md"}) catch |e| switch (e) {
             error.OutOfMemory => return error.OutOfMemory,
@@ -88,14 +93,16 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proj
                 continue;
             }
             switch (source.kind) {
-                .documents => try documents.read(arena, &project.schema, report, file, text, &items),
+                .documents => try documents.read(arena, &project.schema, report, file, text, &items, &mentions),
                 .items => if (try item_file.read(arena, &project.schema, report, file, text, source.item_type)) |item| {
                     try items.append(arena, item);
                 },
             }
         }
     }
-    return init(arena, items.items, report);
+    var out = try init(arena, items.items, report);
+    out.mentions = mentions.items;
+    return out;
 }
 
 test {

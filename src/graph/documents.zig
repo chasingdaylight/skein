@@ -25,10 +25,19 @@ pub fn read(
     file: []const u8,
     source: []const u8,
     out: *std.ArrayList(Item),
+    mentions: *std.ArrayList(Mention),
 ) Error!void {
-    var reader: Reader = .{ .arena = arena, .schema = schema, .report = report, .file = file, .out = out };
-    _ = try reader.region(.{ .text = source, .line = 1, .dedent = 0 }, null);
+    var reader: Reader = .{ .arena = arena, .schema = schema, .report = report, .file = file, .out = out, .mentions = mentions };
+    _ = try reader.region(.{ .text = source, .line = 1, .dedent = 0 }, null, true);
 }
+
+/// A reference to an item in narrative text: text that is no item's
+pub const Mention = struct {
+    target: []const u8,
+    file: []const u8,
+    line: u32,
+    column: u32,
+};
 
 /// A stretch of Markdown read on its own: the file, or a list entry
 const Region = struct {
@@ -45,10 +54,11 @@ const Reader = struct {
     report: *Report,
     file: []const u8,
     out: *std.ArrayList(Item),
+    mentions: *std.ArrayList(Mention),
 
     /// Reads the items of `r`; those not inside another item of it become
     /// parts of `whole`, if there is one. Whether it held any item.
-    fn region(self: *Reader, r: Region, whole: ?*Builder) Error!bool {
+    fn region(self: *Reader, r: Region, whole: ?*Builder, narrative: bool) Error!bool {
         const blocks = try markdown.scan(self.arena, r.text);
         var held = false;
         var i: usize = 0;
@@ -61,14 +71,31 @@ const Reader = struct {
                 // a list that belongs to no item here: its entries may hold some
                 .list => {
                     for (try markdown.list.entries(self.arena, blocks[i])) |entry| {
-                        if (try self.region(entryRegion(r, entry), whole)) held = true;
+                        if (try self.region(entryRegion(r, entry), whole, narrative)) held = true;
                     }
                     i += 1;
                 },
-                else => i += 1,
+                else => {
+                    if (narrative) try self.mention(r, blocks[i]);
+                    i += 1;
+                },
             }
         }
         return held;
+    }
+
+    /// Records the references in a narrative block
+    fn mention(self: *Reader, r: Region, block: markdown.Block) Error!void {
+        const first_col = columnsBefore(r.text, block.text);
+        for (try markdown.references.find(self.arena, block.text)) |found| {
+            const at = markdown.references.position(block.text, found.offset);
+            try self.mentions.append(self.arena, .{
+                .target = found.target,
+                .file = self.file,
+                .line = r.line + block.first_line - 1 + at.line - 1,
+                .column = at.column + r.dedent + (if (at.line == 1) first_col else 0),
+            });
+        }
     }
 
     /// Reads the item whose marker is `blocks[at]`; the index after what
@@ -159,7 +186,8 @@ const Reader = struct {
         const entries = try markdown.list.entries(self.arena, block);
         var any = false;
         for (entries) |entry| {
-            if (try self.region(entryRegion(r, entry), b)) any = true;
+            // what an entry with a marker leaves over is narrative; the others are the item's
+            if (try self.region(entryRegion(r, entry), b, markdown.Marker.startsOne(entry.text))) any = true;
         }
         const place: Builder.Place = .{ .line = r.line + block.first_line - 1, .dedent = r.dedent };
         // the list as it stands, when all of it is the item's own

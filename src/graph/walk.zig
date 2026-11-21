@@ -20,6 +20,15 @@ pub fn referencedBy(_: std.mem.Allocator, graph: *const Graph, id: []const u8) s
     return if (graph.referrers.get(id)) |list| list.items else &.{};
 }
 
+/// The references to `id` in narrative text, in the order read
+pub fn mentionsOf(arena: std.mem.Allocator, graph: *const Graph, id: []const u8) std.mem.Allocator.Error![]const Graph.Mention {
+    var out: std.ArrayList(Graph.Mention) = .empty;
+    for (graph.mentions) |m| {
+        if (std.mem.eql(u8, m.target, id)) try out.append(arena, m);
+    }
+    return out.items;
+}
+
 pub const Direction = enum { above, below };
 
 /// Every item that can be reached from `id` by following links one way,

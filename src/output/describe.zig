@@ -99,6 +99,17 @@ pub fn json(ctx: Context, j: *Json, item: *const Item, with_text: bool) Error!vo
     try j.strings(try referenceTargets(ctx.arena, item));
     try j.key("referenced_from");
     try j.strings(try walk.referencedBy(ctx.arena, ctx.graph, item.id));
+    try j.key("mentioned_in");
+    try j.beginArray();
+    for (try walk.mentionsOf(ctx.arena, ctx.graph, item.id)) |m| {
+        try j.beginObject();
+        try j.key("file");
+        try j.string(m.file);
+        try j.key("line");
+        try j.integer(m.line);
+        try j.endObject();
+    }
+    try j.endArray();
 
     try j.key("approvals");
     try j.beginArray();
@@ -177,6 +188,10 @@ pub fn text(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
 
     try list(a, out, "\nRefers to: ", try referenceTargets(a, item));
     try list(a, out, "\nReferred to by: ", try walk.referencedBy(a, ctx.graph, item.id));
+
+    const mentions = try walk.mentionsOf(a, ctx.graph, item.id);
+    if (mentions.len > 0) try out.appendSlice(a, "\nMentioned in:\n");
+    for (mentions) |m| try out.print(a, "  {s}:{d}\n", .{ m.file, m.line });
 
     const approvals = try ctx.approvals.of(a, item.id);
     if (approvals.len > 0) try out.appendSlice(a, "\nApproved by:\n");
