@@ -54,7 +54,7 @@ derives-from = ["SYS-003"]
 The software shall record the time of each measurement.
 ```
 
-The rest of the file is the item's text.
+The rest of the file is the item's text. A Markdown file in the directory that does not start with front matter is not an item, and is passed over: a readme, notes.
 
 | Key | Meaning |
 | --- | --- |

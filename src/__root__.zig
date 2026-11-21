@@ -26,5 +26,7 @@ test {
     _ = @import("graph/coverage.zig");
     _ = @import("commands/diff.zig");
     _ = @import("commands/export.zig");
+    _ = @import("import/doorstop/convert.zig");
+    _ = @import("commands/import_doorstop.zig");
     _ = @import("commands/_test/trace.zig");
 }

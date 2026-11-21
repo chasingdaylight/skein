@@ -4,6 +4,7 @@ const approve = @import("commands/approve.zig");
 const check = @import("commands/check.zig");
 const diff = @import("commands/diff.zig");
 const exporter = @import("commands/export.zig");
+const import_doorstop = @import("commands/import_doorstop.zig");
 const coverage = @import("commands/coverage.zig");
 const cli = @import("cli.zig");
 const review = @import("commands/review.zig");
@@ -27,6 +28,9 @@ pub fn main(init: std.process.Init) !void {
         .approve => |options| try approve.run(io, arena, options),
         .diff => |options| try diff.run(io, arena, options),
         .exporting => |options| try exporter.run(io, arena, options),
+        .import => |options| switch (options.format) {
+            .doorstop => try import_doorstop.run(io, arena, options),
+        },
         .trace => |options| try trace.run(io, arena, options),
         .coverage => |options| try coverage.run(io, arena, options),
         .unknown => |name| .{
