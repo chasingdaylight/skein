@@ -11,6 +11,7 @@ pub const usage =
     \\  coverage          Count the items that are linked to or cited as expected
     \\  diff [REV [REV]]  Show the items added, removed or changed since a commit
     \\  impact [REV]      Show what the changes since a commit reach
+    \\  export [WHAT]     Write the graph as JSON, or items, links or citations as CSV
     \\  review ID...      Record the links of these items as reviewed
     \\  clear ID...       Record the links to these items as reviewed
     \\  approve ID...     Record an approval of these items as they are now
@@ -21,7 +22,7 @@ pub const usage =
     \\  --root DIR        The project, or a directory inside it (default: here)
     \\  --json            trace, coverage, diff, impact: as JSON
     \\  --markdown        diff, impact: as Markdown, for a pull request
-    \\  --profile NAME    coverage: only the items of this profile
+    \\  --profile NAME    coverage, export: only the items of this profile
     \\  --all             review, clear: every link, not those of the items named
     \\  --by NAME         approve: who approves (default: git's user.name)
     \\  --on DATE         approve: when, as 2027-03-01 (default: today)
@@ -36,6 +37,8 @@ pub const Command = union(enum) {
     coverage: Coverage,
     /// `diff`, and `impact`
     diff: Diff,
+    /// `export`
+    exporting: Export,
     review: Review,
     clear: Review,
     approve: Approve,
@@ -72,6 +75,21 @@ pub const Diff = struct {
     impact: bool = false,
     json: bool = false,
     markdown: bool = false,
+};
+
+pub const Export = struct {
+    common: Common = .{},
+    what: What = .json,
+    profile: ?[]const u8 = null,
+
+    pub const What = enum {
+        /// everything, as JSON
+        json,
+        /// as CSV: one row per item, per link, per citation
+        items,
+        links,
+        citations,
+    };
 };
 
 pub const Review = struct {
@@ -134,6 +152,13 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (impact and words.len > 1) return .{ .misuse = "impact takes one commit: it is about the project as it is now" };
         if (words.len > 2) return .{ .misuse = "diff takes one commit or two" };
         return .{ .diff = .{ .common = common, .revisions = words, .impact = impact, .json = p.flag("--json"), .markdown = p.flag("--markdown") } };
+    }
+    if (eql(name, "export")) {
+        if (try p.allow(&.{ "--root", "--profile" })) |problem| return .{ .misuse = problem };
+        if (words.len > 1) return .{ .misuse = "export takes one thing to export" };
+        const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
+            return .{ .misuse = "export: json, items, links or citations" };
+        return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
     }
     if (eql(name, "review") or eql(name, "clear")) {
         if (try p.allow(&.{ "--root", "--all" })) |problem| return .{ .misuse = problem };
@@ -321,4 +346,14 @@ test "diff and impact take commits" {
     try testing.expectEqualStrings("diff takes one commit or two", (try f.run(&.{ "diff", "a", "b", "c" })).misuse);
     try testing.expectEqualStrings("impact takes one commit: it is about the project as it is now", (try f.run(&.{ "impact", "a", "b" })).misuse);
     try testing.expectEqualStrings("give --json or --markdown, not both", (try f.run(&.{ "diff", "--json", "--markdown" })).misuse);
+}
+
+test "export takes what to export" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    try testing.expectEqual(.json, (try f.run(&.{"export"})).exporting.what);
+    const e = (try f.run(&.{ "export", "links", "--profile", "s0" })).exporting;
+    try testing.expectEqual(.links, e.what);
+    try testing.expectEqualStrings("s0", e.profile.?);
+    try testing.expectEqualStrings("export: json, items, links or citations", (try f.run(&.{ "export", "everything" })).misuse);
 }
