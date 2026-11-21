@@ -10,13 +10,15 @@ pub const usage =
     \\  review ID...      Record the links of these items as reviewed
     \\  clear ID...       Record the links to these items as reviewed
     \\  trace ID          Show an item with what is above and below it
+    \\  coverage          Count the items that are linked to or cited as expected
     \\  help              Show this text
     \\  version           Show skein's version
     \\
     \\Options:
     \\  --root DIR        The project, or a directory inside it (default: here)
     \\  --all             review, clear: every link, not those of the items named
-    \\  --json            trace: as JSON
+    \\  --profile NAME    coverage: only the items of this profile
+    \\  --json            trace, coverage: as JSON
     \\
 ;
 
@@ -26,6 +28,7 @@ pub const Command = union(enum) {
     check: Common,
     review: Review,
     trace: Trace,
+    coverage: Coverage,
     clear: Review,
     /// the first argument, which names no command
     unknown: []const u8,
@@ -42,6 +45,12 @@ pub const Common = struct {
 pub const Trace = struct {
     common: Common = .{},
     id: []const u8,
+    json: bool = false,
+};
+
+pub const Coverage = struct {
+    common: Common = .{},
+    profile: ?[]const u8 = null,
     json: bool = false,
 };
 
@@ -65,7 +74,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (p.words.items.len != 1 or p.all) return .{ .misuse = "trace takes one item" };
         return .{ .trace = .{ .common = p.common, .id = p.words.items[0], .json = p.json } };
     }
-    if (p.json) return .{ .misuse = "--json goes with trace" };
+    if (eql(name, "coverage")) {
+        if (p.words.items.len > 0 or p.all) return .{ .misuse = "coverage takes no arguments but its options" };
+        return .{ .coverage = .{ .common = p.common, .profile = p.profile, .json = p.json } };
+    }
+    if (p.json) return .{ .misuse = "--json goes with trace and coverage" };
+    if (p.profile != null) return .{ .misuse = "--profile goes with coverage" };
     if (eql(name, "check")) {
         if (p.words.items.len > 0 or p.all) return .{ .misuse = "check takes no arguments but --root" };
         return .{ .check = p.common };
@@ -83,6 +97,7 @@ const Parsed = struct {
     common: Common = .{},
     all: bool = false,
     json: bool = false,
+    profile: ?[]const u8 = null,
     /// what is not an option
     words: std.ArrayList([]const u8) = .empty,
 
@@ -95,6 +110,10 @@ const Parsed = struct {
                 i += 1;
                 if (i == args.len) return "--root needs a directory";
                 self.common.root = args[i];
+            } else if (eql(arg, "--profile")) {
+                i += 1;
+                if (i == args.len) return "--profile needs a name";
+                self.profile = args[i];
             } else if (eql(arg, "--json")) {
                 self.json = true;
             } else if (eql(arg, "--all")) {

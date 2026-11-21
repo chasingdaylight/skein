@@ -156,5 +156,5 @@ test "trace on the command line" {
     try testing.expectEqualStrings("a.b", t.id);
     try testing.expect(t.json);
     try testing.expectEqualStrings("trace takes one item", (try cli.parse(a, &.{"trace"})).misuse);
-    try testing.expectEqualStrings("--json goes with trace", (try cli.parse(a, &.{ "check", "--json" })).misuse);
+    try testing.expectEqualStrings("--json goes with trace and coverage", (try cli.parse(a, &.{ "check", "--json" })).misuse);
 }

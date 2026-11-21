@@ -34,6 +34,7 @@ type = "srs"
 | `citations.files` | The ends of the names of the files to read: `[".zig"]`, `["_test.c"]`. |
 | `citations.marker` | The text that comes before the IDs on a line: `"// spec:"`. |
 | `citations.to` | The item types the citations may name; leave out for any. |
+| `citations.expected` | Every item of a `to` type should be cited by the set; coverage counts the ones that are not. |
 
 ```toml
 [[citations]]
