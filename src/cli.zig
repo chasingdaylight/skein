@@ -9,12 +9,14 @@ pub const usage =
     \\  check             Check the project: its configuration, schema and items
     \\  review ID...      Record the links of these items as reviewed
     \\  clear ID...       Record the links to these items as reviewed
+    \\  trace ID          Show an item with what is above and below it
     \\  help              Show this text
     \\  version           Show skein's version
     \\
     \\Options:
     \\  --root DIR        The project, or a directory inside it (default: here)
     \\  --all             review, clear: every link, not those of the items named
+    \\  --json            trace: as JSON
     \\
 ;
 
@@ -23,6 +25,7 @@ pub const Command = union(enum) {
     version,
     check: Common,
     review: Review,
+    trace: Trace,
     clear: Review,
     /// the first argument, which names no command
     unknown: []const u8,
@@ -34,6 +37,12 @@ pub const Command = union(enum) {
 pub const Common = struct {
     /// where to look for the project from
     root: []const u8 = ".",
+};
+
+pub const Trace = struct {
+    common: Common = .{},
+    id: []const u8,
+    json: bool = false,
 };
 
 pub const Review = struct {
@@ -52,6 +61,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
 
     var p: Parsed = .{};
     if (try p.read(arena, args[1..])) |problem| return .{ .misuse = problem };
+    if (eql(name, "trace")) {
+        if (p.words.items.len != 1 or p.all) return .{ .misuse = "trace takes one item" };
+        return .{ .trace = .{ .common = p.common, .id = p.words.items[0], .json = p.json } };
+    }
+    if (p.json) return .{ .misuse = "--json goes with trace" };
     if (eql(name, "check")) {
         if (p.words.items.len > 0 or p.all) return .{ .misuse = "check takes no arguments but --root" };
         return .{ .check = p.common };
@@ -68,6 +82,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
 const Parsed = struct {
     common: Common = .{},
     all: bool = false,
+    json: bool = false,
     /// what is not an option
     words: std.ArrayList([]const u8) = .empty,
 
@@ -80,6 +95,8 @@ const Parsed = struct {
                 i += 1;
                 if (i == args.len) return "--root needs a directory";
                 self.common.root = args[i];
+            } else if (eql(arg, "--json")) {
+                self.json = true;
             } else if (eql(arg, "--all")) {
                 self.all = true;
             } else if (std.mem.startsWith(u8, arg, "--")) {

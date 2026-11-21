@@ -29,7 +29,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Review, direction: Dir
     };
     defer ws.close();
     // what is wrong with the items is for `check`; the schema must be sound
-    if (!ws.report.ok()) return ws.problems();
+    if (!ws.items_read) return ws.problems();
 
     for (options.ids) |id| {
         if (ws.graph.find(id) == null) return .{
@@ -39,8 +39,10 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Review, direction: Dir
     }
 
     const schema = &ws.project.schema;
+    // the records must be readable, or writing them again would lose some
+    const before = ws.report.problems.items.len;
     var reviews = try Reviews.load(io, arena, ws.root, &ws.report);
-    if (!ws.report.ok()) return ws.problems();
+    if (ws.report.problems.items.len > before) return ws.problems();
 
     var files: std.ArrayList([]const u8) = .empty;
     var count: usize = 0;
