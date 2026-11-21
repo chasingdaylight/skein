@@ -1,5 +1,6 @@
 //! Documents the parser must refuse, and where it says the mistake is.
 
+// req: project.toml.diagnostics
 const std = @import("std");
 const testing = std.testing;
 

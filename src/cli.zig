@@ -295,6 +295,7 @@ fn eql(a: []const u8, b: []const u8) bool {
     return std.mem.eql(u8, a, b);
 }
 
+// req: cli.commands, cli.options, principle.no-silent-mistakes
 const testing = std.testing;
 
 /// A parser for tests, whose arena is freed with `deinit`

@@ -1,5 +1,7 @@
 //! `skein import doorstop`, on Doorstop documents written for the test.
 
+// req: import.doorstop.items, import.doorstop.type, import.doorstop.fields, import.doorstop.reviews
+// req: import.doorstop.refusals, import.place
 const std = @import("std");
 const testing = std.testing;
 

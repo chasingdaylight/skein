@@ -95,6 +95,12 @@ jobs:
       - name: The binary runs
         run: ./zig-out/bin/skein version
 
+      # skein checks itself: its own requirements, and the tests that cite them
+      - name: skein check, on skein
+        run: |
+          ./zig-out/bin/skein check
+          ./zig-out/bin/skein coverage --profile implemented
+
   lint:
     name: Lint
     needs: changes

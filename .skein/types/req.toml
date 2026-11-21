@@ -1,0 +1,3 @@
+description = "A requirement of skein"
+# an item that names no status is implemented; what is to come says planned
+statuses = ["implemented", "planned", "removed"]

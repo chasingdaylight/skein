@@ -1,5 +1,6 @@
 //! Loading a project's items from its sources on disk.
 
+// req: items.sources, principle.deterministic
 const std = @import("std");
 const testing = std.testing;
 

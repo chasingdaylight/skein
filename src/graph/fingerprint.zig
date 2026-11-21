@@ -59,6 +59,7 @@ pub fn normalize(arena: std.mem.Allocator, text: []const u8) std.mem.Allocator.E
     return out.items;
 }
 
+// req: fingerprint.content, fingerprint.layout, markdown.line-ends
 const testing = std.testing;
 
 fn fingerprintOf(arena: std.mem.Allocator, item: Item) !Fingerprint {

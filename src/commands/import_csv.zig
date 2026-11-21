@@ -28,8 +28,9 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Import) !Workspace.Out
     const to = std.mem.trimEnd(u8, options.to orelse return fail(arena, "import csv: name the directory for the items with --to", .{}), "/");
     if (!Schema.names.valid(type_name)) return fail(arena, "'{s}' cannot be an item type: {s}", .{ type_name, Schema.names.rule });
 
-    const root_path = try Project.findRoot(io, arena, options.common.root) orelse
-        Io.Dir.cwd().realPathFileAlloc(io, options.common.root, arena) catch return fail(arena, "cannot find the directory '{s}'", .{options.common.root});
+    // where the project is, or is to be: an import does not look for one
+    // above, since the paths it is given are from this directory
+    const root_path = Io.Dir.cwd().realPathFileAlloc(io, options.common.root, arena) catch return fail(arena, "cannot find the directory '{s}'", .{options.common.root});
     var root = try Io.Dir.cwd().openDir(io, root_path, .{});
     defer root.close(io);
     var report: Report = .{ .arena = arena };

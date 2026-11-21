@@ -116,6 +116,7 @@ fn quoted(self: *Json, s: []const u8) Error!void {
     try self.out.append(self.arena, '"');
 }
 
+// req: export.json, principle.deterministic
 test "objects, arrays and values, indented" {
     var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();

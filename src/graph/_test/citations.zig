@@ -1,5 +1,6 @@
 //! Citations in code and tests.
 
+// req: items.citation, items.citation.directory, check.citations
 const std = @import("std");
 const testing = std.testing;
 

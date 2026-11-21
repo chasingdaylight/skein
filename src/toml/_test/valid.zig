@@ -1,6 +1,7 @@
 //! Documents the parser must accept, after the examples of the TOML
 //! specification (toml.io, v1.0.0 and v1.1.0).
 
+// req: project.toml
 const std = @import("std");
 const testing = std.testing;
 

@@ -57,6 +57,7 @@ fn before(_: void, a: Problem, b: Problem) bool {
     };
 }
 
+// req: check.report, principle.deterministic
 test "problems are rendered in order of file and place" {
     var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();

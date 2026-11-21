@@ -1,0 +1,15 @@
+[project]
+name = "skein"
+
+# what skein is required to do: paragraphs with markers in these documents
+[[sources]]
+path = "docs/requirements"
+
+# the tests say which requirements they check
+[[citations]]
+name = "test"
+path = "src"
+files = [".zig"]
+marker = "// req:"
+to = ["req"]
+expected = true

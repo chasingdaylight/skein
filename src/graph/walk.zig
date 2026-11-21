@@ -45,6 +45,7 @@ pub fn reach(arena: std.mem.Allocator, graph: *const Graph, id: []const u8, dire
     return seen.keys()[1..];
 }
 
+// req: trace.closure
 const testing = std.testing;
 
 test "above and below, through several links and around a loop" {

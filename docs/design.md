@@ -230,4 +230,4 @@ Nothing is waiting on a decision. Left to settle with the first code, and to bri
 
 ## 14. Requirements of skein itself
 
-Until phase 2 works, this document is skein's requirements. Then they move into skein's own format in this repository, traced to its tests, and this document becomes a design description that cites them.
+skein's requirements are written in skein's own format, in `docs/requirements/`: what it does today, each requirement cited by the tests that check it, and, more coarsely, what this document commits it to and the code does not do yet (`status=planned`). `skein check` and `skein coverage --profile implemented`, run in skein's repository, say whether they hold together; CI runs both. This document stays the description of where skein is going and why; where the two disagree about what skein does, the requirements are right and this document is to be brought in line.

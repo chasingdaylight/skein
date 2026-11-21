@@ -1,5 +1,7 @@
 //! Reading items from documents and from item files.
 
+// req: items.text-extent, items.removed, items.file, items.file.keys, items.file.not-items
+// req: principle.prose-friendly
 const std = @import("std");
 const testing = std.testing;
 

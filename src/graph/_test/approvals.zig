@@ -1,5 +1,7 @@
 //! Approvals, on a project on disk.
 
+// req: approval.record, approval.records, approval.current, approval.status
+// req: check.schema-first, principle.plain-text
 const std = @import("std");
 const testing = std.testing;
 

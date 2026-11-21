@@ -1,5 +1,6 @@
 //! Loading a project from a `.skein/` directory on disk.
 
+// req: project.root, project.config, project.paths, project.files-by-name, project.unknown-keys
 const std = @import("std");
 const testing = std.testing;
 

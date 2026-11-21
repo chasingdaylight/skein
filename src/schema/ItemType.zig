@@ -158,6 +158,7 @@ pub fn idMatches(self: *const ItemType, id: []const u8) bool {
     }
 }
 
+// req: schema.item-type
 test "IDs are matched against the type's scheme" {
     const rule: ItemType = .{ .name = "rule" };
     try std.testing.expect(rule.idMatches("lex.comment.line"));

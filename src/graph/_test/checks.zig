@@ -1,5 +1,7 @@
 //! What `skein check` reports about items.
 
+// req: check.ids, check.removed-ids, check.type-rules, check.attributes, check.links, check.references
+// req: check.removed-exempt, check.other-repositories, principle.schema-driven
 const std = @import("std");
 const testing = std.testing;
 

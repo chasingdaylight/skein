@@ -23,9 +23,9 @@ const link_type = "parent";
 const link_file = Project.dir_name ++ "/links/" ++ link_type ++ ".toml";
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Import) !Workspace.Outcome {
-    // the project, or where one is to be
-    const root_path = try Project.findRoot(io, arena, options.common.root) orelse
-        Io.Dir.cwd().realPathFileAlloc(io, options.common.root, arena) catch return fail(arena, "cannot find the directory '{s}'", .{options.common.root});
+    // where the project is, or is to be: an import does not look for one
+    // above, since the paths it is given are from this directory
+    const root_path = Io.Dir.cwd().realPathFileAlloc(io, options.common.root, arena) catch return fail(arena, "cannot find the directory '{s}'", .{options.common.root});
     var root = try Io.Dir.cwd().openDir(io, root_path, .{});
     defer root.close(io);
 

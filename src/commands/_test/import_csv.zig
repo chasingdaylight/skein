@@ -1,5 +1,6 @@
 //! `skein import csv`, on files written for the test.
 
+// req: import.csv.rows, import.csv.type, import.csv.all-or-nothing, import.place
 const std = @import("std");
 const testing = std.testing;
 
