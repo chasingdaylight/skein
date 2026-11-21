@@ -1,0 +1,76 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "skein markers and references in Markdown",
+  "scopeName": "skein.injection",
+  "injectionSelector": "L:text.html.markdown - markup.raw - markup.fenced_code - markup.inline.raw - meta.embedded - comment",
+  "patterns": [
+    { "include": "#marker" },
+    { "include": "#reference" }
+  ],
+  "repository": {
+    "marker": {
+      "comment": "%type[id words key=value]: declares an item",
+      "name": "meta.item.marker.skein",
+      "begin": "(?<![A-Za-z0-9%\\\\])(%)([a-z][a-z0-9-]*)(\\[)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.item.skein" },
+        "2": { "name": "keyword.other.item-type.skein" },
+        "3": { "name": "punctuation.definition.item.begin.skein" }
+      },
+      "end": "\\]|$",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.item.end.skein" }
+      },
+      "patterns": [
+        {
+          "comment": "the first word is the ID",
+          "match": "\\G\\s*(\\.?[A-Za-z0-9_][A-Za-z0-9_.-]*)",
+          "captures": {
+            "1": { "name": "entity.name.tag.item-id.skein" }
+          }
+        },
+        {
+          "comment": "key=\"a value\" or key=value,value",
+          "match": "([A-Za-z][A-Za-z0-9_-]*)(=)(?:(\"[^\"]*\")|([^\\s\\]]+))",
+          "captures": {
+            "1": { "name": "entity.other.attribute-name.skein" },
+            "2": { "name": "punctuation.separator.key-value.skein" },
+            "3": { "name": "string.quoted.double.skein" },
+            "4": { "name": "string.unquoted.skein" }
+          }
+        },
+        {
+          "comment": "a bare word: the category or the status",
+          "match": "[A-Za-z][A-Za-z0-9_-]*",
+          "name": "constant.language.item-word.skein"
+        }
+      ]
+    },
+    "reference": {
+      "comment": "%[id words]: refers to an item",
+      "name": "meta.item.reference.skein",
+      "begin": "(?<![A-Za-z0-9%\\\\])(%)(\\[)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.item.skein" },
+        "2": { "name": "punctuation.definition.item.begin.skein" }
+      },
+      "end": "\\]|$",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.item.end.skein" }
+      },
+      "patterns": [
+        {
+          "match": "\\G\\s*([A-Za-z0-9_][A-Za-z0-9_.:-]*)",
+          "captures": {
+            "1": { "name": "entity.name.tag.item-id.skein markup.underline.link.skein" }
+          }
+        },
+        {
+          "comment": "the words shown in place of the ID",
+          "match": "[^\\]\\s][^\\]]*",
+          "name": "string.other.link.title.skein"
+        }
+      ]
+    }
+  }
+}

@@ -29,3 +29,7 @@ SuperMD
 sysinfo
 zfls
 ZON
+Dtarget
+OPENVSX
+OVSX
+ovsx
