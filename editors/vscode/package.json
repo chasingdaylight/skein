@@ -2,7 +2,7 @@
   "name": "skein",
   "displayName": "skein",
   "description": "Highlights skein's item markers and references in Markdown.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "chasingdaylight",
   "license": "MIT",
   "preview": true,

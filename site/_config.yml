@@ -1,0 +1,54 @@
+# The documentation site: docs/ as pages, built by GitHub Pages' own Jekyll
+# until skein renders HTML itself. tools/site.sh puts this directory, docs/
+# and the rendered requirements together.
+#
+# No `url` and no absolute links: the same site is served under more than one
+# domain, and a page must not load or link to anything on another one.
+title: skein
+description: Requirements, specifications and traceability as plain text in git.
+repository_url: https://github.com/chasingdaylight/skein
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter_opts:
+    disable: true
+
+plugins:
+  - jekyll-optional-front-matter
+  - jekyll-relative-links
+  - jekyll-titles-from-headings
+  - jekyll-readme-index
+
+relative_links:
+  enabled: true
+  collections: false
+
+titles_from_headings:
+  enabled: true
+  strip_title: false
+  collections: false
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+nav:
+  - title: Overview
+    url: /
+  - title: Writing items
+    url: /writing-items.html
+  - title: Project files
+    url: /project-files.html
+  - title: Commands
+    url: /commands.html
+  - title: Reviewing
+    url: /reviewing.html
+  - title: Importing
+    url: /importing.html
+  - title: Design
+    url: /design.html
+  - title: Requirements
+    url: /requirements/
