@@ -34,7 +34,7 @@ Plain-text requirements, specifications and traceability kept in git. `docs/desi
 ## Git
 
 - `main` and `dev`. Work goes on a branch from `dev` and reaches `dev` through a pull request; `main` only takes releases, through the `dev` to `main` pull request, which emanspeaks merges.
-- A release is made by CI when `main` gets a version (`build.zig.zon`) that has no tag: it tags the commit, publishes skein for each platform and the VS Code extension (`editors/vscode/`, published by `marketplace.yml` and `open-vsx.yml`), and begins the next patch version on `dev`. The version in `editors/vscode/package.json` is the same as in `build.zig.zon`; CI refuses a difference. Never tag or publish by hand.
+- A release is made by CI when `main` gets a version (`build.zig.zon`) that has no tag and something a release ships has changed since the last tag (not documentation, the site or CI alone: `.github/workflows/ci-only.txt`): it tags the commit, publishes skein for each platform and the VS Code extension (`editors/vscode/`, published by `marketplace.yml` and `open-vsx.yml`), and begins the next patch version on `dev`. The version in `editors/vscode/package.json` is the same as in `build.zig.zon`; CI refuses a difference. Never tag or publish by hand.
 - For now agents commit, push and open pull requests with emanspeaks's own git identity and `gh`, with the harness's AI attribution trailer; no GitHub App is installed here yet.
 - Commit messages are one short line (about 50 characters), with no body; rationale and test results go in the pull request or the issue.
 - Before a commit, check `git diff --cached` and `git status` so a commit takes only your own changes. emanspeaks's uncommitted edits to `CLAUDE.md`, the LTeX files and the readme go into the next commit.

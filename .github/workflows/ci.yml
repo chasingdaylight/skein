@@ -10,7 +10,8 @@ name: CI
 # skips the checks; the "CI" job, the check main's ruleset requires, passes
 # then too.
 #
-# A push to main of a version (build.zig.zon) that has no tag yet is released:
+# A push to main of a version (build.zig.zon) that has no tag yet is released,
+# when something a release ships has changed since the last one (changes.sh):
 # the commit is tagged, a GitHub release gets skein for each platform and the
 # VS Code extension, the extension is published to the Marketplace and to Open
 # VSX (marketplace.yml, open-vsx.yml), and the next version is begun on dev.
@@ -103,7 +104,20 @@ jobs:
           release=false
           if [ "$EVENT" = push ] && [ "$GITHUB_REF" = refs/heads/main ] \
             && ! git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
-            release=true
+            # matches, exempt, shipped_changes
+            source .github/workflows/changes.sh
+            last=$(git describe --tags --abbrev=0 --match 'v*' 2> /dev/null || true)
+            if [ -z "$last" ]; then
+              release=true
+            else
+              shipped=$(shipped_changes "$last")
+              if [ -n "$shipped" ]; then
+                release=true
+                { echo "Changed since $last:"; echo "$shipped" | sed 's/^/- /'; } >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "Nothing that a release ships has changed since $last: no release." | tee -a "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
           fi
           {
             echo "version=$version"

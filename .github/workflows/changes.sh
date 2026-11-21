@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 # Which changed files can change the shipped binary. Sourced (in bash, from
 # the repository root) by ci.yml's "Changes" job, which decides whether a
-# pull request needs the checks. From zfls's changes.sh; the release
-# decisions it also makes there come here with the first release.
+# pull request needs the checks, and by its "Version" job, which decides
+# whether a push to main is a release. From zfls's changes.sh.
 
 # patterns LIST...: the globs of the lists (one bash `case` glob per line;
 # lines starting with # and blank lines are ignored)
@@ -25,3 +25,31 @@ matches() {
 mapfile -t no_ci < <(patterns .github/workflows/no-ci.txt)
 # shellcheck disable=SC2034
 mapfile -t exempt < <(patterns .github/workflows/no-ci.txt .github/workflows/ci-only.txt)
+
+# version_only FILE TAG: whether FILE differs from what it was at TAG in
+# nothing but its version line
+version_only() {
+    local line='^\s*(\.version = |"version": )"'
+    diff <(git show "$2:$1" 2> /dev/null | grep -vE "$line") <(grep -vE "$line" "$1" 2> /dev/null) > /dev/null
+}
+
+# shipped_changes TAG: the files changed since TAG that change what a
+# release ships: skein, or the VS Code extension. A version begun on dev
+# changes the version lines and the extension's changelog, which alone ship
+# nothing new.
+shipped_changes() {
+    local f
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        case "$f" in
+            build.zig.zon | editors/vscode/package.json)
+                version_only "$f" "$1" && continue
+                ;;
+            editors/vscode/CHANGELOG.md) continue ;;
+            # everything else of the extension is in its package, its readme too
+            editors/vscode/*) ;;
+            *) matches "$f" "${exempt[@]}" && continue ;;
+        esac
+        echo "$f"
+    done <<< "$(git diff --name-only "$1" HEAD)"
+}
