@@ -6,7 +6,7 @@ skein holds the threads of a project together: what is needed, what is decided, 
 
 It is for projects that want the rigor of requirements management without a database or a proprietary tool: from a language specification written as atomic, numbered paragraphs (like the Ferrocene Language Specification) to a NASA-style V-model of system requirements, software requirements, design and tests.
 
-**Status:** design. `docs/design.md` describes what skein is to be; no code yet.
+**Status:** early. `docs/design.md` describes what skein is to be; the code so far is the skeleton of the `skein` binary. Build it with Zig 0.17.1: `zig build`, `zig build test`.
 
 ## Principles
 

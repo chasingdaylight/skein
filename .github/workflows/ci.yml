@@ -1,0 +1,130 @@
+name: CI
+
+# Modeled on zfls's and rstd's ci.yml. Every pull request into main and every
+# push to main runs the unit tests on each platform, and checks zig fmt and
+# the Markdown. Pushes to dev and pull requests into it are not run: dev is
+# checked as a whole by the pull request that releases it (to main), which
+# each merge into dev restarts; start the workflow by hand on a branch to
+# check it alone (`gh workflow run CI --ref <branch>`). A pull request that
+# only changes the files listed in no-ci.txt (documentation, editor settings)
+# skips the checks; the "CI" job, the check main's ruleset requires, passes
+# then too.
+#
+# Tagging releases from build.zig.zon's version, as zfls and rstd do, comes
+# with the first release.
+
+on:
+  push:
+    # (not dev: see the top)
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  ZIG_VERSION: 0.17.1
+
+jobs:
+  changes:
+    name: Changes
+    runs-on: ubuntu-24.04
+    outputs:
+      ci: ${{ steps.changes.outputs.ci }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Work out what changed
+        id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # matches, no_ci
+          source .github/workflows/changes.sh
+
+          # A pull request that only changes files of no-ci.txt skips CI;
+          # pushes to main and runs started by hand never do
+          ci=true
+          if [ "$EVENT" = pull_request ]; then
+            ci=false
+            while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              if ! matches "$f" "${no_ci[@]}"; then ci=true; echo "changed: $f"; break; fi
+            done <<< "$(git diff --name-only "$BASE_SHA...HEAD")"
+          fi
+          echo "ci=$ci" >> "$GITHUB_OUTPUT"
+          if [ "$ci" = false ]; then
+            echo "Only files of no-ci.txt changed; skipping the checks." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+  test:
+    name: Test ${{ matrix.os }}
+    needs: changes
+    if: needs.changes.outputs.ci == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025, macos-15, macos-15-intel]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: randyos-org/setup-zig@node24  # v2.2.1 on Node.js 24, until upstream releases it
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Build
+        run: zig build
+
+      - name: Unit tests
+        run: zig build test
+
+      - name: The binary runs
+        run: ./zig-out/bin/skein version
+
+  lint:
+    name: Lint
+    needs: changes
+    if: needs.changes.outputs.ci == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: randyos-org/setup-zig@node24  # v2.2.1 on Node.js 24, until upstream releases it
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: zig fmt
+        run: zig fmt --check build build.zig src
+
+      - name: Markdown
+        run: npx --yes markdownlint-cli2@0.24.2 "**/*.md"
+
+  ci:
+    name: CI
+    # the one check main's ruleset requires: passes when every job passed or
+    # was skipped for a change that needs none
+    if: always()
+    needs: [changes, test, lint]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check the jobs
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for r in $RESULTS; do
+            case "$r" in success | skipped) ;; *) echo "::error::a job ended as $r"; exit 1 ;; esac
+          done

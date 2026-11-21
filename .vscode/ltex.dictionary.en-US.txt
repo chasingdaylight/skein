@@ -2,10 +2,15 @@ burnup
 cmark
 Doptimize
 emanspeaks
+envrc
 Forgejo
+frobnicate
 Gantt
 grep
+iosb
 mermaid
+MSYS
+ntdll
 OpenFastTrace
 OpenProject
 overallocation

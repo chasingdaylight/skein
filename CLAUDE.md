@@ -69,3 +69,7 @@ The list is not complete (zfls's `CLAUDE.md` has a longer one); the standard lib
 - Never write a redirect that can create a `nul` file: `/dev/null` in Bash, `$null` in PowerShell.
 - Search with `rg` (with an explicit path) or the Grep tool, excluding `zig-pkg`, `.zig-cache` and `zig-out`.
 - Kill only processes you started, matched by their own command line.
+
+## Checks before a pull request
+
+`zig build test`, `zig fmt --check build build.zig src`, and `npx markdownlint-cli2 "**/*.md"`. CI does not run on pull requests into `dev` (only on those into `main`, and when started by hand: `gh workflow run ci.yml --ref BRANCH`), so these checks are what stands between a change and `dev`; say in the pull request which were run.
