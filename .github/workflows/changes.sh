@@ -24,7 +24,9 @@ matches() {
 # shellcheck disable=SC2034
 mapfile -t no_ci < <(patterns .github/workflows/no-ci.txt)
 # shellcheck disable=SC2034
-mapfile -t exempt < <(patterns .github/workflows/no-ci.txt .github/workflows/ci-only.txt)
+mapfile -t docs_only < <(patterns .github/workflows/docs-only.txt)
+# shellcheck disable=SC2034
+mapfile -t exempt < <(patterns .github/workflows/no-ci.txt .github/workflows/docs-only.txt .github/workflows/ci-only.txt)
 
 # version_only FILE TAG: whether FILE differs from what it was at TAG in
 # nothing but its version line
