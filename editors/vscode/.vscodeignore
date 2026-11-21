@@ -2,6 +2,7 @@
 **
 !package.json
 !extension.js
+!icon.png
 !bin/**
 !syntaxes/skein.injection.tmLanguage.json
 !readme.md

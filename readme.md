@@ -1,5 +1,7 @@
 # skein
 
+![The skein logo: a skein of red yarn on a pin board](docs/assets/logo.svg)
+
 Plain-text requirements, specifications and traceability, kept in git.
 
 skein holds the threads of a project together: what is needed, what is decided, what is specified, how it is built, and what proves it. Every item is a piece of Markdown in the repository with a stable ID, a type and typed links. skein checks the whole graph, traces it in both directions, flags what a change makes suspect, imports test results, plans the work (schedules, resources, Gantt charts, burndown), and generates the views a team reads: specifications, matrices, coverage, plans and reports.
