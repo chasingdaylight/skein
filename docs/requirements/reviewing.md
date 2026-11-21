@@ -8,7 +8,7 @@ For their users: `docs/reviewing.md`.
 An item's fingerprint shall be a hash of its type, its category, the attributes its type marks as part of what it says, and its text. Its status, its links, its other attributes, its ID and its place are not part of it.
 
 %req[fingerprint.parts]
-The fingerprint of an item with parts shall also be over the fingerprints of its parts, in their order, so that a change to what a part says changes its whole's fingerprint, and that of every whole above it. The IDs and statuses of the parts are not part of it.
+The fingerprint of an item with parts shall also be over the names and the fingerprints of its parts, in their order, so that a change to what a part says, or to its name, changes its whole's fingerprint, and that of every whole above it. A part's name is what follows its whole's ID when its ID continues that one, and else its ID, so that renaming the whole alone changes nothing. The statuses of the parts are not part of it.
 
 %req[fingerprint.layout]
 A change of layout alone shall not change a fingerprint: line ends, runs of spaces, and where lines are wrapped. Inside a code block the lines and their indentation are part of what is said; only spaces at their ends are not.
