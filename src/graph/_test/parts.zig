@@ -13,7 +13,7 @@ test "the text may start on the marker's line" {
     defer f.deinit();
     try f.document("spec/lex.md",
         \\%rule[lex.comment syntax] A comment starts with `//`
-        \\and ends with the line. See [[lex.token]].
+        \\and ends with the line. See %[lex.token].
         \\
         \\%term[lex.token] A token.
         \\
@@ -22,7 +22,7 @@ test "the text may start on the marker's line" {
     try f.expectProblems("");
     try testing.expectEqual(2, f.items.items.len);
     const comment = f.items.items[0];
-    try testing.expectEqualStrings("A comment starts with `//`\nand ends with the line. See [[lex.token]].", comment.text);
+    try testing.expectEqualStrings("A comment starts with `//`\nand ends with the line. See %[lex.token].", comment.text);
     try testing.expectEqual(1, comment.line);
     try testing.expectEqual(2, comment.references[0].line);
     try testing.expectEqual(29, comment.references[0].column);
@@ -33,7 +33,7 @@ test "a reference on the marker's line is found where it stands" {
     var f: Fixture = undefined;
     f.init();
     defer f.deinit();
-    try f.document("spec/lex.md", "%term[lex.token] As [[lex.other]] says.\n");
+    try f.document("spec/lex.md", "%term[lex.token] As %[lex.other] says.\n");
     const ref = f.items.items[0].references[0];
     try testing.expectEqual(1, ref.line);
     try testing.expectEqual(21, ref.column);

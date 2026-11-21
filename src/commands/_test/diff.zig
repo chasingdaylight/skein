@@ -72,7 +72,7 @@ const Repo = struct {
             \\A token is a unit of the text.
             \\
             \\%rule[lex.space approved note=old]
-            \\White space separates tokens; see [[lex.token]].
+            \\White space separates tokens; see %[lex.token].
             \\
             \\%rule[lex.gone]
             \\To be removed.
@@ -100,7 +100,7 @@ const Repo = struct {
             \\A token is the smallest unit of the text.
             \\
             \\%rule[lex.space deprecated note=new]
-            \\White space separates tokens; see [[lex.token]].
+            \\White space separates tokens; see %[lex.token].
             \\
             \\%rule[lex.gone removed]
             \\
