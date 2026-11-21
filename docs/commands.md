@@ -81,7 +81,7 @@ What should be is what the project marks `expected = true`:
 - a link type (`.skein/links/`): every item of its `to` types should be pointed to by a link of that type;
 - a citation set (`[[citations]]` in `.skein/config.toml`): every item of its `to` types should be cited by the set.
 
-Removed items are not counted. `--profile NAME` counts only the items of that profile (`.skein/profiles/`), for example one stage of a language or one software class. `--json` gives the counts and the lists as JSON.
+Removed items are not counted. `--profile NAME` counts only the items of that profile (`.skein/profiles/`), for example one stage of a language or one software class. `--json` gives the counts and the lists as JSON. `--markdown` gives them as a Markdown table with the uncovered items folded away, for the summary of a CI job (`skein coverage --markdown >> "$GITHUB_STEP_SUMMARY"`) or a comment on a pull request.
 
 Coverage reports; it does not fail. Its exit status is 0 whatever the numbers are.
 

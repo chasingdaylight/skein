@@ -35,6 +35,9 @@ With `--profile`, only the items of that profile shall be counted.
 %req[coverage.reports]
 Coverage shall report and not fail: the exit status is 0 whatever the numbers are.
 
+%req[coverage.markdown]
+With `--markdown`, `skein coverage` shall give the same counts as one Markdown table, followed for each expectation by the list of the items that are not covered, in a section that is folded until opened. It is meant for the summary of a CI job or a comment on a pull request.
+
 ## Changes
 
 %req[diff.changes]

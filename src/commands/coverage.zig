@@ -64,6 +64,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
         return .{ .text = try j.finish() };
     }
 
+    if (options.markdown) return .{ .text = try markdown(arena, ws.name(), options.profile, expectations) };
+
     var out: std.ArrayList(u8) = .empty;
     try out.print(arena, "Coverage of {s}", .{ws.name()});
     if (options.profile) |name| try out.print(arena, ", profile {s}", .{name});
@@ -89,6 +91,48 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
         for (e.uncovered) |id| try out.print(arena, "    {s}\n", .{id});
     }
     return .{ .text = out.items };
+}
+
+/// The coverage as Markdown, for a job summary or a pull request: one
+/// table, then the items without, folded away
+fn markdown(arena: std.mem.Allocator, name: []const u8, profile: ?[]const u8, expectations: []const coverage.Expectation) ![]const u8 {
+    var out: std.ArrayList(u8) = .empty;
+    try out.print(arena, "## Coverage of {s}", .{name});
+    if (profile) |p| try out.print(arena, ", profile {s}", .{p});
+    try out.appendSlice(arena, "\n\n");
+    if (expectations.len == 0) {
+        try out.appendSlice(arena, "Nothing is expected: no link type and no citation set has `expected = true`.\n");
+        return out.items;
+    }
+    try out.appendSlice(arena, "| Expected | Of | Covered | |\n| --- | --- | ---: | ---: |\n");
+    for (expectations) |e| {
+        try out.print(arena, "| `{s}` {s} | `{s}` items | {d} of {d} | {s} |\n", .{ e.name, kindName(e.kind, true), e.item_type, e.covered, e.total, try percent(arena, e.covered, e.total) });
+        for (e.categories) |c| {
+            if (c.total == 0) continue;
+            try out.print(arena, "| | {s} | {d} of {d} | {s} |\n", .{ c.name, c.covered, c.total, try percent(arena, c.covered, c.total) });
+        }
+    }
+    for (expectations) |e| {
+        if (e.uncovered.len == 0) continue;
+        try out.print(arena, "\n<details>\n<summary>{d} <code>{s}</code> item{s} without a <code>{s}</code> {s}</summary>\n\n", .{
+            e.uncovered.len, e.item_type, if (e.uncovered.len == 1) "" else "s", e.name, kindName(e.kind, false),
+        });
+        for (e.uncovered) |id| try out.print(arena, "- `{s}`\n", .{id});
+        try out.appendSlice(arena, "\n</details>\n");
+    }
+    return out.items;
+}
+
+fn kindName(kind: coverage.Expectation.Kind, plural: bool) []const u8 {
+    return switch (kind) {
+        .link => if (plural) "links" else "link",
+        .citation => if (plural) "citations" else "citation",
+    };
+}
+
+/// "80%"; nothing when there is nothing to cover
+fn percent(arena: std.mem.Allocator, covered: usize, total: usize) ![]const u8 {
+    return if (total == 0) "" else arena.print("{d}%", .{covered * 100 / total});
 }
 
 /// "12 of 15 (80%)"
