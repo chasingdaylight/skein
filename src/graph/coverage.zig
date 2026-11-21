@@ -113,17 +113,17 @@ fn count(
 }
 
 fn hasIncoming(graph: *const Graph, id: []const u8, link_type: []const u8) bool {
-    for (graph.items) |item| {
-        for (item.links) |link| {
-            if (std.mem.eql(u8, link.target, id) and std.mem.eql(u8, link.type_name, link_type)) return true;
-        }
+    const list = graph.incoming.get(id) orelse return false;
+    for (list.items) |in| {
+        if (std.mem.eql(u8, in.link.type_name, link_type)) return true;
     }
     return false;
 }
 
 fn hasCitation(citations: *const Graph.Citations, id: []const u8, set: []const u8) bool {
-    for (citations.all) |c| {
-        if (std.mem.eql(u8, c.target, id) and std.mem.eql(u8, c.set, set)) return true;
+    const list = citations.by_target.get(id) orelse return false;
+    for (list.items) |c| {
+        if (std.mem.eql(u8, c.set, set)) return true;
     }
     return false;
 }

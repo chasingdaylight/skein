@@ -64,7 +64,7 @@ pub fn read(
 fn isText(kind: markdown.Block.Kind) bool {
     return switch (kind) {
         .paragraph, .list, .code, .quote, .table => true,
-        .front_matter, .marker, .heading, .html, .thematic_break => false,
+        .front_matter, .yaml_front_matter, .marker, .heading, .html, .thematic_break => false,
     };
 }
 
@@ -72,6 +72,6 @@ fn isText(kind: markdown.Block.Kind) bool {
 fn hangsOn(kind: markdown.Block.Kind) bool {
     return switch (kind) {
         .list, .code, .quote, .table => true,
-        .front_matter, .marker, .heading, .html, .thematic_break, .paragraph => false,
+        .front_matter, .yaml_front_matter, .marker, .heading, .html, .thematic_break, .paragraph => false,
     };
 }

@@ -1,0 +1,5 @@
+description = "The rules of the core stage: what the first implementation must do"
+types = ["rule"]
+
+[where]
+stage = "core"

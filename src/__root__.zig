@@ -29,5 +29,6 @@ test {
     _ = @import("import/doorstop/convert.zig");
     _ = @import("commands/import_doorstop.zig");
     _ = @import("commands/import_csv.zig");
+    _ = @import("_test/examples.zig");
     _ = @import("commands/_test/trace.zig");
 }

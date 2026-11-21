@@ -1,0 +1,6 @@
+description = "A test procedure verifies a software requirement"
+from = ["tst"]
+to = ["srs"]
+required = true
+review = true
+expected = true

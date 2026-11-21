@@ -1,0 +1,7 @@
+# spec: expr.binary.syntax
+1 + 2
+# spec: expr.binary.precedence
+1 + 2 * 3
+8 - 2 - 1
+# spec: expr.divide.zero
+1 / 0

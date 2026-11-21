@@ -1,0 +1,5 @@
+description = "A system requirement"
+id = "numbered"
+prefix = "SYS"
+# an approved system requirement stays approved only as it was approved
+approval = ["approved"]

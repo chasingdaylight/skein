@@ -17,6 +17,9 @@ pub const Block = struct {
         /// TOML between `+++` lines at the top of the file (the text is
         /// what is between them)
         front_matter,
+        /// YAML between `---` lines at the top of the file, as site
+        /// generators and Doorstop write: not skein's, and passed over
+        yaml_front_matter,
         /// a line that makes the next block an item (Marker.zig)
         marker,
         heading,
@@ -108,6 +111,15 @@ const Scanner = struct {
     /// after it
     fn frontMatter(self: *Scanner) !usize {
         const n = self.lines.items.len;
+        if (n > 0 and isYamlFence(self.text(0))) {
+            var k: usize = 1;
+            while (k < n) : (k += 1) {
+                if (!isYamlFence(self.text(k))) continue;
+                try self.add(.yaml_front_matter, 0, k);
+                return k + 1;
+            }
+            return 0;
+        }
         if (n == 0 or !isFrontMatterFence(self.text(0))) return 0;
         var j: usize = 1;
         while (j < n) : (j += 1) {
@@ -237,6 +249,10 @@ const Scanner = struct {
     }
 };
 
+fn isYamlFence(line: []const u8) bool {
+    return std.mem.eql(u8, std.mem.trimEnd(u8, line, " \t"), "---");
+}
+
 fn isFrontMatterFence(line: []const u8) bool {
     return std.mem.eql(u8, std.mem.trimEnd(u8, line, " \t"), "+++");
 }
@@ -301,4 +317,5 @@ fn interruptsParagraph(s: []const u8) bool {
 
 test {
     _ = @import("_test/blocks.zig");
+    _ = @import("_test/yaml_front_matter.zig");
 }

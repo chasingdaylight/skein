@@ -20,6 +20,16 @@ const Graph = @This();
 /// in the order of the sources, the files (by path) and the lines
 items: []const Item = &.{},
 by_id: std.array_hash_map.String(usize) = .empty,
+/// by target: the links that point to it, in the order of the items
+incoming: std.array_hash_map.String(std.ArrayList(Incoming)) = .empty,
+/// by target: the IDs of the items whose text refers to it, each once
+referrers: std.array_hash_map.String(std.ArrayList([]const u8)) = .empty,
+
+/// A link, with the item it is a link of
+pub const Incoming = struct {
+    from: *const Item,
+    link: Item.Link,
+};
 
 pub fn find(self: *const Graph, id: []const u8) ?*const Item {
     const i = self.by_id.get(id) orelse return null;
@@ -36,6 +46,19 @@ pub fn init(arena: std.mem.Allocator, items: []const Item, report: *Report) std.
             const first = items[entry.value_ptr.*];
             try report.add(item.file, item.line, 1, "{s}: the ID is already used at {s}:{d}", .{ item.id, first.file, first.line });
         } else entry.value_ptr.* = i;
+    }
+    for (items) |*item| {
+        for (item.links) |link| {
+            const entry = try out.incoming.getOrPut(arena, link.target);
+            if (!entry.found_existing) entry.value_ptr.* = .empty;
+            try entry.value_ptr.append(arena, .{ .from = item, .link = link });
+        }
+        for (item.references) |r| {
+            const entry = try out.referrers.getOrPut(arena, r.target);
+            if (!entry.found_existing) entry.value_ptr.* = .empty;
+            const ids = entry.value_ptr.items;
+            if (ids.len == 0 or !std.mem.eql(u8, ids[ids.len - 1], item.id)) try entry.value_ptr.append(arena, item.id);
+        }
     }
     return out;
 }

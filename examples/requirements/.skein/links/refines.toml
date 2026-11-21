@@ -1,0 +1,9 @@
+description = "A software requirement refines a system requirement"
+from = ["srs"]
+to = ["sys"]
+# every software requirement comes from a system requirement
+required = true
+# when the system requirement changes, the link is suspect until reviewed
+review = true
+# every system requirement should be refined by something
+expected = true
