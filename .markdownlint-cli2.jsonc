@@ -1,6 +1,5 @@
 {
   "ignores": [
-    "build/**",
     "site/**",
     "node_modules/**",
     "zig-pkg/**",
