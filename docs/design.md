@@ -26,6 +26,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 - **Not a forge.** Discussion, code review and merging stay in the forge's issues and pull or merge requests. skein does plan the work (section 10), keeping the plan in git the way it keeps everything else.
 - **Not a general static site generator.** skein renders its own documents and views (section 8); it is not a tool for building arbitrary websites.
 - **Not a database.** Any index or cache skein builds is derived from the files and can be deleted.
+- **Not access control.** Who may read or change what is the repository's and the forge's business; skein cannot restrict parts of a repository. Material that must be restricted (export-controlled, proprietary) goes in a repository of its own, linked as section 10.5 describes.
 
 ## 2. Principles
 
@@ -34,7 +35,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 3. **Schema-driven.** A project declares its item types, their attributes, the links allowed between them and the rules they must satisfy. skein has no built-in notion of "requirement" or "test".
 4. **Prose-friendly.** An item can be a file of its own or a paragraph inside a document, so a specification reads as a document while every paragraph stays an item.
 5. **Cheap for people and agents.** Small text files, readable IDs, one obvious place for everything; no generated file is ever edited by hand.
-6. **Deterministic.** The same inputs give byte-identical outputs, so generated files diff cleanly and CI can check them.
+6. **Deterministic.** The same inputs (the files, and the forge data where it is used) give byte-identical outputs, so generated files diff cleanly and CI can check them.
 7. **One binary, one codebase.** Zig, built with the latest official release at the time of each skein release (0.17.1 now), pinned per release (emanspeaks, 2026-11-21); no runtime dependencies, on Windows, Linux and macOS. skein must be usable where outside dependencies need special approval (emanspeaks, 2026-11-21), so everything it needs is in its own repository: what it takes from other projects is forked and merged into the codebase, with its license and origin recorded, not fetched at build time or run as a separate tool. One day it may be rewritten in Cesium.
 
 ## 3. Concepts
@@ -42,12 +43,16 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 - **Project:** a git repository with a `.skein/` directory at its root. A project can span several repositories, one of which holds what they share (section 10.5).
 - **Schema:** the project's item types, attributes, link types and rules.
 - **Item type:** a kind of item, for example `need`, `srs`, `design`, `test` for srapnol, or `proposal`, `rule`, `test` for Cesium. A type declares its ID pattern, its attributes, which links it may or must have, and its categories if any (for Cesium's rules: syntax, legality, dynamic semantics, implementation-defined, undefined, informative).
-- **Item:** one identified piece of text with a type, attributes and links. Its **fingerprint** is a hash of its normative content (text and attributes the schema marks as normative), used to detect change.
+- **Item:** one identified piece of text with a type, attributes and links. Its **fingerprint** is a hash of its normative content (text and attributes the schema marks as normative), used to detect change. The content is normalized first (line endings, runs of white space, wrapping), so reformatting a file changes no fingerprint.
+- **Status:** every item has one, from a lifecycle the schema declares (for example draft, approved, deprecated, removed). A removed item leaves a tombstone, so its ID is never used again and old citations of it can be explained.
 - **Link:** a typed, directed reference from one item to another (`derives-from`, `implements`, `verifies`, `introduced-by`, ...). skein records the fingerprint of its target when it was last reviewed (section 6); when the target changes, the link becomes **suspect** until someone reviews it again.
 - **Document:** an ordered, readable assembly of items and narrative text (a specification chapter, an SRS, a design description). Narrative text is not an item and carries no obligations.
 - **Citation:** a reference to an item from outside the item files: a test that says which rules it checks, a source file that says which requirement it implements, a commit or pull request that names an item.
 - **Result:** the outcome of a test for an implementation, imported from a test run, attached to the items the test cites.
-- **Baseline:** a named, immutable state of the item graph, normally a git tag, against which changes and coverage are compared.
+- **Verification record:** evidence that an item is satisfied by a method other than an automated test (analysis, inspection, demonstration, a manual test procedure that was run): who, when, of which version, with what outcome, and where the evidence is.
+- **Approval:** a record in git that a named person approved an item at a given fingerprint (section 6).
+- **Profile:** a named selection of items (for example Cesium's stage `S0`, or a software class of NPR 7150.2D), for which documents, coverage and compliance can be produced separately.
+- **Baseline:** a named, immutable state of the item graph, against which changes and coverage are compared: a git tag (section 6).
 
 ## 4. Sources
 
@@ -67,9 +72,21 @@ In a document, any paragraph or list item can be an item by carrying a marker wi
 
 Comments in source and test files cite items, with a configurable pattern per file type (for example `// spec: expr.as.narrow` in a Cesium test, `/// Implements SRS-012.` in a Zig doc comment). A directory can carry a file that cites items for every test inside it. skein checks that every citation names an existing item of an allowed type.
 
-### 4.5 Results
+Later: code examples inside documents can be marked as tested, and `skein` extracts them for the project's own test driver, so the examples in a specification cannot go stale.
+
+### 4.5 Results and verification records
 
 skein imports test results in common formats (JUnit XML, TAP, and a small native JSON format for test drivers that write their own), records which implementation and version produced them, and attaches them to the items the tests cite.
+
+Not everything is verified by an automated test. The schema can give an item a verification method (test, analysis, inspection, demonstration), and a verification record, a small file written by hand or through the VS Code extension, supplies the evidence for the other methods and for manual test procedures. `coverage` counts an item as verified by whichever its method requires.
+
+### 4.6 References in prose
+
+Text refers to items inline: a rule cites another rule, a sentence uses a defined term, a requirement points at a design element. An inline reference names the target's ID in a short plain-text form (settled with the first code, alongside the paragraph marker). `check` verifies every one, the renderer turns them into links and builds each item's "referenced by" list, and renaming an ID updates them. Defined terms are items of a type the schema declares, so a glossary is a filtered list.
+
+### 4.7 External standards
+
+A standard the project must comply with (NPR 7150.2D's requirements, a coding standard, a customer's specification) is an item set of its own: read-only, kept in its own repository or directory, imported once from its source (CSV to begin with) and versioned. Project items link to its items, so a compliance matrix is an ordinary trace view. Applicability is by profile (a software class), and tailoring, waivers and deviations are item types the schema declares, linked to the requirement they relax, with their rationale and approval.
 
 ## 5. The engine
 
@@ -81,12 +98,15 @@ A command-line tool, `skein`, with subcommands that each do one thing and fail w
 | `trace <id>` | Shows an item with everything above and below it, as text or JSON. |
 | `coverage` | Reports, per item type and per category, which items lack the links or citations the schema expects (for example rules without tests), and the results per implementation. |
 | `review <id>` / `clear <id>` | Records that an item, or the links to a changed parent, have been reviewed, by updating the stored fingerprints. |
+| `approve <id>` | Records an approval of an item at its current fingerprint (section 6). |
+| `diff <ref> [<ref>]` / `impact` | Shows which items were added, changed or removed between two commits or baselines, and what a change reaches: the items downstream, the links it makes suspect, the tests to run again. Text, JSON, or a summary for a pull request. |
+| `baseline <name>` | Freezes a baseline: writes what a tag alone would not hold, commits and tags (section 6). |
 | `new` / `move` / `link` | Creates items with the next free ID, renames IDs (keeping an alias), adds links; keeps files consistent so no one edits fingerprints by hand. |
 | `apply` | Writes a planning overlay's values to the forge and removes them from `.skein/` (section 10.4). |
 | `mirror` / `sync` / `publish` | Copies the forge's data into a full plain-text mirror, writes offline edits back to the forge, and re-creates mirrored data on another forge (section 10.4). |
-| `import` | Converts Doorstop trees, and imports test results. |
-| `export` | Writes the whole graph as JSON (for other tools and agents); later ReqIF for interchange with DOORS and similar. |
-| `render` | Generates the pages a renderer turns into a site (section 8). |
+| `import` | Converts Doorstop trees; imports items from CSV (requirements from a spreadsheet or a DOORS export, an external standard); imports test results. |
+| `export` | Writes the whole graph as JSON (for other tools and agents) and any matrix or list as CSV; later ReqIF for interchange with DOORS and similar. |
+| `render` | Builds the site, and each document as a single file for delivery (section 8). |
 | `lsp` | The language server (section 9). Later. |
 
 The graph is built from the files on every run; for large projects a cache under the build directory may speed it up, but deleting it changes nothing.
@@ -95,16 +115,21 @@ The graph is built from the files on every run; for large projects a cache under
 
 - Every item has a fingerprint over its normative content. For each link, skein records the fingerprint of the target as last reviewed; a changed target makes the link suspect, and `check` reports it until `clear` records the review.
 - Review records are kept in `.skein/`, never in the items or beside the documents (emanspeaks, 2026-11-21), so sources hold no hashes and document folders hold no extra files. Under `.skein/reviews/` there is one file per document or item directory, with one sorted line per link, so two branches conflict only where both reviewed the same document. skein writes these files; no one edits them by hand.
-- Baselines are git tags; `check` and `coverage` can compare against one ("what changed since v0.3", "which rules are new and untested").
-- Who approved a change is the forge's merge record (section 7); skein does not keep its own approval database.
+- **Baselines are git tags**; `check`, `coverage` and `diff` can compare against one ("what changed since v0.3", "which rules are new and untested"). A tag freezes everything that is in git. The only thing it does not freeze is a value the forge holds (an issue's due date or milestone), so where a plan uses such values, `skein baseline` first writes them to a file under `.skein/baselines/`, commits it, and tags that commit. A project with no forge data in its plan just tags.
+- **Approvals are in git** (emanspeaks, 2026-11-21): who approved which item, when, and at which fingerprint, under `.skein/` like the review records. `skein approve` writes one; the forge adapter can also write them from a merged pull request's approvals, so the forge's review is the act and git keeps the record. They survive a move to another forge and can be shown to an auditor. An item whose content changed after its approval is reported as no longer approved, and the schema can require approval for a status (no `approved` requirement without one).
+- **IDs are never reused.** `check` reports an ID that a tombstone holds, and two branches that took the same new number are caught when they meet, with `skein move` to renumber one.
+- **History as data:** counts over time (items by status, changes per baseline, coverage) come from git history the same way burndown does (section 10.3), for the measurement reports that standards such as NPR 7150.2D ask for. Later.
 
 ## 7. Forges
 
 The core needs only git. Everything that involves a forge goes through an adapter with one small interface, implemented for GitHub first, then GitLab and Forgejo:
 
 - Resolve an item's links to issues and pull or merge requests (references written in item attributes or commit messages).
-- Read who approved and merged a change, for reports that need it.
+- Read the reviews and approvals of a merged change, to record them in git (section 6).
+- Read and write the planning fields its forge stores (section 10.4).
 - Report `check` and `coverage` results in CI in the forge's format (annotations, summaries).
+
+Forge data is read live (emanspeaks, 2026-11-21): views and checks that use it follow the forge as it changes, and without a connection they use the last values read, or the mirror, and say so. skein's output is still determined by its inputs: the same files and the same forge data give the same bytes.
 
 A capability that only one forge has (for example GitHub Projects fields or issue types) may be used by that adapter for convenience, but skein's own features never depend on it. Acceptance of a proposal or a design change is a merge, which all three forges have.
 
@@ -116,6 +141,8 @@ A capability that only one forge has (for example GitHub Projects fields or issu
 - **The alternative** is a renderer written for skein, taking from Zine (with its license and origin recorded) only what is useful. skein needs less than a general site generator does: it must parse Markdown itself in any case, to find paragraph items, and its pages come from its own data, so it needs an HTML writer and plain templates, not a scripting language or an image pipeline.
 - Either way the output is plain HTML and CSS; `skein render` can also write plain Markdown pages for another generator (Quartz, or one written in Cesium for cesiumlang.org later).
 - Search, backlinks and a broken-reference check are skein's own, built from the graph.
+- **Documents for delivery:** each document can also be rendered as one self-contained HTML file with a print style sheet (title page, numbered sections, page headers, a change record from the baselines), which any browser prints to PDF. Projects that hand over documents, as NPR 7150.2D work does, need this more than a site.
+- **Profiles and editions:** a document or the whole site can be rendered for one profile (only what applies to `S0`, or to one software class), and, later, for several baselines side by side, so readers can pick the edition that matches a release.
 - **Charts and diagrams that skein computes** (trace graphs, Gantt charts, burndown and burnup, resource load) are drawn by skein itself as static SVG, so they are deterministic, diff cleanly, and need no JavaScript or outside tool.
 - **Mermaid** blocks written by hand in documents (flowcharts, sequence and state diagrams) are kept as they are. VS Code and all three forges draw them in their own Markdown views. On the rendered site, drawing them needs mermaid.js, an outside JavaScript library the site would ship: an option the project turns on, off by default, since it is a dependency that may need approval (section 13). Mermaid's own command-line renderer is not used, since it needs Node.js and a headless browser. skein can also export its own graphs as Mermaid source, for pasting into issues and pull requests, which all three forges render.
 
@@ -145,7 +172,7 @@ skein plans and tracks the work as well as describing the product, taking from O
 ### 10.3 Views
 
 - **Gantt chart:** bars, milestones, dependencies and the critical path, by version, by person, or for any filter; with a baseline's bars beside the current ones to show slippage.
-- **Burndown and burnup** per version or milestone, in items or effort. Their history comes from where each value lives: git history for what skein holds (the state at each commit gives the series), the forge's issue events for what the forge holds; so nothing records snapshots by hand and the chart can be rebuilt for any past date.
+- **Burndown and burnup** per milestone, version or iteration, modeled on GitLab's charts (emanspeaks, 2026-11-21), which GitLab offers only in its paid tiers. Over the milestone's dates, day by day: the burndown shows what remains, against a straight guideline from the starting total to zero; the burnup shows the total scope and what is completed, so work added or removed during the milestone is visible instead of looking like lost progress. Both count either items or weight (effort). They are built from events, as GitLab's are: an item added to or removed from the milestone, closed or reopened, its weight changed. Events come from where each value lives: the forge's issue events for what the forge holds, and git history on the main branch for what skein holds; so nothing records snapshots by hand and a chart can be rebuilt for any past milestone.
 - **Boards** by status, assignee or version, and a **roadmap** of versions with what each contains and how far along it is.
 - **Resource load** per person and week, as a table and a chart.
 - The same filters as everywhere else ("open tasks implementing chapter 4", "work on rules with no test"), as pages and in `skein export`.
@@ -157,7 +184,7 @@ Discussion stays in the forge, so a work item can be linked to an issue, and an 
 - **The forge is the truth for what it holds.** What it holds depends on the forge: GitHub, GitLab and Forgejo differ in milestones, due dates, weights, dependencies, time tracking and custom fields. Each adapter declares which planning fields its forge stores, and skein reads those through it.
 - **`.skein/` holds only what the forge lacks:** schedules, allocations, lags, capacity, links to milestones or work outside git, and whatever field the chosen forge cannot store. It is keyed by the issue's reference and never repeats a value the forge holds, so with a richer forge `.skein/` holds less. Moving to another forge moves a field between the two sides; `skein` writes the fields the new forge lacks into `.skein/` as part of the move.
 - **No mirror by default.** Values read from the forge are cached under the build directory, derived and deletable, so the last view of them is available offline; nothing of them is committed except as below, or when a full mirror is chosen. Charts that need the history of forge-held fields (a burndown of closed issues) read it from the forge's issue events, which all three forges keep.
-- **Baselines** record the forge-held values they compare (for example due dates, at the moment a version's plan was frozen), a deliberate, named snapshot rather than a running copy.
+- **Baselines** are the exception: `skein baseline` writes the forge-held values a plan uses (for example due dates, at the moment a version's plan is frozen) into git before tagging (section 6), a deliberate, named snapshot rather than a running copy.
 
 #### Overlays and what-if plans
 
@@ -172,7 +199,7 @@ A branch of the plan can explore a different schedule: other priorities, assignm
 
 When it is needed, a project or one person can opt into a **full mirror** of the forge's data (emanspeaks, 2026-11-21), for two purposes:
 
-- **Extended offline work.** `skein mirror` copies everything the forge holds for the project's issues and milestones (every issue and milestone in full: fields, labels, relations and comments; emanspeaks, 2026-11-21) into a forge-neutral plain-text form, in `.skein/mirror/`. Offline, the mirror stands in for the forge: views, `check` and edits work as if it were there. Edits to mirrored values are recorded the same way as overlays, each with the value it was based on. Back online, `skein sync` writes them to the forge, refreshes the mirror, and reports each field that changed on both sides for a decision rather than overwriting either.
+- **Extended offline work.** `skein mirror` copies everything the forge holds for the project's issues and milestones (every issue and milestone in full: fields, labels, relations and comments, and the reviews and approvals of pull or merge requests; emanspeaks, 2026-11-21) into a forge-neutral plain-text form, in `.skein/mirror/`. Offline, the mirror stands in for the forge: views, `check` and edits work as if it were there. Edits to mirrored values are recorded the same way as overlays, each with the value it was based on. Back online, `skein sync` writes them to the forge, refreshes the mirror, and reports each field that changed on both sides for a decision rather than overwriting either.
 - **Moving between forges.** The mirror is the interchange format: `skein mirror` from the old forge and `skein publish` to the new one, each through its adapter, re-create the issues, labels, milestones and relations, with comments where the target allows. Fields the new forge cannot store move into `.skein/`, so nothing is lost, and fields it can store move out of `.skein/` into the forge. A map from old references to new ones (`github:#24` to `forgejo:#24`) is kept in `.skein/`, so citations in items, code and commits keep resolving.
 
 The mirror is per checkout by default (ignored by git, rebuilt by `skein mirror`), so the default of no duplication in the repository holds. A project can choose to commit it instead, for a team working offline together or to keep an archive that outlives the forge; then the mirror is the truth while offline, and `skein sync` is how it gives that back.
@@ -183,8 +210,9 @@ The mirror is per checkout by default (ignored by git, rebuilt by `skein mirror`
 
 A project spread over several repositories (a compiler, a website, an editor extension, like Cesium's) can have one **planning repository** that holds what they share: the resources and calendars, work that spans repositories (milestones, roadmaps, epics), and the cross-repository views. Cesium's workspace repository is a natural one.
 
-- Each repository's `.skein/` names the planning repository, and the planning repository's names the others, by a short project name and a location: a path to a local checkout (a sibling or a submodule) or a remote URL that skein clones. skein reads them as git repositories, never through a forge's API, so this works offline and on any forge, and can mix forges.
-- Items and issues in other repositories are cited by a qualified reference (`cesium:expr.as.narrow`, `vscode-cesium#24`), checked by `check` like local ones; the forge adapter turns issue references into links.
+- Each repository's `.skein/` names the planning repository, and the planning repository's names the others, by a short project name and a location: a path to a local checkout (a sibling or a submodule) or a remote URL. The repositories can be on different forges.
+- **Issues, milestones and pull requests** in other repositories are cited by a qualified reference (`vscode-cesium#24`). They are forge objects, so they are resolved live through the adapter like the repository's own, with nothing to pin (emanspeaks, 2026-11-21).
+- **Items, code and tests** in other repositories are things in git, cited by a qualified reference (`cesium:expr.as.narrow`) and tied to a commit: the configuration records the commit of the other repository that references were last checked against, so a check can be repeated, and `check` reports what changed there since.
 - A repository can also be used alone: without the planning repository at hand, `check` reports cross-repository references as unresolved instead of failing on them, unless the configuration requires them.
 
 ## 11. Migration
@@ -195,12 +223,12 @@ A project spread over several repositories (a compiler, a website, an editor ext
 ## 12. Phases
 
 1. **This design**, accepted by merge.
-2. **Core and CLI:** configuration and schema, item files and paragraph items, citations, `check`, `trace`, `coverage`, `review`/`clear`, `export` (JSON). Proven on Cesium's S0 chapter and its bootstrap tests, and on an import of srapnol's Doorstop trees. From here, skein's own requirements are written in skein.
-3. **Rendering and results:** `render`, result import, baselines, the forge adapter for GitHub with CI output.
+2. **Core and CLI:** configuration and schema, item files and paragraph items, references in prose, statuses and tombstones, citations, profiles, `check`, `trace`, `coverage`, `review`/`clear`, `approve`, `diff` and `impact`, `export` (JSON, CSV), `import` (Doorstop, CSV). Proven on Cesium's S0 chapter and its bootstrap tests, and on an import of srapnol's Doorstop trees. From here, skein's own requirements are written in skein.
+3. **Rendering and results:** `render` (site and documents for delivery), result import and verification records, external standards and compliance matrices, baselines, the forge adapter for GitHub with CI output.
 4. **Planning, first part:** work items, scheduling and the critical path, Gantt, burndown and burnup, boards and the roadmap as rendered pages; the GitHub adapter's planning fields. Proven on skein's own work and on Cesium's roadmap.
 5. **Editing:** `new`/`move`/`link`, the language server, the VS Code extension with forms and interactive planning views.
 6. **Planning, second part:** resources, calendars and load, time spent, releveling, overlays and `skein apply`.
-7. **Wider:** GitLab and Forgejo adapters, the full mirror with `sync` and `publish` between forges, ReqIF export.
+7. **Wider:** GitLab and Forgejo adapters, the full mirror with `sync` and `publish` between forges, ReqIF export, tested examples, editions side by side, measurements over time.
 
 ## 13. Open questions for emanspeaks
 
