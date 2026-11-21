@@ -12,3 +12,5 @@
 # the documentation site: its layout, and the script that puts it together
 site/*
 tools/site.sh
+# the images of the documentation
+docs/assets/*
