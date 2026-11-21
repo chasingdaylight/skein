@@ -213,6 +213,7 @@ pub fn renderType(
     return out.items;
 }
 
+// req: import.doorstop.items, import.doorstop.type, import.doorstop.fields
 const testing = std.testing;
 
 test "a Markdown item becomes a skein item file" {

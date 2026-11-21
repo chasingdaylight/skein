@@ -1,5 +1,6 @@
 //! Files that start with YAML front matter, as site generators want.
 
+// req: markdown.yaml-front-matter
 const std = @import("std");
 const testing = std.testing;
 

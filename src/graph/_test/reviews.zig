@@ -1,5 +1,7 @@
 //! Review records: suspect links, and the files the records are kept in.
 
+// req: review.per-link-type, review.state, review.commands, review.records, review.records.stale
+// req: principle.plain-text
 const std = @import("std");
 const testing = std.testing;
 

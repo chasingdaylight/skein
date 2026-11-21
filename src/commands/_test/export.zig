@@ -1,5 +1,6 @@
 //! `skein export`, on a project on disk.
 
+// req: export.json, export.csv, export.profile
 const std = @import("std");
 const testing = std.testing;
 

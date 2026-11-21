@@ -72,6 +72,7 @@ fn delimiterOf(src: []const u8) u8 {
     return if (std.mem.count(u8, first, ";") > std.mem.count(u8, first, ",")) ';' else ',';
 }
 
+// req: import.csv.reader
 const testing = std.testing;
 
 test "fields: plain, quoted, with delimiters, quotes and line ends inside" {

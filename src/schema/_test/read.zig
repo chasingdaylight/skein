@@ -1,5 +1,8 @@
 //! Reading item types, link types and profiles from TOML text.
 
+// req: schema.item-type, schema.categories, schema.statuses, schema.tombstone, schema.attributes
+// req: schema.verification, schema.link-type, schema.profile, schema.reserved-names, schema.cross-check
+// req: project.unknown-keys, principle.no-silent-mistakes
 const std = @import("std");
 const testing = std.testing;
 

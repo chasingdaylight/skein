@@ -1,5 +1,6 @@
 //! `skein trace`, on a project on disk.
 
+// req: trace.item, trace.closure, trace.json, check.exit-status
 const std = @import("std");
 const testing = std.testing;
 

@@ -48,6 +48,7 @@ fn endsWithAny(name: []const u8, suffixes: []const []const u8) bool {
     return false;
 }
 
+// req: items.sources
 const testing = std.testing;
 
 test "files are listed in order, without caches and hidden directories" {

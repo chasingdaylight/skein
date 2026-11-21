@@ -1,5 +1,6 @@
 //! `skein diff` and `skein impact`, on a git repository made for the test.
 
+// req: diff.changes, diff.history, diff.formats, impact.reach, principle.git-only
 const std = @import("std");
 const testing = std.testing;
 

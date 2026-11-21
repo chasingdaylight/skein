@@ -1,5 +1,6 @@
 //! The block scanner, on Markdown as documents write it.
 
+// req: markdown.blocks, markdown.line-ends
 const std = @import("std");
 const testing = std.testing;
 

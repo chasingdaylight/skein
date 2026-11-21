@@ -40,6 +40,7 @@ pub fn row(self: *Csv, fields: []const []const u8) Error!void {
     try self.endRow();
 }
 
+// req: export.csv
 test "fields are quoted only when they must be" {
     var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();

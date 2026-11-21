@@ -27,6 +27,7 @@ skein coverage
 | [`docs/commands.md`](docs/commands.md) | The commands. |
 | [`docs/reviewing.md`](docs/reviewing.md) | Fingerprints, suspect links, approvals. |
 | [`docs/importing.md`](docs/importing.md) | Coming from Doorstop, or from a spreadsheet. |
+| [`docs/requirements/`](docs/requirements/readme.md) | What skein is required to do, in its own format, traced to its tests. |
 | [`docs/design.md`](docs/design.md) | What skein is to be. |
 
 ## Principles

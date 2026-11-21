@@ -1,6 +1,7 @@
 //! The example projects in `examples/` must check clean: they are what a
 //! reader copies from.
 
+// req: principle.git-only
 const std = @import("std");
 const testing = std.testing;
 
@@ -37,4 +38,25 @@ test "the requirements example, with its review records and its approval" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);
     defer arena.deinit();
     try expectClean(arena.allocator(), "requirements", "skein: requirements example: no problems (6 items of 3 types, 2 link types, 0 profiles, 2 citations)\n");
+}
+
+test "skein's own requirements, and the tests that cite them" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    // the repository itself: `examples` is a directory of its root
+    const root = try std.Io.Dir.path.join(a, &.{ examples_dir, ".." });
+    const out = try check.run(testing.io, a, .{ .root = root });
+    testing.expectEqual(.ok, out.status) catch |e| {
+        std.debug.print("{s}", .{out.text});
+        return e;
+    };
+    // every requirement that is implemented has a test, but for the one
+    // that is verified by reading build.zig.zon
+    const implemented = (try coverage.run(testing.io, a, .{ .common = .{ .root = root }, .profile = "implemented" })).text;
+    testing.expect(std.mem.find(u8, implemented, "  without:\n    principle.one-codebase\n") != null and
+        std.mem.count(u8, implemented, "\n    ") == 1) catch |e| {
+        std.debug.print("{s}", .{implemented});
+        return e;
+    };
 }

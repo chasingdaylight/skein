@@ -1,5 +1,6 @@
 //! Coverage and profiles, on a project on disk.
 
+// req: coverage.expected, coverage.profile, coverage.reports
 const std = @import("std");
 const testing = std.testing;
 

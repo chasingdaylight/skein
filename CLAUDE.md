@@ -6,7 +6,14 @@ The repository's setup follows zfls (cesiumlang/zfls) and rstd (randyos-org/rstd
 
 ## What skein is
 
-Plain-text requirements, specifications and traceability kept in git. `docs/design.md` is the design; read it before changing anything substantial. Until skein can describe itself in its own format, that document is the source of its requirements, and a change to the design starts as a pull request that changes it: merging it is accepting it.
+Plain-text requirements, specifications and traceability kept in git. `docs/design.md` is the design: where skein is going and why; read it before changing anything substantial. A change to the design starts as a pull request that changes it: merging it is accepting it.
+
+## Requirements and tests
+
+- `docs/requirements/` holds skein's requirements, in skein's own format (`.skein/` at the root is skein's own project). What skein does is what they say.
+- A change to what skein does changes its requirement in the same pull request: a new `req[...]` paragraph, or a changed one. A requirement that goes away keeps its marker, with `status=removed`; an ID is never changed or used again.
+- A test file says which requirements it checks, in a `// req:` comment before its imports (or before its tests, in a source file that has them at its end). Every implemented requirement has a test that cites it; `skein coverage --profile implemented` lists the ones that have none.
+- What the design promises and the code does not do yet is in `docs/requirements/planned.md`, `status=planned`. Building it turns each into requirements of its own, with tests.
 
 ## Rules
 
@@ -72,4 +79,4 @@ The list is not complete (zfls's `CLAUDE.md` has a longer one); the standard lib
 
 ## Checks before a pull request
 
-`zig build test`, `zig fmt --check build build.zig src`, and `npx markdownlint-cli2 "**/*.md"`. CI does not run on pull requests into `dev` (only on those into `main`, and when started by hand: `gh workflow run ci.yml --ref BRANCH`), so these checks are what stands between a change and `dev`; say in the pull request which were run.
+`zig build test`, `zig fmt --check build build.zig src`, `npx markdownlint-cli2 "**/*.md"`, and skein on itself: `zig build`, then `zig-out/bin/skein check` and `zig-out/bin/skein coverage --profile implemented`. CI does not run on pull requests into `dev` (only on those into `main`, and when started by hand: `gh workflow run ci.yml --ref BRANCH`), so these checks are what stands between a change and `dev`; say in the pull request which were run.

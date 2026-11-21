@@ -91,6 +91,7 @@ pub fn parse(arena: std.mem.Allocator, line: []const u8, types: []const []const 
     return out;
 }
 
+// req: items.marker, items.marker.types-only, items.marker.words
 const testing = std.testing;
 const test_types = [_][]const u8{ "rule", "term" };
 

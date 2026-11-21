@@ -100,6 +100,7 @@ pub fn position(text: []const u8, offset: usize) struct { line: u32, column: u32
     return .{ .line = line, .column = column };
 }
 
+// req: items.reference
 const testing = std.testing;
 
 fn expectTargets(text: []const u8, expected: []const []const u8) !void {
