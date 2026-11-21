@@ -19,6 +19,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Out
         try Graph.checks.run(&ws.graph, &ws.project.schema, &ws.report);
         try ws.citations.check(&ws.project, &ws.graph, &ws.report);
         const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
+        const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
+        try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
         try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     }
     if (!ws.report.ok()) return ws.problems();

@@ -5,6 +5,7 @@ const Io = std.Io;
 
 const cli = @import("../cli.zig");
 const Json = @import("../output/Json.zig");
+const Approvals = @import("../graph/Approvals.zig");
 const Reviews = @import("../graph/Reviews.zig");
 const Workspace = @import("Workspace.zig");
 const describe = @import("../output/describe.zig");
@@ -25,12 +26,14 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Trace) !Workspace.Outc
     };
     var ignored: @import("../Report.zig") = .{ .arena = arena };
     const reviews = try Reviews.load(io, arena, ws.root, &ignored);
+    const approvals = try Approvals.load(io, arena, ws.root, &ignored);
     const ctx: describe.Context = .{
         .arena = arena,
         .project = &ws.project,
         .graph = &ws.graph,
         .citations = &ws.citations,
         .reviews = &reviews,
+        .approvals = &approvals,
     };
 
     if (options.json) {

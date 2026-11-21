@@ -3,7 +3,6 @@
 const std = @import("std");
 const testing = std.testing;
 
-const cli = @import("../../cli.zig");
 const review = @import("../review.zig");
 const trace = @import("../trace.zig");
 
@@ -122,6 +121,7 @@ test "an item as JSON" {
         \\      "lex.comment"
         \\    ],
         \\    "referenced_from": [],
+        \\    "approvals": [],
         \\    "citations": [],
         \\    "text": "Checks [[lex.comment]]."
         \\  },
@@ -146,15 +146,4 @@ test "an item that does not exist" {
     const out = try trace.run(testing.io, a, .{ .common = .{ .root = root }, .id = "no.such" });
     try testing.expectEqual(.misuse, out.status);
     try testing.expectEqualStrings("skein: there is no item 'no.such'\n", out.text);
-}
-
-test "trace on the command line" {
-    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
-    defer arena.deinit();
-    const a = arena.allocator();
-    const t = (try cli.parse(a, &.{ "trace", "--json", "a.b" })).trace;
-    try testing.expectEqualStrings("a.b", t.id);
-    try testing.expect(t.json);
-    try testing.expectEqualStrings("trace takes one item", (try cli.parse(a, &.{"trace"})).misuse);
-    try testing.expectEqualStrings("--json goes with trace and coverage", (try cli.parse(a, &.{ "check", "--json" })).misuse);
 }

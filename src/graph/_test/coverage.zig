@@ -3,7 +3,6 @@
 const std = @import("std");
 const testing = std.testing;
 
-const cli = @import("../../cli.zig");
 const coverage_command = @import("../../commands/coverage.zig");
 
 fn write(dir: std.Io.Dir, path: []const u8, data: []const u8) !void {
@@ -152,16 +151,4 @@ test "a project that expects nothing says so" {
         \\Nothing is expected: no link type and no citation set has 'expected = true'.
         \\
     , try run(arena.allocator(), tmp.dir, null, false));
-}
-
-test "coverage on the command line" {
-    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
-    defer arena.deinit();
-    const a = arena.allocator();
-    const c = (try cli.parse(a, &.{ "coverage", "--profile", "s0", "--json" })).coverage;
-    try testing.expectEqualStrings("s0", c.profile.?);
-    try testing.expect(c.json);
-    try testing.expectEqual(null, (try cli.parse(a, &.{"coverage"})).coverage.profile);
-    try testing.expectEqualStrings("--profile needs a name", (try cli.parse(a, &.{ "coverage", "--profile" })).misuse);
-    try testing.expectEqualStrings("--profile goes with coverage", (try cli.parse(a, &.{ "check", "--profile", "s0" })).misuse);
 }

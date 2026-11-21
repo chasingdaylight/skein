@@ -18,6 +18,7 @@ pub const Context = struct {
     graph: *const Graph,
     citations: *const Graph.Citations,
     reviews: *const Graph.Reviews,
+    approvals: *const Graph.Approvals,
 };
 
 /// What a reviewed link is, in words; null for a link that is not reviewed
@@ -94,6 +95,20 @@ pub fn json(ctx: Context, j: *Json, item: *const Item, with_text: bool) Error!vo
     try j.key("referenced_from");
     try j.strings(try walk.referencedBy(ctx.arena, ctx.graph, item.id));
 
+    try j.key("approvals");
+    try j.beginArray();
+    for (try ctx.approvals.of(ctx.arena, item.id)) |approval| {
+        try j.beginObject();
+        try j.key("by");
+        try j.string(approval.by);
+        try j.key("on");
+        try j.string(try ctx.arena.print("{d:0>4}-{d:0>2}-{d:0>2}", .{ approval.on.year, approval.on.month, approval.on.day }));
+        try j.key("current");
+        try j.boolean(if (item_type) |t| try Graph.Approvals.isCurrent(ctx.arena, approval, item, t) else false);
+        try j.endObject();
+    }
+    try j.endArray();
+
     try j.key("citations");
     try j.beginArray();
     for (try ctx.citations.of(ctx.arena, item.id)) |c| {
@@ -154,6 +169,15 @@ pub fn text(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
 
     try list(a, out, "\nRefers to: ", try referenceTargets(a, item));
     try list(a, out, "\nReferred to by: ", try walk.referencedBy(a, ctx.graph, item.id));
+
+    const approvals = try ctx.approvals.of(a, item.id);
+    if (approvals.len > 0) try out.appendSlice(a, "\nApproved by:\n");
+    for (approvals) |approval| {
+        try out.print(a, "  {s} on {d:0>4}-{d:0>2}-{d:0>2}", .{ approval.by, approval.on.year, approval.on.month, approval.on.day });
+        const current = if (item_type) |t| try Graph.Approvals.isCurrent(a, approval, item, t) else false;
+        if (!current) try out.appendSlice(a, "  [of an earlier version]");
+        try out.append(a, '\n');
+    }
 
     const cited = try ctx.citations.of(a, item.id);
     if (cited.len > 0) try out.appendSlice(a, "\nCited by:\n");

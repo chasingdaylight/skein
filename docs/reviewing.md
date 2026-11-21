@@ -1,4 +1,4 @@
-# Fingerprints, reviews and suspect links
+# Fingerprints, reviews, suspect links and approvals
 
 When a requirement changes, what was derived from it, and what tests it, may no longer be right. skein finds those places: a link can record what its target said when the link was last reviewed, and `skein check` reports the link as suspect once the target says something else.
 
@@ -50,3 +50,33 @@ Under `.skein/reviews/`, never in the items or beside the documents, so the sour
 ```
 
 skein writes these files; no one edits them by hand. They are committed with the change that was reviewed, so a pull request shows which links its author looked at. Two branches conflict in them only where both reviewed links of the same document. A record of a link that no longer exists is dropped when its file is next written.
+
+## Approvals
+
+An approval records, in git, that a named person approved an item as it was on a given day:
+
+```text
+skein approve SRS-012 --by "A. Reviewer"
+```
+
+`--by` may be left out where git knows the user's name (`git config user.name`), and `--on 2027-03-01` gives a day other than today.
+
+An approval is of what the item said then, by its fingerprint. When the item changes, the record stays, and now shows what was approved; the item itself is no longer approved. `skein trace` shows each approval and whether it is of the item as it is.
+
+An item type can make a status depend on it:
+
+```toml
+# .skein/types/srs.toml
+approval = ["approved"]
+```
+
+Then `skein check` reports an item that has the status `approved` without an approval of what it says now. So a requirement cannot be changed and stay "approved" unnoticed: either it is approved again, or its status goes back.
+
+The records are under `.skein/approvals/`, in files named as the review records are, with one line per item and approver:
+
+```toml
+# .skein/approvals/requirements.toml
+"SRS-012"."A. Reviewer" = { on = 2027-03-01, fingerprint = "9f2c41d0a6b7c8e9f0a1b2c3d4e5f607" }
+```
+
+Several people can approve one item. Approving again replaces that person's earlier record; git keeps the history. Because the records are files in the repository, they are reviewed and merged with the change they belong to, they survive a move to another forge, and they can be shown to an auditor without the forge.

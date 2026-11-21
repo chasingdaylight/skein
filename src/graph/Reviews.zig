@@ -1,11 +1,8 @@
 //! The review records of a project: for each reviewed link, the
 //! fingerprint its target had when the link was last reviewed. They are
-//! kept under `.skein/reviews/`, one file per document or directory of
-//! item files, one sorted line per link:
+//! kept under `.skein/reviews/` (record_files.zig), one line per link:
 //!
 //!     "t.lex.comment".verifies."lex.comment.line" = "9f2c..."
-//!
-//! skein writes these files; no one edits them by hand.
 
 const std = @import("std");
 const Io = std.Io;
@@ -16,11 +13,13 @@ const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 const Schema = @import("../schema/Schema.zig");
 const fingerprint = @import("fingerprint.zig");
+const record_files = @import("record_files.zig");
 const toml = @import("../toml.zig");
 
 const Reviews = @This();
 
 pub const dir = Project.dir_name ++ "/reviews";
+const header = "# Review records, written by skein. Do not edit: use 'skein review'.\n";
 
 /// by `key`
 records: std.array_hash_map.String([]const u8) = .empty,
@@ -38,43 +37,19 @@ pub fn put(self: *Reviews, arena: std.mem.Allocator, from: []const u8, link_type
     try self.records.put(arena, try key(arena, from, link_type, target), try arena.dupe(u8, fp));
 }
 
-/// The file that holds the records of the links of `item`: named after
-/// its document, or after the directory of its item file
+/// The file that holds the records of the links of `item`
 pub fn fileOf(arena: std.mem.Allocator, item: *const Item) ![]const u8 {
-    const subject = if (item.in_document) item.file else Io.Dir.path.dirnamePosix(item.file) orelse "_";
-    return arena.print("{s}/{s}.toml", .{ dir, subject });
+    return record_files.fileOf(arena, dir, item);
 }
 
 /// Reads every record under `.skein/reviews/`. Files that cannot be read
 /// are reported.
 pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std.mem.Allocator.Error!Reviews {
     var out: Reviews = .{};
-    var d = root.openDir(io, dir, .{ .iterate = true }) catch return out;
-    defer d.close(io);
-    var walker = try d.walk(arena);
-    defer walker.deinit();
-    while (walker.next(io) catch null) |entry| {
-        if (entry.kind != .file or !std.mem.endsWith(u8, entry.path, ".toml")) continue;
-        const path = try arena.print("{s}/{s}", .{ dir, entry.path });
-        std.mem.replaceScalar(u8, path, '\\', '/');
-        const text = d.readFileAlloc(io, entry.path, arena, .limited(1 << 26)) catch |e| switch (e) {
+    for (try record_files.load(io, arena, root, dir, report)) |file| {
+        out.read(arena, file.table) catch |e| switch (e) {
             error.OutOfMemory => return error.OutOfMemory,
-            else => {
-                try report.add(path, 0, 0, "cannot read the file ({s})", .{@errorName(e)});
-                continue;
-            },
-        };
-        var diag: toml.Diagnostic = .{};
-        const table = toml.parse(arena, text, &diag) catch |e| switch (e) {
-            error.OutOfMemory => return error.OutOfMemory,
-            error.InvalidToml => {
-                try report.add(path, diag.line, diag.column, "{s}", .{diag.message});
-                continue;
-            },
-        };
-        out.read(arena, table) catch |e| switch (e) {
-            error.OutOfMemory => return error.OutOfMemory,
-            error.NotRecords => try report.add(path, 0, 0, "this is no file of review records; skein writes them, with 'skein review'", .{}),
+            error.NotRecords => try report.add(file.path, 0, 0, "this is no file of review records; skein writes them, with 'skein review'", .{}),
         };
     }
     return out;
@@ -99,7 +74,8 @@ fn read(self: *Reviews, arena: std.mem.Allocator, table: *const toml.Table) !voi
 /// What a reviewed link is, held against its record
 pub const State = enum { reviewed, never_reviewed, suspect };
 
-/// The state of every reviewed link of `graph` whose target exists
+/// The state of a link of `item`; null when its type is not reviewed or
+/// its target does not exist
 pub fn stateOf(self: *const Reviews, arena: std.mem.Allocator, schema: *const Schema, graph: *const Graph, item: *const Item, link: Item.Link) !?State {
     const link_type = schema.linkType(link.type_name) orelse return null;
     if (!link_type.review) return null;
@@ -127,8 +103,7 @@ pub fn check(self: *const Reviews, arena: std.mem.Allocator, schema: *const Sche
 }
 
 /// Writes the record files named in `files` again, from the records held:
-/// those of links that still exist, sorted. A file left without records
-/// is deleted.
+/// those of links that still exist. A file left without records is deleted.
 pub fn write(self: *const Reviews, io: Io, arena: std.mem.Allocator, root: Io.Dir, schema: *const Schema, graph: *const Graph, files: []const []const u8) !void {
     for (files) |file| {
         var lines: std.ArrayList([]const u8) = .empty;
@@ -141,24 +116,7 @@ pub fn write(self: *const Reviews, io: Io, arena: std.mem.Allocator, root: Io.Di
                 try lines.append(arena, try arena.print("\"{s}\".{s}.\"{s}\" = \"{s}\"\n", .{ item.id, link.type_name, link.target, fp }));
             }
         }
-        if (lines.items.len == 0) {
-            root.deleteFile(io, file) catch {};
-            continue;
-        }
-        std.mem.sort([]const u8, lines.items, {}, struct {
-            fn lt(_: void, a: []const u8, b: []const u8) bool {
-                return std.mem.lessThan(u8, a, b);
-            }
-        }.lt);
-        var text: std.ArrayList(u8) = .empty;
-        try text.appendSlice(arena, "# Review records, written by skein. Do not edit: use 'skein review'.\n");
-        for (lines.items, 0..) |line, i| {
-            // one link given twice is one record
-            if (i > 0 and std.mem.eql(u8, line, lines.items[i - 1])) continue;
-            try text.appendSlice(arena, line);
-        }
-        if (Io.Dir.path.dirnamePosix(file)) |parent| try root.createDirPath(io, parent);
-        try root.writeFile(io, .{ .sub_path = file, .data = text.items });
+        try record_files.write(io, arena, root, file, header, lines.items);
     }
 }
 

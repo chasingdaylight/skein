@@ -13,6 +13,7 @@ pub const Item = @import("Item.zig");
 pub const checks = @import("checks.zig");
 pub const Reviews = @import("Reviews.zig");
 pub const Citations = @import("Citations.zig");
+pub const Approvals = @import("Approvals.zig");
 
 const Graph = @This();
 
@@ -80,5 +81,6 @@ test {
     _ = @import("_test/load.zig");
     _ = Reviews;
     _ = Citations;
+    _ = Approvals;
     _ = files;
 }
