@@ -11,9 +11,9 @@ Every item has a fingerprint: a hash of what it says.
 | The item's own text | Its status |
 | Its type and its category | Its links |
 | The attributes its type marks `normative = true` | Its other attributes |
-| The fingerprints of its parts, in order | Its ID and where it is written |
+| The names and fingerprints of its parts, in order | Its ID and where it is written |
 
-Fingerprints form a tree, as the hashes of files and directories do in git: an item with [parts](writing-items.md#parts-items-inside-an-item) is hashed over its own text and its parts' fingerprints, not over their text again. So a change to a part changes that part, its whole, and every whole above, and no other item. Unlike a directory in git, a whole does not hash the names of its parts: giving a part another ID, or another status, changes nothing that is said.
+Fingerprints form a tree, as the hashes of files and directories do in git: an item with [parts](writing-items.md#parts-items-inside-an-item) is hashed over its own text and, for each part, the part's name and fingerprint, not over the parts' text again. So a change to a part changes that part, its whole, and every whole above, and no other item. As with a file in git, an item's own ID is not in its own fingerprint, and it is in its whole's: giving a part another ID changes the whole and not the part. The name hashed is the part's ID as the whole knows it: `.as` for `lex.keywords.as` in `lex.keywords`, so renaming the whole alone changes nothing. A part's status is not hashed.
 
 The text is taken without its layout: runs of spaces and line ends count as one space, so rewrapping a paragraph, changing line endings or re-indenting a list changes nothing. Inside code blocks the lines are kept, because there they can matter.
 

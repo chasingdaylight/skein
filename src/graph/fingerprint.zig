@@ -18,8 +18,9 @@ pub const Fingerprint = [32]u8;
 
 /// The fingerprint of `item`: over its type, its category, the attributes
 /// its type marks as normative, its own text as `normalize` gives it, and
-/// the fingerprints of its parts, in order. Its status, its links, its ID
-/// and the IDs of its parts are not part of it.
+/// the names and fingerprints of its parts, in order. A part's name is
+/// its ID as its whole knows it (`partName`). The item's own status,
+/// links and ID are not part of it, as a file's name is not in its hash.
 pub fn of(arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema, item: *const Item) std.mem.Allocator.Error!Fingerprint {
     var content: std.ArrayList(u8) = .empty;
     try content.print(arena, "type:{s}\ncategory:{s}\n", .{ item.type_name, item.category orelse "" });
@@ -35,12 +36,20 @@ pub fn of(arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema, 
     try content.appendSlice(arena, try normalize(arena, item.text));
     for (item.parts) |id| {
         const part = graph.find(id) orelse continue;
-        try content.print(arena, "\npart:{s}", .{&try of(arena, graph, schema, part)});
+        try content.print(arena, "\npart:{s}:{s}", .{ partName(item.id, id), &try of(arena, graph, schema, part) });
     }
 
     var digest: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
     std.crypto.hash.sha2.Sha256.hash(content.items, &digest, .{});
     return std.fmt.bytesToHex(digest[0..16].*, .lower);
+}
+
+/// The name of the part `id` in the item `whole`: what follows the whole's
+/// ID when the part's ID continues it (`.as`), else the ID. So a whole
+/// that is itself renamed keeps its fingerprint.
+fn partName(whole: []const u8, id: []const u8) []const u8 {
+    const continues = id.len > whole.len + 1 and std.mem.startsWith(u8, id, whole) and id[whole.len] == '.';
+    return if (continues) id[whole.len..] else id;
 }
 
 /// `text` (Markdown) with its layout taken out: each block's runs of
@@ -175,13 +184,35 @@ test "a whole's fingerprint is over its parts' fingerprints" {
     swapped.parts = &.{ "p2", "p1" };
     try testing.expect(!std.mem.eql(u8, &fp, &try firstOf(a, &.{ swapped, p1, p2 })));
 
-    // a part renamed, or with another status, says the same
+    // a part with another status says the same
+    var p2_status = p2;
+    p2_status.status = "final";
+    try testing.expectEqualStrings(&fp, &try firstOf(a, &.{ whole, p1, p2_status }));
+
+    // a part renamed changes its whole, as a file's name does its
+    // directory, and not the part itself
     var renamed = whole;
     renamed.parts = &.{ "p1", "other" };
     var p2_renamed = p2;
     p2_renamed.id = "other";
-    p2_renamed.status = "final";
-    try testing.expectEqualStrings(&fp, &try firstOf(a, &.{ renamed, p1, p2_renamed }));
+    try testing.expect(!std.mem.eql(u8, &fp, &try firstOf(a, &.{ renamed, p1, p2_renamed })));
+    try testing.expectEqualStrings(&try firstOf(a, &.{p2}), &try firstOf(a, &.{p2_renamed}));
+
+    // a whole renamed keeps its fingerprint when its parts' IDs continue its own
+    var dotted = whole;
+    dotted.parts = &.{ "a.x", "a.y" };
+    var x = p1;
+    x.id = "a.x";
+    var y = p2;
+    y.id = "a.y";
+    var moved = dotted;
+    moved.id = "b";
+    moved.parts = &.{ "b.x", "b.y" };
+    var moved_x = x;
+    moved_x.id = "b.x";
+    var moved_y = y;
+    moved_y.id = "b.y";
+    try testing.expectEqualStrings(&try firstOf(a, &.{ dotted, x, y }), &try firstOf(a, &.{ moved, moved_x, moved_y }));
 
     // the same words as one item without parts are not the same item
     try testing.expect(!std.mem.eql(u8, &fp, &try firstOf(a, &.{rule("The keywords are:\n\n`as`\n\n`fn`")})));
