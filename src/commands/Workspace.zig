@@ -34,6 +34,8 @@ root_path: []const u8,
 project: Project,
 graph: Graph,
 citations: Graph.Citations = .{},
+/// whether the configuration and schema were sound, so the items were read
+items_read: bool = false,
 report: Report,
 
 pub const Opened = union(enum) {
@@ -66,6 +68,7 @@ pub fn open(io: Io, arena: std.mem.Allocator, common: cli.Common) !Opened {
     self.project = try Project.load(io, arena, self.root, &self.report);
     // items are read against the schema: a broken one would only add noise
     if (self.report.ok()) {
+        self.items_read = true;
         self.graph = try Graph.load(io, arena, self.root, &self.project, &self.report);
         self.citations = try Graph.Citations.load(io, arena, self.root, &self.project, &self.report);
     }

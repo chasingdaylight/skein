@@ -2,6 +2,7 @@
 
 pub const cli = @import("cli.zig");
 pub const Graph = @import("graph/Graph.zig");
+pub const Json = @import("output/Json.zig");
 pub const markdown = @import("markdown.zig");
 pub const Project = @import("Project.zig");
 pub const Report = @import("Report.zig");
@@ -14,10 +15,13 @@ pub const main = @import("__main__.zig").main;
 test {
     _ = cli;
     _ = Graph;
+    _ = Json;
     _ = markdown;
     _ = Project;
     _ = Report;
     _ = Schema;
     _ = stdio;
     _ = toml;
+    _ = @import("graph/walk.zig");
+    _ = @import("commands/_test/trace.zig");
 }
