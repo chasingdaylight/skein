@@ -1,4 +1,5 @@
 burnup
+cmark
 Doptimize
 emanspeaks
 Forgejo
@@ -12,6 +13,7 @@ randyos
 releveling
 ReqIF
 rstd
+Scripty
 skein
 srapnol
 StrictDoc

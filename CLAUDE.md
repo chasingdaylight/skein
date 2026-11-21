@@ -11,6 +11,7 @@ Plain-text requirements, specifications and traceability kept in git. `docs/desi
 ## Rules
 
 - Git and the files are the only source of truth. Forges (GitHub, GitLab, Forgejo) are reached only through adapters, and nothing in the core may rely on a feature one of them lacks.
+- One codebase: no dependency is fetched at build time or run as a separate tool; code taken from another project is merged in with its license and origin recorded, after asking emanspeaks.
 - Zig over other languages: the tool, build steps, generators, test drivers and tools are Zig, built with the pinned official release (0.17.1). No Python, Node or Java; scripts are bash or batch.
 - Never run a command that downloads or installs software without asking first, package managers included (markdownlint through `npx` excepted).
 - The repository owner is `emanspeaks` in every file, issue and pull request; write `@emanspeaks` only to ask for his input, since every `@` notifies him.

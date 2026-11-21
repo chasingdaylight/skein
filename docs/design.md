@@ -24,7 +24,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 ### Non-goals
 
 - **Not a forge.** Discussion, code review and merging stay in the forge's issues and pull or merge requests. skein does plan the work (section 10), keeping the plan in git the way it keeps everything else.
-- **Not a static site generator.** skein generates pages for an existing renderer (section 8).
+- **Not a general static site generator.** skein renders its own documents and views (section 8); it is not a tool for building arbitrary websites.
 - **Not a database.** Any index or cache skein builds is derived from the files and can be deleted.
 
 ## 2. Principles
@@ -35,7 +35,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 4. **Prose-friendly.** An item can be a file of its own or a paragraph inside a document, so a specification reads as a document while every paragraph stays an item.
 5. **Cheap for people and agents.** Small text files, readable IDs, one obvious place for everything; no generated file is ever edited by hand.
 6. **Deterministic.** The same inputs give byte-identical outputs, so generated files diff cleanly and CI can check them.
-7. **One small binary.** Zig, built with a pinned official release, no runtime dependencies, on Windows, Linux and macOS.
+7. **One binary, one codebase.** Zig, built with a pinned official release, no runtime dependencies, on Windows, Linux and macOS. skein must be usable where outside dependencies need special approval (emanspeaks, 2026-11-21), so everything it needs is in its own repository: what it takes from other projects is forked and merged into the codebase, with its license and origin recorded, not fetched at build time or run as a separate tool. One day it may be rewritten in Cesium.
 
 ## 3. Concepts
 
@@ -53,7 +53,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 
 ### 4.1 Configuration and schema
 
-A `.skein/` directory at the repository root holds skein's own files (emanspeaks, 2026-11-21): the configuration (item directories and documents, the schema, citation patterns, outputs, the forge and the other repositories of the project), and the data that belongs to no item file and that the forge does not hold, such as reviews of links, resources and calendars, time logs, schedules and the planning data the forge cannot store for an issue, and planning overlays (section 10.4). Items and documents themselves live wherever the project wants them (`docs/`, `spec/`, beside the code); `.skein/` is for skein's bookkeeping. The format of its files is an open question (section 13), with ZON as the recommendation: native to Zig, no extra parser, and small.
+A `.skein/` directory at the repository root holds skein's own files (emanspeaks, 2026-11-21): the configuration (item directories and documents, the schema, citation patterns, outputs, the forge and the other repositories of the project), and the data that belongs to no item file and that the forge does not hold, such as reviews of links, resources and calendars, time logs, schedules and the planning data the forge cannot store for an issue, and planning overlays (section 10.4). Items and documents themselves live wherever the project wants them (`docs/`, `spec/`, beside the code); `.skein/` is for skein's bookkeeping. The format of its files and of item front matter is an open question (section 13), with TOML as the recommendation.
 
 ### 4.2 Item files
 
@@ -61,7 +61,7 @@ An item of its own is a Markdown file with a front-matter block (ID, type, attri
 
 ### 4.3 Paragraph items in documents
 
-In a document, any paragraph or list item can be an item by carrying a marker with its ID and, where the type has categories, its category. Links and attributes go in a compact form after the marker or in a short block below the paragraph. The marker syntax is an open question (section 13); it must be plain text that survives any Markdown renderer, cheap to type, and easy to find with grep. IDs are readable and hierarchical (`lex.comment.line`, `expr.as.narrow`), as in the Rust Reference, never random.
+In a document, any paragraph or list item can be an item by carrying a marker with its ID and, where the type has categories, its category. Links and attributes go in a compact form after the marker or in a short block below the paragraph. The marker is a line of its own before the paragraph (emanspeaks, 2026-11-21), as in the Rust Reference (`r[lex.comment.line]`), carrying the ID and the category: with one line per paragraph, a marker at the end of the line would be out of sight. It is plain text, cheap to type, readable in a raw view on any forge, and easy to find with grep; its exact spelling is settled with the first code. IDs are readable and hierarchical (`lex.comment.line`, `expr.as.narrow`), as in the Rust Reference, or numbered (`SRS-012`), as srapnol's are; the scheme is chosen per item type in the schema (emanspeaks, 2026-11-21). They are never random.
 
 ### 4.4 Citations in code and tests
 
@@ -109,20 +109,20 @@ A capability that only one forge has (for example GitHub Projects fields or issu
 
 ## 8. Rendering
 
-skein does not render HTML itself. `render` writes Markdown pages (documents with every item anchored by its ID, generated matrices, coverage pages, per-item backlinks, filtered lists) in the dialect of the chosen renderer, and the renderer builds the site. The renderer is a replaceable last stage:
+`skein render` builds the site itself: documents with every item anchored by its ID, generated matrices, coverage pages, per-item backlinks, filtered lists, schedules and charts, as static HTML that needs no server. Rendering is part of the one codebase (principle 7), not a separate tool (emanspeaks, 2026-11-21).
 
-- **First: Zine**, run as its pinned standalone binary (so its Zig version does not bind skein's), with skein writing SuperMD (items as blocks with ID, category and data attributes). Zine fails the build on unknown pages and references, which doubles as a link check.
-- If Zine's direction or pace stops fitting (it is in beta, has one maintainer, and takes no plugins), skein forks it under emanspeaks's account rather than working around it; emanspeaks agreed to this on 2026-11-21. Since skein only writes pages for it, a fork changes nothing in skein's sources.
-- Others can be added (plain CommonMark for any generator; Quartz; a generator written in Cesium for cesiumlang.org later).
-- Search and backlinks, which Zine lacks, are generated by skein as pages or data where they are needed.
+- **Where the renderer comes from** is an open question (section 13). emanspeaks's direction is to fork Zine (MIT) and merge it in. Zine 0.14.1 is not one project, though: it builds on about a dozen others (SuperMD, SuperHTML, Ziggy and Scripty by the same author; a C Markdown parser, cmark-gfm; an image library, a syntax highlighter, a time library and more), several of them C. Merging Zine means merging and owning all of them.
+- **The alternative** is a renderer written for skein, taking from Zine (with its license and origin recorded) only what is useful. skein needs less than a general site generator does: it must parse Markdown itself in any case, to find paragraph items, and its pages come from its own data, so it needs an HTML writer and plain templates, not a scripting language or an image pipeline.
+- Either way the output is plain HTML and CSS; `skein render` can also write plain Markdown pages for another generator (Quartz, or one written in Cesium for cesiumlang.org later).
+- Search, backlinks and a broken-reference check are skein's own, built from the graph.
 - **Charts and diagrams that skein computes** (trace graphs, Gantt charts, burndown and burnup, resource load) are drawn by skein itself as static SVG, so they are deterministic, diff cleanly, and need no JavaScript or outside tool.
-- **Mermaid** blocks written by hand in documents (flowcharts, sequence and state diagrams) are kept as they are and drawn in the reader's browser by a pinned copy of mermaid.js that the site ships. Mermaid's own command-line renderer is not used, since it needs Node.js and a headless browser. skein can also export its own graphs as Mermaid source, for pasting into issues and pull requests, which all three forges render.
+- **Mermaid** blocks written by hand in documents (flowcharts, sequence and state diagrams) are kept as they are. VS Code and all three forges draw them in their own Markdown views. On the rendered site, drawing them needs mermaid.js, an outside JavaScript library the site would ship: an option the project turns on, off by default, since it is a dependency that may need approval (section 13). Mermaid's own command-line renderer is not used, since it needs Node.js and a headless browser. skein can also export its own graphs as Mermaid source, for pasting into issues and pull requests, which all three forges render.
 
 ## 9. Interactivity
 
 1. **A language server** (`skein lsp`) for the item and document sources in any editor: go to definition on an ID, find references, completion of IDs and link targets, hover previews, diagnostics from `check`, rename of an ID across files.
-2. **A VS Code view** on top of it: the item tree, trace views, coverage.
-3. **Later, a local web interface** that edits the same files (like StrictDoc's or Doorstop's), for people who prefer forms to text. It writes files and commits; it never holds state of its own. Its planning views (section 10) are interactive: dragging a bar in the Gantt chart or a card on a board writes the change to the item's file.
+2. **A VS Code extension** on top of it is skein's graphical interface (emanspeaks, 2026-11-21): the item tree, trace views, coverage, forms for items, and the interactive planning views (section 10), where dragging a bar in the Gantt chart or a card on a board writes the change to the item's file. The extension is thin, as zfls's is: the logic is in the `skein` binary, which also draws the views, so other editors can use the same server.
+3. **No hosted application.** People who edit (authors, project managers) have VS Code; everyone else reads the rendered documents, schedules and charts, which are static files that any web server, or a file share, can serve.
 
 ## 10. Planning
 
@@ -195,20 +195,21 @@ A project spread over several repositories (a compiler, a website, an editor ext
 
 1. **This design**, accepted by merge.
 2. **Core and CLI:** configuration and schema, item files and paragraph items, citations, `check`, `trace`, `coverage`, `review`/`clear`, `export` (JSON). Proven on Cesium's S0 chapter and its bootstrap tests, and on an import of srapnol's Doorstop trees. From here, skein's own requirements are written in skein.
-3. **Rendering and results:** `render` for Zine, result import, baselines, the forge adapter for GitHub with CI output.
+3. **Rendering and results:** `render`, result import, baselines, the forge adapter for GitHub with CI output.
 4. **Planning:** work items, scheduling and the critical path, resources and load, Gantt, burndown and burnup, boards and the roadmap as rendered pages; the GitHub adapter's planning fields, overlays and `skein apply`. Proven on skein's own work and on Cesium's roadmap.
-5. **Editing:** `new`/`move`/`link`, the language server, the VS Code view.
-6. **Wider:** GitLab and Forgejo adapters, the full mirror with `sync` and `publish` between forges, ReqIF export, the web interface with interactive planning views.
+5. **Editing:** `new`/`move`/`link`, the language server, the VS Code extension with forms and interactive planning views.
+6. **Wider:** GitLab and Forgejo adapters, the full mirror with `sync` and `publish` between forges, ReqIF export.
 
 ## 13. Open questions for emanspeaks
 
-1. **Configuration format:** ZON (recommended: native to Zig, small), TOML, or YAML (closest to Doorstop).
-2. **Paragraph marker syntax** in documents, for example a trailing `{#lex.comment.line .legality}` attribute (Pandoc and Markdown-attribute style), a leading `r[lex.comment.line]` line (Rust Reference style), or an HTML comment. Recommendation: the trailing attribute form; it reads well, many tools already know it, and it carries a category without a second marker.
-3. **ID scheme per project:** readable hierarchical IDs (recommended for specifications) and numbered IDs (`SRS-012`, as srapnol uses) both supported, chosen per item type in the schema.
-4. **Zig version:** the latest official release at the time of each skein release (0.17.1 today), pinned per release.
-5. **Names inside `.skein/`** (for example `config.zon`, `resources.zon`, `overlay/`), settled with the first code.
-6. **Planning's place in the phases:** after rendering (recommended, since its views are rendered pages), or earlier, if Cesium's roadmap should move from the GitHub Project to skein soon.
-7. **What the full mirror takes by default:** fields, labels, milestones and relations only (recommended; small, and enough for planning offline), or comments too (needed to move between forges, so `skein mirror` for a move always takes them).
+1. **File format** for `.skein/` and item front matter: TOML (recommended: simple enough to parse in skein's own code, typed dates and times for schedules, no surprises in how values are read, readable by other tools), with deep nesting avoided by keeping one thing per file; or YAML (closest to Doorstop, but a large format to implement and one emanspeaks dislikes); or ZON (native to Zig, but only Zig tools read it).
+2. **Where the renderer comes from** (section 8): fork Zine and its dozen dependencies into the codebase, or write a narrower renderer for skein that borrows from Zine (recommended).
+3. **Mermaid on the rendered site:** ship mermaid.js as an option that is off by default (recommended), or leave Mermaid to VS Code and the forges only.
+4. **The VS Code extension's own dependencies:** an extension is TypeScript and needs at least the language-client package from npm, bundled into it. Whether that needs approval where skein is used decides how much the extension may hold; keeping it thin limits it to that one package.
+5. **Zig version:** the latest official release at the time of each skein release (0.17.1 today), pinned per release.
+6. **Names inside `.skein/`** (for example `config.toml`, `resources.toml`, `overlay/`), settled with the first code.
+7. **Planning's place in the phases:** after rendering (recommended, since its views are rendered pages), or earlier, if Cesium's roadmap should move from the GitHub Project to skein soon.
+8. **What the full mirror takes by default:** fields, labels, milestones and relations only (recommended; small, and enough for planning offline), or comments too (needed to move between forges, so `skein mirror` for a move always takes them).
 
 ## 14. Requirements of skein itself
 

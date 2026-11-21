@@ -14,7 +14,7 @@ It is for projects that want the rigor of requirements management without a data
 - **Forge-neutral.** Works with nothing but a git repository; GitHub, GitLab and Forgejo integrations are adapters on top.
 - **Schema-driven.** Each project declares its item types, links and rules; skein enforces them.
 - **Prose-friendly.** An item can be its own file or a paragraph inside a document, so specifications read as documents.
-- **One small binary.** Written in Zig, no runtime dependencies.
+- **One binary, one codebase.** Written in Zig, with no runtime dependencies and nothing fetched at build time, so it can be used where outside dependencies need approval.
 
 ## License
 
