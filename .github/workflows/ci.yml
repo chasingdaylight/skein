@@ -6,7 +6,9 @@ name: CI
 # checked as a whole by the pull request that releases it (to main), which
 # each merge into dev restarts; start the workflow by hand on a branch to
 # check it alone (`gh workflow run CI --ref <branch>`). A pull request that
-# only changes the files listed in no-ci.txt (documentation, editor settings)
+# only changes documentation (docs-only.txt) is linted and tested on one
+# platform, and not packaged. A pull request that
+# only changes the files listed in no-ci.txt (the license, editor settings)
 # skips the checks; the "CI" job, the check main's ruleset requires, passes
 # then too.
 #
@@ -47,6 +49,8 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       ci: ${{ steps.changes.outputs.ci }}
+      scope: ${{ steps.changes.outputs.scope }}
+      platforms: ${{ steps.changes.outputs.platforms }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -58,22 +62,45 @@ jobs:
           EVENT: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          # matches, no_ci
+          # matches, no_ci, docs_only
           source .github/workflows/changes.sh
 
-          # A pull request that only changes files of no-ci.txt skips CI;
-          # pushes to main and runs started by hand never do
+          # A pull request that only changes files of no-ci.txt skips CI.
+          # One that only changes documentation (docs-only.txt) is linted
+          # and tested on one platform, since the tests read the
+          # requirements, and is not packaged. Pushes to main and runs
+          # started by hand always run everything.
           ci=true
+          scope=full
           if [ "$EVENT" = pull_request ]; then
             ci=false
+            scope=docs
             while IFS= read -r f; do
               [ -z "$f" ] && continue
-              if ! matches "$f" "${no_ci[@]}"; then ci=true; echo "changed: $f"; break; fi
+              if matches "$f" "${no_ci[@]}"; then continue; fi
+              ci=true
+              case "$f" in
+                # the extension's files are in its package, its readme too
+                editors/vscode/*) scope=full ;;
+                *) matches "$f" "${docs_only[@]}" || scope=full ;;
+              esac
+              if [ "$scope" = full ]; then echo "changed: $f"; break; fi
             done <<< "$(git diff --name-only "$BASE_SHA...HEAD")"
           fi
-          echo "ci=$ci" >> "$GITHUB_OUTPUT"
+          if [ "$scope" = full ]; then
+            platforms='["ubuntu-24.04","ubuntu-24.04-arm","windows-2025","macos-15","macos-15-intel"]'
+          else
+            platforms='["ubuntu-24.04"]'
+          fi
+          {
+            echo "ci=$ci"
+            echo "scope=$scope"
+            echo "platforms=$platforms"
+          } >> "$GITHUB_OUTPUT"
           if [ "$ci" = false ]; then
             echo "Only files of no-ci.txt changed; skipping the checks." | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$scope" = docs ]; then
+            echo "Only documentation changed: lint, and the tests on one platform." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
 
   # The version, from build.zig.zon, and whether this run releases it: a push
@@ -134,7 +161,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025, macos-15, macos-15-intel]
+        os: ${{ fromJSON(needs.changes.outputs.platforms) }}
     steps:
       - uses: actions/checkout@v7
 
@@ -180,7 +207,7 @@ jobs:
   package:
     name: Package
     needs: [changes, version]
-    if: needs.changes.outputs.ci == 'true'
+    if: needs.changes.outputs.ci == 'true' && needs.changes.outputs.scope == 'full'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
