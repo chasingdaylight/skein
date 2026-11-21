@@ -6,6 +6,7 @@ envrc
 Forgejo
 frobnicate
 Gantt
+gpgsign
 grep
 iosb
 mermaid

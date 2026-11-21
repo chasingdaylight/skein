@@ -9,6 +9,8 @@ pub const usage =
     \\  check             Check the project: its configuration, schema and items
     \\  trace ID          Show an item with what is above and below it
     \\  coverage          Count the items that are linked to or cited as expected
+    \\  diff [REV [REV]]  Show the items added, removed or changed since a commit
+    \\  impact [REV]      Show what the changes since a commit reach
     \\  review ID...      Record the links of these items as reviewed
     \\  clear ID...       Record the links to these items as reviewed
     \\  approve ID...     Record an approval of these items as they are now
@@ -17,7 +19,8 @@ pub const usage =
     \\
     \\Options:
     \\  --root DIR        The project, or a directory inside it (default: here)
-    \\  --json            trace, coverage: as JSON
+    \\  --json            trace, coverage, diff, impact: as JSON
+    \\  --markdown        diff, impact: as Markdown, for a pull request
     \\  --profile NAME    coverage: only the items of this profile
     \\  --all             review, clear: every link, not those of the items named
     \\  --by NAME         approve: who approves (default: git's user.name)
@@ -31,6 +34,8 @@ pub const Command = union(enum) {
     check: Common,
     trace: Trace,
     coverage: Coverage,
+    /// `diff`, and `impact`
+    diff: Diff,
     review: Review,
     clear: Review,
     approve: Approve,
@@ -58,6 +63,17 @@ pub const Coverage = struct {
     json: bool = false,
 };
 
+pub const Diff = struct {
+    common: Common = .{},
+    /// the commit to compare from (default: HEAD), and the one to compare
+    /// to (default: the files as they are)
+    revisions: []const []const u8 = &.{},
+    /// also what the changes reach
+    impact: bool = false,
+    json: bool = false,
+    markdown: bool = false,
+};
+
 pub const Review = struct {
     common: Common = .{},
     ids: []const []const u8 = &.{},
@@ -75,6 +91,7 @@ pub const Approve = struct {
 const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--root", .takes_value = true },
     .{ .name = "--json", .takes_value = false },
+    .{ .name = "--markdown", .takes_value = false },
     .{ .name = "--profile", .takes_value = true },
     .{ .name = "--all", .takes_value = false },
     .{ .name = "--by", .takes_value = true },
@@ -109,6 +126,14 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (try p.allow(&.{ "--root", "--json", "--profile" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
         return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json") } };
+    }
+    if (eql(name, "diff") or eql(name, "impact")) {
+        const impact = eql(name, "impact");
+        if (try p.allow(&.{ "--root", "--json", "--markdown" })) |problem| return .{ .misuse = problem };
+        if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
+        if (impact and words.len > 1) return .{ .misuse = "impact takes one commit: it is about the project as it is now" };
+        if (words.len > 2) return .{ .misuse = "diff takes one commit or two" };
+        return .{ .diff = .{ .common = common, .revisions = words, .impact = impact, .json = p.flag("--json"), .markdown = p.flag("--markdown") } };
     }
     if (eql(name, "review") or eql(name, "clear")) {
         if (try p.allow(&.{ "--root", "--all" })) |problem| return .{ .misuse = problem };
@@ -281,4 +306,19 @@ test "approve takes items, and who and when" {
     try testing.expectEqualStrings("2027-03-01", approve.on.?);
     try testing.expectEqual(null, (try f.run(&.{ "approve", "a.b" })).approve.by);
     try testing.expectEqualStrings("name the items to approve", (try f.run(&.{"approve"})).misuse);
+}
+
+test "diff and impact take commits" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    const d = (try f.run(&.{ "diff", "v0.1", "HEAD", "--json" })).diff;
+    try testing.expectEqual(2, d.revisions.len);
+    try testing.expectEqualStrings("HEAD", d.revisions[1]);
+    try testing.expect(d.json and !d.impact and !d.markdown);
+    const i = (try f.run(&.{ "impact", "--markdown" })).diff;
+    try testing.expect(i.impact and i.markdown);
+    try testing.expectEqual(0, i.revisions.len);
+    try testing.expectEqualStrings("diff takes one commit or two", (try f.run(&.{ "diff", "a", "b", "c" })).misuse);
+    try testing.expectEqualStrings("impact takes one commit: it is about the project as it is now", (try f.run(&.{ "impact", "a", "b" })).misuse);
+    try testing.expectEqualStrings("give --json or --markdown, not both", (try f.run(&.{ "diff", "--json", "--markdown" })).misuse);
 }

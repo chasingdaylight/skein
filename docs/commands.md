@@ -82,6 +82,48 @@ Removed items are not counted. `--profile NAME` counts only the items of that pr
 
 Coverage reports; it does not fail. Its exit status is 0 whatever the numbers are.
 
+## `skein diff [REV [REV]]`
+
+Shows which items were added, removed or changed since a commit: by default the last one (`HEAD`), compared with the files as they are. `REV` is anything git takes for a commit: a hash, a tag, a branch, `HEAD~3`. With two, the first is compared with the second and the working tree is not looked at.
+
+```text
+Changes from v0.3 to the working tree
+
+Added (1):
+  lex.new  (rule)  spec/lex.md:13
+
+Removed (1):
+  lex.gone  (rule)
+
+Changed (2):
+  lex.token  (rule)  content  spec/lex.md:5
+  lex.space  (rule)  status: approved -> deprecated, attributes  spec/lex.md:8
+```
+
+An item is changed in its **content** when its fingerprint is different, so a paragraph that was only rewrapped is not listed. Its status, links, attributes and verification method are named when they differ. An item given the status of a removed item counts as removed.
+
+## `skein impact [REV]`
+
+The same changes, and what they reach in the project as it is now:
+
+```text
+Look again at (2):
+  c.token  (case)  rests on lex.token  spec/lex.md:16
+  c.deep  (case)  rests on lex.token  spec/lex.md:19
+
+Links now suspect (1):
+  c.token  verifies lex.token
+
+Cited in (1):
+  tests/token.zig:1  (test)  lex.token
+```
+
+- **Look again at:** every item below an item that was removed or whose content changed, however many links away, and every item whose text refers to it.
+- **Links now suspect:** the reviewed links to those items; see [reviewing](reviewing.md).
+- **Cited in:** the tests and code that cite them: the tests to run again, the code to read again.
+
+Both commands take `--json`, and `--markdown` for a summary to put in a pull request. They need git: the earlier state of the project is taken out of the repository.
+
 ## `skein review ID...` and `skein clear ID...`
 
 Record that links have been reviewed; see [reviewing](reviewing.md). `review` takes the items whose links you looked at, `clear` the items that changed. `--all` takes every link.
