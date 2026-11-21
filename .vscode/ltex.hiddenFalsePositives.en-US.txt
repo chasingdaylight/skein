@@ -1,0 +1,1 @@
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^[\\s\\S]*%\\[?[A-Za-z][\\s\\S]*$"}
