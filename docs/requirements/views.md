@@ -1,4 +1,4 @@
-# Views: trace, coverage, diff, impact, export
+# Views: trace, coverage, diff, impact, export, render
 
 The user documentation is in `docs/commands.md`.
 
@@ -59,3 +59,20 @@ For the items removed or changed in content, `skein impact` shall list every ite
 
 %req[export.profile]
 With `--profile`, an export shall hold only the items of that profile, with their links and citations.
+
+## Render
+
+%req[render.markdown]
+`skein render --out DIR` shall write every Markdown file of every source to `DIR`, under the path the file has in the project, as Markdown for a site generator. Text that is not a marker or a reference is written unchanged, byte for byte, including its line endings.
+
+%req[render.markdown.markers]
+In a rendered document, each marker shall be replaced by an anchor named after the ID of the item, followed by the ID as a link to that anchor and, when the marker gives them, the category and the status. A marker inside a code block is not an item and is left unchanged.
+
+%req[render.markdown.references]
+Each reference, in the text of an item or in narrative text, shall be replaced by a Markdown link to the item, showing the words the reference gives or else the ID. The link is the anchor alone for an item in the same document, and otherwise the relative path to the file of the item, with the anchor when that file is a document. A reference to an item that does not exist, or to an item of another repository, is replaced by its words or its ID without a link.
+
+%req[render.markdown.item-files]
+A rendered item file shall start with YAML front matter that gives the ID as the title, in place of the TOML front matter, followed by the category and status when the item has them, and the text. A file in a source of item files that is not an item is written unchanged.
+
+%req[render.markdown.output]
+`skein render` shall create `DIR` when it does not exist, shall not change any file of the project, and shall say how many files it wrote. Without `--out` it is refused. The only format is `markdown`.
