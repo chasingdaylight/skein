@@ -1,0 +1,82 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.zig-cache/**": true,
+      "**/zig-pkg/**": true,
+      "**/zig-cache*/**": true,
+      "**/zine.exe": true,
+    },
+    "files.watcherExclude": {
+      "**/.zig-cache/**": true,
+      "**/zig-pkg/**": true,
+      "**/zig-cache*/**": true,
+      "build/**": true,
+      "site/**": true,
+    },
+    "files.associations": {
+      ".local-gitignore": "gitignore",
+    },
+    "terminal.integrated.automationProfile.windows": {
+      "path": "C:\\windows\\system32\\cmd.exe",
+    },
+    "ltex.additionalRules.motherTongue": "en-US",
+    "zig.zls.enabled": "on",
+    "zig.zls.inlayHintsShowParameterName": false,
+    "zig.zls.inlayHintsExcludeSingleArgument": false,
+    "zig.zls.inlayHintsShowBuiltin": false,
+    "zig.zls.inlayHintsShowStructLiteralFieldType": false,
+    "zig.zls.inlayHintsShowVariableTypeHints": false,
+    "zig.zls.warnStyle": true,
+    "zig.zls.enableArgumentPlaceholders": false,
+    "debug.onTaskErrors": "abort",  // will switch to problems pane otherwise
+    "editor.semanticTokenColorCustomizations": {
+      "rules": {
+        "*.deprecated": {
+          // highlight semantic tokens that are marked as "deprecated"
+          "strikethrough": true
+        },
+      },
+    },
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "zig build",
+        "type": "shell",
+        "command": "${config:zig.path}",
+        "args": [
+          "build",
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "problemMatcher": [],
+        "presentation": {
+          "clear": true,
+          "reveal": "always",
+          "panel": "shared",
+          "focus": true,
+          "revealProblems": "never",
+        },
+      },
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "ziglang.vscode-zig",
+      "ms-vscode.cpptools",  // windows debug
+      "mkhl.direnv",
+      "DavidAnson.vscode-markdownlint",
+      "streetsidesoftware.code-spell-checker",
+      "streetsidesoftware.code-spell-checker-win32",
+      "ltex-plus.vscode-ltex-plus",
+    ]
+  }
+}
