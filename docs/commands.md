@@ -51,6 +51,37 @@ A link points up, from an item to what it rests on: a test to the rule it verifi
 
 `--json` gives the same as JSON: the item (with its text), and the IDs above and below.
 
+## `skein coverage`
+
+Counts, of the items that should be linked to or cited, how many are, and lists the ones that are not:
+
+```text
+Coverage of example
+
+verifies links to rule items: 2 of 4 (50%)
+  syntax: 2 of 2 (100%)
+  legality: 0 of 2 (0%)
+  without:
+    lex.c
+    lex.d
+
+test citations of rule items: 2 of 4 (50%)
+  syntax: 1 of 2 (50%)
+  legality: 1 of 2 (50%)
+  without:
+    lex.b
+    lex.c
+```
+
+What should be is what the project marks `expected = true`:
+
+- a link type (`.skein/links/`): every item of its `to` types should be pointed to by a link of that type;
+- a citation set (`[[citations]]` in `.skein/config.toml`): every item of its `to` types should be cited by the set.
+
+Removed items are not counted. `--profile NAME` counts only the items of that profile (`.skein/profiles/`), for example one stage of a language or one software class. `--json` gives the counts and the lists as JSON.
+
+Coverage reports; it does not fail. Its exit status is 0 whatever the numbers are.
+
 ## `skein review ID...` and `skein clear ID...`
 
 Record that links have been reviewed; see [reviewing](reviewing.md). `review` takes the items whose links you looked at, `clear` the items that changed. `--all` takes every link.

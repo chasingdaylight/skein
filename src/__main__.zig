@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const check = @import("commands/check.zig");
+const coverage = @import("commands/coverage.zig");
 const cli = @import("cli.zig");
 const review = @import("commands/review.zig");
 const trace = @import("commands/trace.zig");
@@ -21,6 +22,7 @@ pub fn main(init: std.process.Init) !void {
         .review => |options| try review.run(io, arena, options, .from),
         .clear => |options| try review.run(io, arena, options, .to),
         .trace => |options| try trace.run(io, arena, options),
+        .coverage => |options| try coverage.run(io, arena, options),
         .unknown => |name| .{
             .text = try arena.print("skein: unknown command '{s}'\n\n{s}", .{ name, cli.usage }),
             .status = .misuse,

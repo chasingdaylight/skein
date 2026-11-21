@@ -34,6 +34,9 @@ pub const CitationSet = struct {
     marker: []const u8,
     /// the item types the citations may name; empty when any
     to: []const []const u8 = &.{},
+    /// every item of a `to` type should be cited by the set: coverage
+    /// counts the ones that are not
+    expected: bool = false,
 };
 
 pub fn citationSet(self: *const Project, name: []const u8) ?*const CitationSet {
@@ -113,7 +116,7 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
 
     var citations: std.ArrayList(CitationSet) = .empty;
     for (try r.children("citations")) |c| {
-        try c.known(&.{ "name", "path", "files", "marker", "to" });
+        try c.known(&.{ "name", "path", "files", "marker", "to", "expected" });
         const name = try c.string("name") orelse "";
         const path = try c.string("path") orelse "";
         const marker = try c.string("marker") orelse "";
@@ -133,6 +136,7 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
             .files = files,
             .marker = marker,
             .to = try c.strings("to"),
+            .expected = try c.boolean("expected", false),
         });
     }
     self.citations = citations.items;
