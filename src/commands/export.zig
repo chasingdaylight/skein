@@ -130,7 +130,7 @@ const Exporter = struct {
             }
         }
         var csv: Csv = .{ .arena = a };
-        for ([_][]const u8{ "id", "type", "category", "status", "verification", "file", "line", "fingerprint" }) |h| try csv.field(h);
+        for ([_][]const u8{ "id", "type", "category", "status", "verification", "part_of", "file", "line", "fingerprint" }) |h| try csv.field(h);
         for (attributes.items) |name| try csv.field(name);
         try csv.field("text");
         try csv.endRow();
@@ -143,9 +143,10 @@ const Exporter = struct {
             try csv.field(item.category orelse "");
             try csv.field(if (item_type) |t| item.effectiveStatus(t) else item.status orelse "");
             try csv.field(item.verification orelse "");
+            try csv.field(item.parent orelse "");
             try csv.field(item.file);
             try csv.integer(item.line);
-            if (item_type) |t| try csv.field(&try fingerprint.of(a, item, t)) else try csv.field("");
+            try csv.field(&try fingerprint.of(a, self.ctx.graph, &self.ctx.project.schema, item));
             for (attributes.items) |name| try csv.field(item.attribute(name) orelse "");
             try csv.field(item.text);
             try csv.endRow();

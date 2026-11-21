@@ -2,7 +2,8 @@
 //! are. What should be is what the schema marks `expected = true`: a link
 //! type (every item of its `to` types should be pointed to by one) or a
 //! citation set (every item of its `to` types should be cited by it).
-//! Removed items are never counted.
+//! Removed items are never counted. An item with parts is also covered
+//! when every one of its parts is.
 
 const std = @import("std");
 
@@ -63,14 +64,14 @@ pub fn compute(
         if (!link_type.expected) continue;
         for (project.schema.types) |*item_type| {
             if (link_type.to.len > 0 and !Schema.names.contains(link_type.to, item_type.name)) continue;
-            try out.append(arena, try count(arena, .link, link_type.name, item_type, graph, citations, profile));
+            try out.append(arena, try count(arena, .link, link_type.name, item_type, link_type.to, &project.schema, graph, citations, profile));
         }
     }
     for (project.citations) |set| {
         if (!set.expected) continue;
         for (project.schema.types) |*item_type| {
             if (set.to.len > 0 and !Schema.names.contains(set.to, item_type.name)) continue;
-            try out.append(arena, try count(arena, .citation, set.name, item_type, graph, citations, profile));
+            try out.append(arena, try count(arena, .citation, set.name, item_type, set.to, &project.schema, graph, citations, profile));
         }
     }
     return out.items;
@@ -81,6 +82,8 @@ fn count(
     kind: Expectation.Kind,
     name: []const u8,
     item_type: *const Schema.ItemType,
+    to: []const []const u8,
+    schema: *const Schema,
     graph: *const Graph,
     citations: *const Graph.Citations,
     profile: ?*const Schema.Profile,
@@ -95,10 +98,7 @@ fn count(
         if (profile) |p| {
             if (!inProfile(p, item, item_type)) continue;
         }
-        const covered = switch (kind) {
-            .link => hasIncoming(graph, item.id, name),
-            .citation => hasCitation(citations, item.id, name),
-        };
+        const covered = isCovered(.{ .kind = kind, .name = name, .to = to, .schema = schema, .graph = graph, .citations = citations }, item);
         out.total += 1;
         if (covered) out.covered += 1 else try uncovered.append(arena, item.id);
         for (categories) |*c| {
@@ -110,6 +110,38 @@ fn count(
     out.categories = categories;
     out.uncovered = uncovered.items;
     return out;
+}
+
+/// One expectation, as `isCovered` needs it
+const Wanted = struct {
+    kind: Expectation.Kind,
+    name: []const u8,
+    /// the item types it is expected of; all when empty
+    to: []const []const u8,
+    schema: *const Schema,
+    graph: *const Graph,
+    citations: *const Graph.Citations,
+};
+
+/// Whether `item` is covered: it is linked to or cited itself, or it has
+/// parts the expectation applies to and each of them is covered. Removed
+/// parts do not count.
+fn isCovered(wanted: Wanted, item: *const Item) bool {
+    const direct = switch (wanted.kind) {
+        .link => hasIncoming(wanted.graph, item.id, wanted.name),
+        .citation => hasCitation(wanted.citations, item.id, wanted.name),
+    };
+    if (direct) return true;
+    var counted: usize = 0;
+    for (item.parts) |id| {
+        const part = wanted.graph.find(id) orelse continue;
+        const part_type = wanted.schema.itemType(part.type_name) orelse continue;
+        if (part.isTombstone(part_type)) continue;
+        if (wanted.to.len > 0 and !Schema.names.contains(wanted.to, part.type_name)) continue;
+        if (!isCovered(wanted, part)) return false;
+        counted += 1;
+    }
+    return counted > 0;
 }
 
 fn hasIncoming(graph: *const Graph, id: []const u8, link_type: []const u8) bool {

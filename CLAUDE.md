@@ -11,7 +11,7 @@ Plain-text requirements, specifications and traceability kept in git. `docs/desi
 ## Requirements and tests
 
 - `docs/requirements/` holds skein's requirements, in skein's own format (`.skein/` at the root is skein's own project). What skein does is what they say.
-- A change to what skein does changes its requirement in the same pull request: a new `req[...]` paragraph, or a changed one. A requirement that goes away keeps its marker, with `status=removed`; an ID is never changed or used again.
+- A change to what skein does changes its requirement in the same pull request: a new `%req[...]` paragraph, or a changed one. A requirement that goes away keeps its marker, with `status=removed`; an ID is never changed or used again.
 - A test file says which requirements it checks, in a `// req:` comment before its imports (or before its tests, in a source file that has them at its end). Every implemented requirement has a test that cites it; `skein coverage --profile implemented` lists the ones that have none.
 - What the design promises and the code does not do yet is in `docs/requirements/planned.md`, `status=planned`. Building it turns each into requirements of its own, with tests.
 

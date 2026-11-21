@@ -31,9 +31,9 @@ test "items are read from every source, in the order of the files" {
     try write(tmp.dir, ".skein/types/rule.toml", "");
     try write(tmp.dir, ".skein/types/srs.toml", "id = \"numbered\"\nprefix = \"SRS\"\n");
     try write(tmp.dir, ".skein/links/refines.toml", "");
-    try write(tmp.dir, "spec/b.md", "rule[b.one]\nSecond file.\r\n");
-    try write(tmp.dir, "spec/a/deep.md", "rule[a.deep]\nIn a directory; see [[SRS-002]].\n");
-    try write(tmp.dir, "spec/notes.txt", "rule[not.read]\nNot Markdown.\n");
+    try write(tmp.dir, "spec/b.md", "%rule[b.one]\nSecond file.\r\n");
+    try write(tmp.dir, "spec/a/deep.md", "%rule[a.deep]\nIn a directory; see [[SRS-002]].\n");
+    try write(tmp.dir, "spec/notes.txt", "%rule[not.read]\nNot Markdown.\n");
     try write(tmp.dir, "requirements/SRS-002.md", "+++\nid = \"SRS-002\"\nrefines = [\"SRS-001\"]\n+++\nTwo.\n");
     try write(tmp.dir, "requirements/SRS-001.md", "+++\nid = \"SRS-001\"\n+++\nOne.\n");
 
@@ -60,7 +60,7 @@ test "a source that is not there, and a file that is not text" {
 
     try write(tmp.dir, ".skein/config.toml", "[[sources]]\npath = \"missing\"\n[[sources]]\npath = \"spec\"\n");
     try write(tmp.dir, ".skein/types/rule.toml", "");
-    try write(tmp.dir, "spec/bad.md", "rule[a.b]\n\xff\xfe\n");
+    try write(tmp.dir, "spec/bad.md", "%rule[a.b]\n\xff\xfe\n");
 
     var report: Report = .{ .arena = a };
     const project = try Project.load(testing.io, a, tmp.dir, &report);

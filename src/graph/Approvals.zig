@@ -49,14 +49,14 @@ pub fn of(self: *const Approvals, arena: std.mem.Allocator, id: []const u8) std.
 }
 
 /// Whether `approval` is of the item as it is now
-pub fn isCurrent(arena: std.mem.Allocator, approval: Approval, item: *const Item, item_type: *const Schema.ItemType) std.mem.Allocator.Error!bool {
-    return std.mem.eql(u8, approval.fingerprint, &try fingerprint.of(arena, item, item_type));
+pub fn isCurrent(arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema, approval: Approval, item: *const Item) std.mem.Allocator.Error!bool {
+    return std.mem.eql(u8, approval.fingerprint, &try fingerprint.of(arena, graph, schema, item));
 }
 
 /// Records that `by` approved `item` as it is now, on `on`, in place of
 /// an earlier approval by the same person
-pub fn put(self: *Approvals, arena: std.mem.Allocator, item: *const Item, item_type: *const Schema.ItemType, by: []const u8, on: toml.Date) std.mem.Allocator.Error!void {
-    const fp = try arena.dupe(u8, &try fingerprint.of(arena, item, item_type));
+pub fn put(self: *Approvals, arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema, item: *const Item, by: []const u8, on: toml.Date) std.mem.Allocator.Error!void {
+    const fp = try arena.dupe(u8, &try fingerprint.of(arena, graph, schema, item));
     for (self.all.items) |*a| {
         if (!std.mem.eql(u8, a.item, item.id) or !std.mem.eql(u8, a.by, by)) continue;
         a.on = on;
@@ -108,7 +108,7 @@ pub fn check(self: *const Approvals, arena: std.mem.Allocator, schema: *const Sc
         const approvals = try self.of(arena, item.id);
         var current = false;
         for (approvals) |a| {
-            if (try isCurrent(arena, a, item, item_type)) current = true;
+            if (try isCurrent(arena, graph, schema, a, item)) current = true;
         }
         if (current) continue;
         if (approvals.len == 0) {

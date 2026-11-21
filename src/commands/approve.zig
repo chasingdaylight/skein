@@ -43,11 +43,11 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Approve) !Workspace.Ou
     var files: std.ArrayList([]const u8) = .empty;
     for (options.ids) |id| {
         const item = ws.graph.find(id).?;
-        const item_type = ws.project.schema.itemType(item.type_name) orelse return .{
+        if (ws.project.schema.itemType(item.type_name) == null) return .{
             .text = try arena.print("skein: '{s}' is of a type the schema does not have\n", .{id}),
             .status = .misuse,
         };
-        try approvals.put(arena, item, item_type, by, on);
+        try approvals.put(arena, &ws.graph, &ws.project.schema, item, by, on);
         const file = try Approvals.fileOf(arena, item);
         if (!Schema.names.contains(files.items, file)) try files.append(arena, file);
     }

@@ -80,9 +80,9 @@ pub fn stateOf(self: *const Reviews, arena: std.mem.Allocator, schema: *const Sc
     const link_type = schema.linkType(link.type_name) orelse return null;
     if (!link_type.review) return null;
     const target = graph.find(link.target) orelse return null;
-    const target_type = schema.itemType(target.type_name) orelse return null;
+    if (schema.itemType(target.type_name) == null) return null;
     const recorded = try self.get(arena, item.id, link.type_name, link.target) orelse return .never_reviewed;
-    const now = try fingerprint.of(arena, target, target_type);
+    const now = try fingerprint.of(arena, graph, schema, target);
     return if (std.mem.eql(u8, recorded, &now)) .reviewed else .suspect;
 }
 

@@ -100,6 +100,7 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proj
 
 test {
     _ = @import("_test/read.zig");
+    _ = @import("_test/parts.zig");
     _ = @import("_test/checks.zig");
     _ = @import("_test/load.zig");
     _ = Reviews;

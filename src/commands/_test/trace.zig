@@ -28,16 +28,16 @@ fn project(dir: std.Io.Dir) !void {
     try write(dir, ".skein/links/verifies.toml", "review = true\n");
     try write(dir, ".skein/links/see.toml", "");
     try write(dir, "spec/lex.md",
-        \\term[lex.token]
+        \\%term[lex.token]
         \\A token.
         \\
-        \\rule[lex.comment] syntax stage=s0 see=lex.token
+        \\%rule[lex.comment syntax stage=s0 see=lex.token]
         \\A comment is not a [[lex.token]].
         \\
-        \\case[c.comment] verifies=lex.comment
+        \\%case[c.comment verifies=lex.comment]
         \\Checks [[lex.comment]].
         \\
-        \\case[c.other] verifies=lex.comment
+        \\%case[c.other verifies=lex.comment]
         \\Checks more.
     );
     try write(dir, "tests/comment.zig", "// spec: lex.comment\n");
@@ -109,6 +109,8 @@ test "an item as JSON" {
         \\    "file": "spec/lex.md",
         \\    "line": 7,
         \\    "fingerprint": "(...)",
+        \\    "part_of": null,
+        \\    "parts": [],
         \\    "attributes": {},
         \\    "links": [
         \\      {

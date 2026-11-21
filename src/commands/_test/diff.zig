@@ -65,22 +65,22 @@ const Repo = struct {
         try self.write(".skein/types/case.toml", "");
         try self.write(".skein/links/verifies.toml", "review = true\n");
         try self.write("spec/lex.md",
-            \\rule[lex.comment]
+            \\%rule[lex.comment]
             \\A comment starts with `//`.
             \\
-            \\rule[lex.token]
+            \\%rule[lex.token]
             \\A token is a unit of the text.
             \\
-            \\rule[lex.space] status=approved note=old
+            \\%rule[lex.space approved note=old]
             \\White space separates tokens; see [[lex.token]].
             \\
-            \\rule[lex.gone]
+            \\%rule[lex.gone]
             \\To be removed.
             \\
-            \\case[c.token] verifies=lex.token
+            \\%case[c.token verifies=lex.token]
             \\Checks tokens.
             \\
-            \\case[c.deep] verifies=c.token
+            \\%case[c.deep verifies=c.token]
             \\Rests on the case above.
         );
         try self.write("tests/token.zig", "// spec: lex.token\n");
@@ -92,25 +92,25 @@ const Repo = struct {
     /// removed (as a tombstone), one added, one only laid out anew
     fn second(self: *Repo) !void {
         try self.write("spec/lex.md",
-            \\rule[lex.comment]
+            \\%rule[lex.comment]
             \\A comment   starts
             \\with `//`.
             \\
-            \\rule[lex.token]
+            \\%rule[lex.token]
             \\A token is the smallest unit of the text.
             \\
-            \\rule[lex.space] status=deprecated note=new
+            \\%rule[lex.space deprecated note=new]
             \\White space separates tokens; see [[lex.token]].
             \\
-            \\rule[lex.gone] status=removed
+            \\%rule[lex.gone removed]
             \\
-            \\rule[lex.new]
+            \\%rule[lex.new]
             \\A new rule.
             \\
-            \\case[c.token] verifies=lex.token
+            \\%case[c.token verifies=lex.token]
             \\Checks tokens.
             \\
-            \\case[c.deep] verifies=c.token
+            \\%case[c.deep verifies=c.token]
             \\Rests on the case above.
         );
     }
@@ -184,7 +184,7 @@ test "between two commits, as Markdown and as JSON" {
     try repo.first();
     try repo.second();
     try repo.commit("second");
-    try repo.write("spec/lex.md", "rule[only.this]\nThe working tree is not looked at.\n");
+    try repo.write("spec/lex.md", "%rule[only.this]\nThe working tree is not looked at.\n");
 
     try testing.expectEqualStrings(
         \\## Changes from HEAD~1 to HEAD

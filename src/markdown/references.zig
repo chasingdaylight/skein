@@ -18,7 +18,7 @@ pub const Reference = struct {
 pub fn find(arena: std.mem.Allocator, text: []const u8) std.mem.Allocator.Error![]const Reference {
     var out: std.ArrayList(Reference) = .empty;
     // code blocks are found as the document's scanner finds them
-    for (try blocks.scan(arena, text, &.{})) |block| {
+    for (try blocks.scan(arena, text)) |block| {
         if (block.kind == .code or block.kind == .front_matter or block.kind == .yaml_front_matter) continue;
         const base = @intFromPtr(block.text.ptr) - @intFromPtr(text.ptr);
         try findInline(arena, block.text, base, &out);

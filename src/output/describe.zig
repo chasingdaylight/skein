@@ -52,7 +52,12 @@ pub fn json(ctx: Context, j: *Json, item: *const Item, with_text: bool) Error!vo
     try j.key("line");
     try j.integer(item.line);
     try j.key("fingerprint");
-    if (item_type) |t| try j.string(&try fingerprint.of(ctx.arena, item, t)) else try j.optional(null);
+    try j.string(&try fingerprint.of(ctx.arena, ctx.graph, &ctx.project.schema, item));
+
+    try j.key("part_of");
+    try j.optional(item.parent);
+    try j.key("parts");
+    try j.strings(item.parts);
 
     try j.key("attributes");
     try j.beginObject();
@@ -104,7 +109,7 @@ pub fn json(ctx: Context, j: *Json, item: *const Item, with_text: bool) Error!vo
         try j.key("on");
         try j.string(try ctx.arena.print("{d:0>4}-{d:0>2}-{d:0>2}", .{ approval.on.year, approval.on.month, approval.on.day }));
         try j.key("current");
-        try j.boolean(if (item_type) |t| try Graph.Approvals.isCurrent(ctx.arena, approval, item, t) else false);
+        try j.boolean(try Graph.Approvals.isCurrent(ctx.arena, ctx.graph, &ctx.project.schema, approval, item));
         try j.endObject();
     }
     try j.endArray();
@@ -147,9 +152,12 @@ pub fn text(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
     if (item.category) |c| try out.print(a, ", {s}", .{c});
     if (item_type) |t| try out.print(a, ", {s}", .{item.effectiveStatus(t)});
     try out.print(a, ")\n  {s}:{d}\n", .{ item.file, item.line });
-    if (item_type) |t| try out.print(a, "  fingerprint {s}\n", .{&try fingerprint.of(a, item, t)});
+    try out.print(a, "  fingerprint {s}\n", .{&try fingerprint.of(a, ctx.graph, &ctx.project.schema, item)});
     if (item.verification) |v| try out.print(a, "  verification = {s}\n", .{v});
     for (item.attributes) |attr| try out.print(a, "  {s} = {s}\n", .{ attr.name, attr.value });
+
+    if (item.parent) |whole| try out.print(a, "\nPart of: {s}\n", .{whole});
+    try list(a, out, "\nParts: ", item.parts);
 
     if (item.links.len > 0) try out.appendSlice(a, "\nLinks to:\n");
     for (item.links) |link| {
@@ -174,7 +182,7 @@ pub fn text(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
     if (approvals.len > 0) try out.appendSlice(a, "\nApproved by:\n");
     for (approvals) |approval| {
         try out.print(a, "  {s} on {d:0>4}-{d:0>2}-{d:0>2}", .{ approval.by, approval.on.year, approval.on.month, approval.on.day });
-        const current = if (item_type) |t| try Graph.Approvals.isCurrent(a, approval, item, t) else false;
+        const current = try Graph.Approvals.isCurrent(a, ctx.graph, &ctx.project.schema, approval, item);
         if (!current) try out.appendSlice(a, "  [of an earlier version]");
         try out.append(a, '\n');
     }

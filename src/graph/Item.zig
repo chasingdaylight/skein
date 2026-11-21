@@ -16,8 +16,13 @@ verification: ?[]const u8 = null,
 attributes: []const Attribute = &.{},
 links: []const Link = &.{},
 references: []const Reference = &.{},
-/// the item's Markdown; empty for a removed item
+/// the item's own Markdown, without that of its parts; empty for a
+/// removed item
 text: []const u8 = "",
+/// the item this one is a part of: the item whose list it is an entry of
+parent: ?[]const u8 = null,
+/// the IDs of its parts, in order
+parts: []const []const u8 = &.{},
 /// from the project's root, with forward slashes
 file: []const u8,
 /// where the item is declared: its marker, or 1 for an item file

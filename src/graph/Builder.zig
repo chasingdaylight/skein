@@ -17,6 +17,20 @@ report: *Report,
 item: Item,
 attributes: std.ArrayList(Item.Attribute) = .empty,
 links: std.ArrayList(Item.Link) = .empty,
+refs: std.ArrayList(Item.Reference) = .empty,
+/// the pieces of the item's own text, in order
+pieces: std.ArrayList([]const u8) = .empty,
+parts: std.ArrayList([]const u8) = .empty,
+
+/// Where a piece of text stands in its file
+pub const Place = struct {
+    /// the file's line of the piece's first line
+    line: u32,
+    /// the columns before the piece on its first line
+    first_col: u32 = 0,
+    /// the columns taken off every line of the piece
+    dedent: u32 = 0,
+};
 
 /// Takes `key = values`: the status, the verification method, links when
 /// `key` is a link type, an attribute otherwise. `line` is 0 when unknown.
@@ -46,20 +60,29 @@ pub fn set(self: *Builder, key: []const u8, values: []const []const u8, line: u3
     }
 }
 
-/// Sets the item's text, whose first line is line `first_line` of the
-/// file, and finds the references in it
-pub fn setText(self: *Builder, text: []const u8, first_line: u32) Error!void {
-    self.item.text = text;
-    var refs: std.ArrayList(Item.Reference) = .empty;
-    for (try references.find(self.arena, text)) |r| {
-        const at = references.position(text, r.offset);
-        try refs.append(self.arena, .{ .target = r.target, .line = first_line + at.line - 1, .column = at.column });
+/// Adds a piece to the item's own text, and the references in it
+pub fn addText(self: *Builder, piece: []const u8, place: Place) Error!void {
+    try self.pieces.append(self.arena, piece);
+    for (try references.find(self.arena, piece)) |r| {
+        const at = references.position(piece, r.offset);
+        try self.refs.append(self.arena, .{
+            .target = r.target,
+            .line = place.line + at.line - 1,
+            .column = at.column + place.dedent + (if (at.line == 1) place.first_col else 0),
+        });
     }
-    self.item.references = refs.items;
 }
 
-pub fn finish(self: *Builder) Item {
+/// Makes the item `id` a part of this one
+pub fn addPart(self: *Builder, id: []const u8) Error!void {
+    try self.parts.append(self.arena, id);
+}
+
+pub fn finish(self: *Builder) Error!Item {
     self.item.attributes = self.attributes.items;
     self.item.links = self.links.items;
+    self.item.references = self.refs.items;
+    self.item.text = if (self.pieces.items.len == 1) self.pieces.items[0] else try std.mem.join(self.arena, "\n\n", self.pieces.items);
+    self.item.parts = self.parts.items;
     return self.item;
 }

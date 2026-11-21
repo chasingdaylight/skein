@@ -52,8 +52,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Import) !Workspace.Out
         for (item.links) |link| {
             if (!importer.stamped.contains(try arena.print("{s}\n{s}", .{ item.id, link.target }))) continue;
             const target = ws.graph.find(link.target) orelse continue;
-            const target_type = ws.project.schema.itemType(target.type_name) orelse continue;
-            try reviews.put(arena, item.id, link.type_name, link.target, &try fingerprint.of(arena, target, target_type));
+            if (ws.project.schema.itemType(target.type_name) == null) continue;
+            try reviews.put(arena, item.id, link.type_name, link.target, &try fingerprint.of(arena, &ws.graph, &ws.project.schema, target));
             const file = try Reviews.fileOf(arena, item);
             if (!Schema.names.contains(files.items, file)) try files.append(arena, file);
             recorded += 1;

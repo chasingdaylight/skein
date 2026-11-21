@@ -1,6 +1,6 @@
 //! Coverage and profiles, on a project on disk.
 
-// req: coverage.expected, coverage.profile, coverage.reports
+// req: coverage.expected, coverage.profile, coverage.reports, coverage.parts
 const std = @import("std");
 const testing = std.testing;
 
@@ -32,24 +32,24 @@ fn project(dir: std.Io.Dir) !void {
     try write(dir, ".skein/links/see.toml", "");
     try write(dir, ".skein/profiles/s0.toml", "types = [\"rule\"]\n[where]\nstage = \"s0\"\n");
     try write(dir, "spec/lex.md",
-        \\rule[lex.a] syntax stage=s0
+        \\%rule[lex.a syntax stage=s0]
         \\Linked and cited.
         \\
-        \\rule[lex.b] syntax stage=s0
+        \\%rule[lex.b syntax stage=s0]
         \\Linked only.
         \\
-        \\rule[lex.c] legality stage=s1
+        \\%rule[lex.c legality stage=s1]
         \\Neither.
         \\
-        \\rule[lex.d] legality stage=s0
+        \\%rule[lex.d legality stage=s0]
         \\Cited only.
         \\
-        \\rule[lex.old] status=removed
+        \\%rule[lex.old removed]
         \\
-        \\term[lex.term]
+        \\%term[lex.term]
         \\Not a rule: nothing is expected of it.
         \\
-        \\case[c.one] verifies=lex.a,lex.b see=lex.c
+        \\%case[c.one verifies=lex.a,lex.b see=lex.c]
         \\A case.
     );
     try write(dir, "tests/a.zig", "// spec: lex.a, lex.d\n");
@@ -138,6 +138,49 @@ test "coverage as JSON" {
         \\        },
     ));
     try testing.expect(std.mem.find(u8, text, "\"uncovered\": [\n        \"lex.d\"\n      ]") != null);
+}
+
+test "an item is covered when each of its parts is" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try project(tmp.dir);
+    try write(tmp.dir, "spec/lex.md",
+        \\%rule[all syntax] Each part is cited, one through its own parts:
+        \\
+        \\- %rule[.a syntax] Cited.
+        \\- %rule[.b syntax] Covered by its parts:
+        \\  - %rule[.x syntax] Cited.
+        \\  - %term[.note] A term: citations are not expected of it.
+        \\  - %rule[.old removed]
+        \\
+        \\%rule[some syntax] One part is not cited:
+        \\
+        \\- %rule[.a syntax] Cited.
+        \\- %rule[.b syntax] Not cited.
+        \\
+        \\%rule[itself syntax] Cited itself, and its part is not:
+        \\
+        \\- %rule[.a syntax] Not cited.
+        \\
+        \\%rule[terms syntax] No part that a citation is expected of:
+        \\
+        \\- %term[.t] A term.
+    );
+    try write(tmp.dir, "tests/a.zig", "// spec: all.a, all.b.x, some.a, itself\n");
+    const text = try run(arena.allocator(), tmp.dir, null, false);
+    const citations = text[std.mem.find(u8, text, "test citations").?..];
+    try testing.expectEqualStrings(
+        \\test citations of rule items: 6 of 10 (60%)
+        \\  syntax: 6 of 10 (60%)
+        \\  without:
+        \\    some
+        \\    some.b
+        \\    itself.a
+        \\    terms
+        \\
+    , citations);
 }
 
 test "a project that expects nothing says so" {

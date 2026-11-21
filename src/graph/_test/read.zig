@@ -16,10 +16,10 @@ test "a document's markers and the text that belongs to each" {
         \\
         \\This chapter is narrative until a marker.
         \\
-        \\rule[lex.comment.line] legality stage=s0 see=lex.token
+        \\%rule[lex.comment.line legality stage=s0 see=lex.token]
         \\A line comment starts with `//`. It is not a [[lex.token]].
         \\
-        \\rule[lex.keywords] syntax
+        \\%rule[lex.keywords syntax]
         \\
         \\The keywords are:
         \\
@@ -32,7 +32,7 @@ test "a document's markers and the text that belongs to each" {
         \\
         \\This paragraph is narrative again.
         \\
-        \\term[lex.token]
+        \\%term[lex.token]
         \\A token is a unit of the source text.
     );
     try f.expectProblems("");
@@ -66,7 +66,7 @@ test "a removed item is its marker alone" {
     f.init();
     defer f.deinit();
     try f.document("spec/old.md",
-        \\rule[lex.old] status=removed
+        \\%rule[lex.old removed]
         \\
         \\This text is narrative: it says why the rule went.
     );
@@ -80,23 +80,23 @@ test "markers that are wrong or have no text" {
     f.init();
     defer f.deinit();
     try f.document("spec/bad.md",
-        \\rule[a.one] syntax legality
+        \\%rule[a.one syntax legality]
         \\Text.
         \\
-        \\rule[a.two] syntax
+        \\%rule[a.two syntax]
         \\
         \\## A heading, not text
         \\
-        \\rule[a.three] syntax stage=s0,s1
+        \\%rule[a.three syntax stage=s0,s1]
         \\Text.
         \\
-        \\rule[a.four] syntax stage=s0 stage=s1
+        \\%rule[a.four syntax stage=s0 stage=s1]
         \\Text.
         \\
-        \\rule[a.five]
+        \\%rule[a.five]
     );
     try f.expectProblems(
-        \\spec/bad.md:1:1: error: a.one: expected one category and key=value words after the ID
+        \\spec/bad.md:1:1: error: a.one: 'legality' is one category or status too many
         \\spec/bad.md:4:1: error: a.two: the marker has no text after it
         \\spec/bad.md:8:1: error: a.three: 'stage' takes one value
         \\spec/bad.md:11:1: error: a.four: 'stage' is given twice

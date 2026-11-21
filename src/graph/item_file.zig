@@ -20,7 +20,7 @@ pub fn read(
     source: []const u8,
     default_type: ?[]const u8,
 ) std.mem.Allocator.Error!?Item {
-    const blocks = try markdown.scan(arena, source, &.{});
+    const blocks = try markdown.scan(arena, source);
     if (blocks.len == 0 or blocks[0].kind != .front_matter) {
         // a file without front matter is no item: a readme, notes
         if (std.mem.startsWith(u8, source, "+++")) try report.add(file, 1, 1, "the front matter is not closed by a +++ line", .{});
@@ -62,11 +62,11 @@ pub fn read(
         const start = @intFromPtr(first.text.ptr) - @intFromPtr(source.ptr);
         const last = blocks[blocks.len - 1];
         const end = @intFromPtr(last.text.ptr) - @intFromPtr(source.ptr) + last.text.len;
-        try b.setText(source[start..end], first.first_line);
+        try b.addText(source[start..end], .{ .line = first.first_line });
     } else if (schema.itemType(type_name)) |item_type| {
         if (!b.item.isTombstone(item_type)) try report.add(file, 1, 1, "{s}: the item has no text", .{id});
     }
-    return b.finish();
+    return try b.finish();
 }
 
 fn stringOf(report: *Report, file: []const u8, table: *const toml.Table, key: []const u8) !?[]const u8 {
