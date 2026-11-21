@@ -167,7 +167,6 @@ test "item files that are not items" {
     try f.itemFile("requirements/f.md", "+++\nid = \"SRS-002\"\npriority = \"low\"\n+++\n", "srs");
     try f.itemFile("requirements/g.md", "+++\nid = \"SRS-003\"\npriority = 1.5\n+++\nText.\n", "srs");
     try f.expectProblems(
-        \\requirements/a.md:1:1: error: an item file starts with front matter between +++ lines
         \\requirements/b.md:1:1: error: the front matter is not closed by a +++ line
         \\requirements/c.md:2:6: error: expected a value
         \\requirements/d.md:1:1: error: the front matter has no id

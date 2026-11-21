@@ -43,7 +43,7 @@ pub fn run(graph: *const Graph, schema: *const Schema, report: *Report) Error!vo
 fn checkOwn(ctx: Context, item: *const Item, item_type: *const Schema.ItemType) Error!void {
     if (!item_type.idMatches(item.id)) switch (item_type.id) {
         .hierarchical => try ctx.problem(item, 0, "the ID of a '{s}' is lowercase words joined by dots, like 'lex.comment.line'", .{item_type.name}),
-        .numbered => |n| try ctx.problem(item, 0, "the ID of a '{s}' is '{s}-' and {d} or more digits", .{ item_type.name, n.prefix, n.digits }),
+        .numbered => |n| try ctx.problem(item, 0, "the ID of a '{s}' is '{s}{s}' and {d} or more digits", .{ item_type.name, n.prefix, n.separator, n.digits }),
     };
     if (item.category) |c| {
         if (item_type.categories.len == 0) {

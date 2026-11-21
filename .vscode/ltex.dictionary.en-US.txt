@@ -9,6 +9,7 @@ Gantt
 gpgsign
 grep
 iosb
+memcpy
 mermaid
 MSYS
 ntdll

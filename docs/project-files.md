@@ -72,6 +72,8 @@ normative = false
 | --- | --- |
 | `description` | What the type is for. |
 | `id` | `"hierarchical"` (the default): IDs like `lex.comment.line`. `"numbered"`: IDs like `SRS-012`, with `prefix` and at least `digits` digits (default 3). |
+| `separator` | For numbered IDs: what stands between the prefix and the number. Default `"-"`; may be empty (`REQ001`). |
+| `names` | For numbered IDs: `true` allows a name in the number's place (`SRS-PURPOSE`). |
 | `categories` | The categories an item of the type is one of; leave out for none. |
 | `statuses` | The lifecycle. Default: draft, approved, deprecated, removed. |
 | `tombstone` | The status of a removed item, whose ID stays taken. Default `"removed"`, when the statuses have it. |

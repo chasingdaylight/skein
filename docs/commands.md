@@ -139,6 +139,10 @@ Writes the project's graph to standard output, for other tools.
 
 The output is the same for the same project, byte for byte, so an export can be kept and compared. The JSON is what `skein trace --json` gives for one item, for all of them.
 
+## `skein import doorstop DIR...`
+
+Turns Doorstop documents into skein items, where they are; see [importing](importing.md).
+
 ## `skein review ID...` and `skein clear ID...`
 
 Record that links have been reviewed; see [reviewing](reviewing.md). `review` takes the items whose links you looked at, `clear` the items that changed. `--all` takes every link.

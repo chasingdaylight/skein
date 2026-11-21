@@ -39,6 +39,7 @@ pub const Command = union(enum) {
     diff: Diff,
     /// `export`
     exporting: Export,
+    import: Import,
     review: Review,
     clear: Review,
     approve: Approve,
@@ -90,6 +91,15 @@ pub const Export = struct {
         links,
         citations,
     };
+};
+
+pub const Import = struct {
+    common: Common = .{},
+    format: Format = .doorstop,
+    /// from the project's root, with forward slashes
+    paths: []const []const u8,
+
+    pub const Format = enum { doorstop };
 };
 
 pub const Review = struct {
@@ -159,6 +169,13 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
             return .{ .misuse = "export: json, items, links or citations" };
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
+    }
+    if (eql(name, "import")) {
+        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (words.len == 0) return .{ .misuse = "import: doorstop DIR..." };
+        const format = std.meta.stringToEnum(Import.Format, words[0]) orelse return .{ .misuse = "import: doorstop DIR..." };
+        if (words.len < 2) return .{ .misuse = "import doorstop: name the directories of the Doorstop documents" };
+        return .{ .import = .{ .common = common, .format = format, .paths = words[1..] } };
     }
     if (eql(name, "review") or eql(name, "clear")) {
         if (try p.allow(&.{ "--root", "--all" })) |problem| return .{ .misuse = problem };
@@ -356,4 +373,16 @@ test "export takes what to export" {
     try testing.expectEqual(.links, e.what);
     try testing.expectEqualStrings("s0", e.profile.?);
     try testing.expectEqualStrings("export: json, items, links or citations", (try f.run(&.{ "export", "everything" })).misuse);
+}
+
+test "import takes a format and what to import" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    const i = (try f.run(&.{ "import", "doorstop", "docs/sys", "docs/srs" })).import;
+    try testing.expectEqual(.doorstop, i.format);
+    try testing.expectEqual(2, i.paths.len);
+    try testing.expectEqualStrings("docs/srs", i.paths[1]);
+    try testing.expectEqualStrings("import: doorstop DIR...", (try f.run(&.{"import"})).misuse);
+    try testing.expectEqualStrings("import: doorstop DIR...", (try f.run(&.{ "import", "excel", "x" })).misuse);
+    try testing.expectEqualStrings("import doorstop: name the directories of the Doorstop documents", (try f.run(&.{ "import", "doorstop" })).misuse);
 }

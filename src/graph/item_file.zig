@@ -22,8 +22,8 @@ pub fn read(
 ) std.mem.Allocator.Error!?Item {
     const blocks = try markdown.scan(arena, source, &.{});
     if (blocks.len == 0 or blocks[0].kind != .front_matter) {
-        const why = if (std.mem.startsWith(u8, source, "+++")) "the front matter is not closed by a +++ line" else "an item file starts with front matter between +++ lines";
-        try report.add(file, 1, 1, "{s}", .{why});
+        // a file without front matter is no item: a readme, notes
+        if (std.mem.startsWith(u8, source, "+++")) try report.add(file, 1, 1, "the front matter is not closed by a +++ line", .{});
         return null;
     }
     var diag: toml.Diagnostic = .{};

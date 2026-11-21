@@ -30,7 +30,14 @@ pub const IdScheme = union(enum) {
     /// `SRS-012`
     numbered: Numbered,
 
-    pub const Numbered = struct { prefix: []const u8, digits: u8 = 3 };
+    pub const Numbered = struct {
+        prefix: []const u8,
+        digits: u8 = 3,
+        /// between the prefix and the number: "-", or nothing
+        separator: []const u8 = "-",
+        /// whether a name may stand in the number's place: `SRS-PURPOSE`
+        names: bool = false,
+    };
 };
 
 pub const Attribute = struct {
@@ -47,7 +54,7 @@ pub const Attribute = struct {
 
 /// The type that the table of `r` declares; problems go to its report.
 pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
-    try r.known(&.{ "description", "id", "prefix", "digits", "categories", "statuses", "tombstone", "verification", "approval", "attributes" });
+    try r.known(&.{ "description", "id", "prefix", "digits", "separator", "names", "categories", "statuses", "tombstone", "verification", "approval", "attributes" });
     var out: ItemType = .{ .name = name };
     out.description = try r.string("description") orelse "";
     out.categories = try r.strings("categories");
@@ -75,10 +82,14 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
         if (try r.integer("digits")) |d| {
             if (d < 1 or d > 9) try r.complain("digits", "expected 1 to 9", .{}) else numbered.digits = @intCast(d);
         }
+        if (try r.string("separator")) |s| numbered.separator = s;
+        numbered.names = try r.boolean("names", false);
         out.id = .{ .numbered = numbered };
     } else if (std.mem.eql(u8, scheme, "hierarchical")) {
         if (r.table.get("prefix") != null) try r.complain("prefix", "only a type with numbered IDs has a prefix", .{});
         if (r.table.get("digits") != null) try r.complain("digits", "only a type with numbered IDs has digits", .{});
+        if (r.table.get("separator") != null) try r.complain("separator", "only a type with numbered IDs has a separator", .{});
+        if (r.table.get("names") != null) try r.complain("names", "only a type with numbered IDs has names", .{});
     } else try r.complain("id", "expected \"hierarchical\" or \"numbered\"", .{});
 
     if (try r.child("attributes")) |attrs| {
@@ -132,12 +143,17 @@ pub fn idMatches(self: *const ItemType, id: []const u8) bool {
         },
         .numbered => |n| {
             if (!std.mem.startsWith(u8, id, n.prefix)) return false;
-            const rest = id[n.prefix.len..];
-            if (rest.len < 1 + @as(usize, n.digits) or rest[0] != '-') return false;
-            for (rest[1..]) |c| {
-                if (!std.ascii.isDigit(c)) return false;
+            const after = id[n.prefix.len..];
+            if (!std.mem.startsWith(u8, after, n.separator)) return false;
+            const rest = after[n.separator.len..];
+            if (rest.len == 0) return false;
+            var digits = true;
+            for (rest) |c| {
+                if (!std.ascii.isAlphanumeric(c) and c != '_') return false;
+                if (!std.ascii.isDigit(c)) digits = false;
             }
-            return true;
+            // a number, or a name where the type allows names
+            return if (digits) rest.len >= @as(usize, n.digits) else n.names;
         },
     }
 }
@@ -159,4 +175,25 @@ test "IDs are matched against the type's scheme" {
     try std.testing.expect(!srs.idMatches("SRS012"));
     try std.testing.expect(!srs.idMatches("SYS-012"));
     try std.testing.expect(!srs.idMatches("SRS-01a"));
+}
+
+test "numbered IDs with another separator, or none" {
+    const req: ItemType = .{ .name = "req", .id = .{ .numbered = .{ .prefix = "REQ", .separator = "" } } };
+    try std.testing.expect(req.idMatches("REQ001"));
+    try std.testing.expect(!req.idMatches("REQ-001"));
+    try std.testing.expect(!req.idMatches("REQ01"));
+    const hlr: ItemType = .{ .name = "hlr", .id = .{ .numbered = .{ .prefix = "HLR", .separator = "_", .digits = 2 } } };
+    try std.testing.expect(hlr.idMatches("HLR_07"));
+    try std.testing.expect(!hlr.idMatches("HLR07"));
+}
+
+test "numbered IDs with names in the number's place" {
+    const plain: ItemType = .{ .name = "srs", .id = .{ .numbered = .{ .prefix = "SRS" } } };
+    try std.testing.expect(!plain.idMatches("SRS-PURPOSE"));
+    const named: ItemType = .{ .name = "srs", .id = .{ .numbered = .{ .prefix = "SRS", .names = true } } };
+    try std.testing.expect(named.idMatches("SRS-PURPOSE"));
+    try std.testing.expect(named.idMatches("SRS-012"));
+    try std.testing.expect(!named.idMatches("SRS-12"));
+    try std.testing.expect(!named.idMatches("SRS-"));
+    try std.testing.expect(!named.idMatches("SRS-TWO WORDS"));
 }
