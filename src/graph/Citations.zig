@@ -19,6 +19,8 @@ pub const directory_file = ".skein-cites";
 
 /// in the order of the citation sets, the files and the lines
 all: []const Citation = &.{},
+/// the same, by target
+by_target: std.array_hash_map.String(std.ArrayList(Citation)) = .empty,
 
 pub const Citation = struct {
     /// the name of its citation set
@@ -61,7 +63,13 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proj
             } else try readSource(arena, set, path, text, &out);
         }
     }
-    return .{ .all = out.items };
+    var citations: Citations = .{ .all = out.items };
+    for (out.items) |c| {
+        const entry = try citations.by_target.getOrPut(arena, c.target);
+        if (!entry.found_existing) entry.value_ptr.* = .empty;
+        try entry.value_ptr.append(arena, c);
+    }
+    return citations;
 }
 
 /// Whether one of `paths` is a source file in the directory of the
@@ -146,12 +154,8 @@ pub fn check(self: *const Citations, project: *const Project, graph: *const Grap
 }
 
 /// The citations of `id`, in order
-pub fn of(self: *const Citations, arena: std.mem.Allocator, id: []const u8) std.mem.Allocator.Error![]const Citation {
-    var out: std.ArrayList(Citation) = .empty;
-    for (self.all) |c| {
-        if (std.mem.eql(u8, c.target, id)) try out.append(arena, c);
-    }
-    return out.items;
+pub fn of(self: *const Citations, _: std.mem.Allocator, id: []const u8) std.mem.Allocator.Error![]const Citation {
+    return if (self.by_target.get(id)) |list| list.items else &.{};
 }
 
 test {

@@ -8,6 +8,8 @@ pub fn build(b: *std.Build) void {
 
     const options = b.addOptions();
     options.addOption([]const u8, "version", zon.version);
+    // for the tests that check the example projects
+    options.addOptionPathUntracked("examples_dir", b.path("examples"));
 
     const mod = b.createModule(.{
         .root_source_file = b.path("src/__root__.zig"),

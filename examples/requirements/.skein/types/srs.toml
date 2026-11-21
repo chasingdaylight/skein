@@ -1,0 +1,11 @@
+description = "A software requirement"
+id = "numbered"
+prefix = "SRS"
+verification = ["test", "analysis", "inspection", "demonstration"]
+
+[attributes.priority]
+values = ["low", "medium", "high"]
+required = true
+
+# why the requirement is there: not part of what it requires
+[attributes.rationale]

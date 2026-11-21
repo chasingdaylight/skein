@@ -124,13 +124,13 @@ pub fn check(self: *const Approvals, arena: std.mem.Allocator, schema: *const Sc
 pub fn write(self: *const Approvals, io: Io, arena: std.mem.Allocator, root: Io.Dir, graph: *const Graph, files: []const []const u8) !void {
     for (files) |file| {
         var lines: std.ArrayList([]const u8) = .empty;
-        for (graph.items) |*item| {
+        // by approval, not by item: there are far fewer
+        for (self.all.items) |a| {
+            const item = graph.find(a.item) orelse continue;
             if (!std.mem.eql(u8, try fileOf(arena, item), file)) continue;
-            for (try self.of(arena, item.id)) |a| {
-                try lines.append(arena, try arena.print("\"{s}\".\"{s}\" = {{ on = {d:0>4}-{d:0>2}-{d:0>2}, fingerprint = \"{s}\" }}\n", .{
-                    item.id, try record_files.escape(arena, a.by), a.on.year, a.on.month, a.on.day, a.fingerprint,
-                }));
-            }
+            try lines.append(arena, try arena.print("\"{s}\".\"{s}\" = {{ on = {d:0>4}-{d:0>2}-{d:0>2}, fingerprint = \"{s}\" }}\n", .{
+                item.id, try record_files.escape(arena, a.by), a.on.year, a.on.month, a.on.day, a.fingerprint,
+            }));
         }
         try record_files.write(io, arena, root, file, header, lines.items);
     }

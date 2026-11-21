@@ -8,33 +8,16 @@ const std = @import("std");
 const Graph = @import("Graph.zig");
 const Item = @import("Item.zig");
 
-pub const Incoming = struct {
-    from: *const Item,
-    link: Item.Link,
-};
+pub const Incoming = Graph.Incoming;
 
 /// The links that point to `id`, in the order of the items
-pub fn incoming(arena: std.mem.Allocator, graph: *const Graph, id: []const u8) std.mem.Allocator.Error![]const Incoming {
-    var out: std.ArrayList(Incoming) = .empty;
-    for (graph.items) |*item| {
-        for (item.links) |link| {
-            if (std.mem.eql(u8, link.target, id)) try out.append(arena, .{ .from = item, .link = link });
-        }
-    }
-    return out.items;
+pub fn incoming(_: std.mem.Allocator, graph: *const Graph, id: []const u8) std.mem.Allocator.Error![]const Incoming {
+    return if (graph.incoming.get(id)) |list| list.items else &.{};
 }
 
 /// The IDs of the items whose text refers to `id`, each once
-pub fn referencedBy(arena: std.mem.Allocator, graph: *const Graph, id: []const u8) std.mem.Allocator.Error![]const []const u8 {
-    var out: std.ArrayList([]const u8) = .empty;
-    for (graph.items) |*item| {
-        for (item.references) |r| {
-            if (!std.mem.eql(u8, r.target, id)) continue;
-            try out.append(arena, item.id);
-            break;
-        }
-    }
-    return out.items;
+pub fn referencedBy(_: std.mem.Allocator, graph: *const Graph, id: []const u8) std.mem.Allocator.Error![]const []const u8 {
+    return if (graph.referrers.get(id)) |list| list.items else &.{};
 }
 
 pub const Direction = enum { above, below };

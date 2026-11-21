@@ -105,19 +105,20 @@ pub fn check(self: *const Reviews, arena: std.mem.Allocator, schema: *const Sche
 /// Writes the record files named in `files` again, from the records held:
 /// those of links that still exist. A file left without records is deleted.
 pub fn write(self: *const Reviews, io: Io, arena: std.mem.Allocator, root: Io.Dir, schema: *const Schema, graph: *const Graph, files: []const []const u8) !void {
-    for (files) |file| {
-        var lines: std.ArrayList([]const u8) = .empty;
-        for (graph.items) |*item| {
-            if (!std.mem.eql(u8, try fileOf(arena, item), file)) continue;
-            for (item.links) |link| {
-                const link_type = schema.linkType(link.type_name) orelse continue;
-                if (!link_type.review) continue;
-                const fp = try self.get(arena, item.id, link.type_name, link.target) orelse continue;
-                try lines.append(arena, try arena.print("\"{s}\".{s}.\"{s}\" = \"{s}\"\n", .{ item.id, link.type_name, link.target, fp }));
-            }
+    var buckets: std.array_hash_map.String(std.ArrayList([]const u8)) = .empty;
+    for (files) |file| try buckets.put(arena, file, .empty);
+    for (graph.items) |*item| {
+        // an item without links has no file to be in
+        if (item.links.len == 0) continue;
+        const lines = buckets.getPtr(try fileOf(arena, item)) orelse continue;
+        for (item.links) |link| {
+            const link_type = schema.linkType(link.type_name) orelse continue;
+            if (!link_type.review) continue;
+            const fp = try self.get(arena, item.id, link.type_name, link.target) orelse continue;
+            try lines.append(arena, try arena.print("\"{s}\".{s}.\"{s}\" = \"{s}\"\n", .{ item.id, link.type_name, link.target, fp }));
         }
-        try record_files.write(io, arena, root, file, header, lines.items);
     }
+    for (buckets.keys(), buckets.values()) |file, *lines| try record_files.write(io, arena, root, file, header, lines.items);
 }
 
 test {
