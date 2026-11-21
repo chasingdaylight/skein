@@ -29,7 +29,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 
 ## 2. Principles
 
-1. **Plain text in git is the only source of truth.** Every item, link, review, baseline, schedule, date, estimate and assignment is in files under version control; there is no database. Everything else is generated. So all of it can be edited offline, with any editor or tool, and reviewed and merged like code.
+1. **Plain text in git is the source of truth, with no database.** Every item, link, review, baseline, schedule, date, estimate and allocation skein holds is in files under version control, so it can be edited offline, with any editor or tool, and reviewed and merged like code. What a forge already holds (an issue's state, assignees, labels) stays sourced there and is not duplicated (section 10.4). Everything else is generated.
 2. **Forge-neutral.** skein works with nothing but a git repository. Integrations with GitHub, GitLab and Forgejo are adapters; the core never relies on a feature one of the three lacks (section 7).
 3. **Schema-driven.** A project declares its item types, their attributes, the links allowed between them and the rules they must satisfy. skein has no built-in notion of "requirement" or "test".
 4. **Prose-friendly.** An item can be a file of its own or a paragraph inside a document, so a specification reads as a document while every paragraph stays an item.
@@ -53,7 +53,7 @@ skein takes the parts that work: Doorstop's files in git and its suspect links; 
 
 ### 4.1 Configuration and schema
 
-A `.skein/` directory at the repository root holds skein's own files (emanspeaks, 2026-11-21): the configuration (item directories and documents, the schema, citation patterns, outputs, the forge and the other repositories of the project), and the data that belongs to no item file and that the forge does not hold, such as reviews of links, resources and calendars, time logs, and the last synced state of forge issues. Items and documents themselves live wherever the project wants them (`docs/`, `spec/`, beside the code); `.skein/` is for skein's bookkeeping. The format of its files is an open question (section 13), with ZON as the recommendation: native to Zig, no extra parser, and small.
+A `.skein/` directory at the repository root holds skein's own files (emanspeaks, 2026-11-21): the configuration (item directories and documents, the schema, citation patterns, outputs, the forge and the other repositories of the project), and the data that belongs to no item file and that the forge does not hold, such as reviews of links, resources and calendars, time logs, schedules and the planning data the forge cannot store for an issue, and planning overlays (section 10.4). Items and documents themselves live wherever the project wants them (`docs/`, `spec/`, beside the code); `.skein/` is for skein's bookkeeping. The format of its files is an open question (section 13), with ZON as the recommendation: native to Zig, no extra parser, and small.
 
 ### 4.2 Item files
 
@@ -82,6 +82,7 @@ A command-line tool, `skein`, with subcommands that each do one thing and fail w
 | `coverage` | Reports, per item type and per category, which items lack the links or citations the schema expects (for example rules without tests), and the results per implementation. |
 | `review <id>` / `clear <id>` | Records that an item, or the links to a changed parent, have been reviewed, by updating the stored fingerprints. |
 | `new` / `move` / `link` | Creates items with the next free ID, renames IDs (keeping an alias), adds links; keeps files consistent so no one edits fingerprints by hand. |
+| `apply` | Writes a planning overlay's values to the forge and removes them from `.skein/` (section 10.4). |
 | `import` | Converts Doorstop trees, and imports test results. |
 | `export` | Writes the whole graph as JSON (for other tools and agents); later ReqIF for interchange with DOORS and similar. |
 | `render` | Generates the pages a renderer turns into a site (section 8). |
@@ -142,20 +143,30 @@ skein plans and tracks the work as well as describing the product, taking from O
 ### 10.3 Views
 
 - **Gantt chart:** bars, milestones, dependencies and the critical path, by version, by person, or for any filter; with a baseline's bars beside the current ones to show slippage.
-- **Burndown and burnup** per version or milestone, in items or effort. Their history comes from git: the state of the plan at each commit (or each day's last commit) gives the series, so nothing records snapshots by hand and the chart can be rebuilt for any past date.
+- **Burndown and burnup** per version or milestone, in items or effort. Their history comes from where each value lives: git history for what skein holds (the state at each commit gives the series), the forge's issue events for what the forge holds; so nothing records snapshots by hand and the chart can be rebuilt for any past date.
 - **Boards** by status, assignee or version, and a **roadmap** of versions with what each contains and how far along it is.
 - **Resource load** per person and week, as a table and a chart.
 - The same filters as everywhere else ("open tasks implementing chapter 4", "work on rules with no test"), as pages and in `skein export`.
 
 ### 10.4 Forge issues
 
-Discussion stays in the forge, so a work item can be linked to an issue, and an issue can be a work item of its own without a separate file. Either way, git holds the plan:
+Discussion stays in the forge, so a work item can be linked to an issue, and an issue can be a work item of its own without a separate file. skein wraps the forge's data instead of copying it (emanspeaks, 2026-11-21):
 
-- What the forge does not hold (dates, durations, estimates, dependencies with lags, effort, capacity) is only in git: in the item's file, or in `.skein/` for an issue that has no file.
-- What the forge does hold (title, open or closed, assignees, labels, milestone) is read through the adapter, and `skein sync` writes it into `.skein/` as a commit. So the whole plan, its history included, is in git: the charts, `check` and offline work need no forge, and moving to another forge loses nothing.
-- `skein sync` can also write the other way, creating or updating issues from items. The configuration says, field by field, which side wins when both changed.
+- **The forge is the truth for what it holds.** What it holds depends on the forge: GitHub, GitLab and Forgejo differ in milestones, due dates, weights, dependencies, time tracking and custom fields. Each adapter declares which planning fields its forge stores, and skein reads those through it.
+- **`.skein/` holds only what the forge lacks:** schedules, allocations, lags, capacity, links to milestones or work outside git, and whatever field the chosen forge cannot store. It is keyed by the issue's reference and never repeats a value the forge holds, so with a richer forge `.skein/` holds less. Moving to another forge moves a field between the two sides; `skein` writes the fields the new forge lacks into `.skein/` as part of the move.
+- **No mirror.** Values read from the forge are cached under the build directory, derived and deletable, so the last view of them is available offline; nothing of them is committed except as below. Charts that need the history of forge-held fields (a burndown of closed issues) read it from the forge's issue events, which all three forges keep.
+- **Baselines** record the forge-held values they compare (for example due dates, at the moment a version's plan was frozen), a deliberate, named snapshot rather than a running copy.
 
-Projects that do not want issues use items alone.
+#### Overlays and what-if plans
+
+A branch of the plan can explore a different schedule: other priorities, assignments, dependencies or dates. Changes to what skein holds are ordinary edits on the branch. Changes to what the forge holds are kept as an **overlay**, copy on write: `.skein/` records only the fields that deviate, each with the upstream value it was based on, and everything else still comes from the forge.
+
+- `check` reports an overlay whose upstream value has since changed, as a merge would report a conflict.
+- Views and charts on the branch show the plan with the overlay applied, and can show it beside the current plan.
+- When the plan is adopted, `skein apply` writes the overlay's values to the forge through the adapter and removes them from `.skein/`; a plan that is not adopted is a branch that is never merged.
+- The same mechanism releveling uses: skein proposes reassignments or new dates to remove overallocation as an overlay, for review like any other change.
+
+`skein` can also create or update issues from items. Projects that do not want issues use items alone.
 
 ### 10.5 Projects of several repositories
 
@@ -175,7 +186,7 @@ A project spread over several repositories (a compiler, a website, an editor ext
 1. **This design**, accepted by merge.
 2. **Core and CLI:** configuration and schema, item files and paragraph items, citations, `check`, `trace`, `coverage`, `review`/`clear`, `export` (JSON). Proven on Cesium's S0 chapter and its bootstrap tests, and on an import of srapnol's Doorstop trees. From here, skein's own requirements are written in skein.
 3. **Rendering and results:** `render` for Zine, result import, baselines, the forge adapter for GitHub with CI output.
-4. **Planning:** work items, scheduling and the critical path, resources and load, Gantt, burndown and burnup, boards and the roadmap as rendered pages; `skein sync` with GitHub issues. Proven on skein's own work and on Cesium's roadmap.
+4. **Planning:** work items, scheduling and the critical path, resources and load, Gantt, burndown and burnup, boards and the roadmap as rendered pages; the GitHub adapter's planning fields, overlays and `skein apply`. Proven on skein's own work and on Cesium's roadmap.
 5. **Editing:** `new`/`move`/`link`, the language server, the VS Code view.
 6. **Wider:** GitLab and Forgejo adapters, ReqIF export, the web interface with interactive planning views.
 
@@ -185,7 +196,7 @@ A project spread over several repositories (a compiler, a website, an editor ext
 2. **Paragraph marker syntax** in documents, for example a trailing `{#lex.comment.line .legality}` attribute (Pandoc and Markdown-attribute style), a leading `r[lex.comment.line]` line (Rust Reference style), or an HTML comment. Recommendation: the trailing attribute form; it reads well, many tools already know it, and it carries a category without a second marker.
 3. **ID scheme per project:** readable hierarchical IDs (recommended for specifications) and numbered IDs (`SRS-012`, as srapnol uses) both supported, chosen per item type in the schema.
 4. **Zig version:** the latest official release at the time of each skein release (0.17.1 today), pinned per release.
-5. **Names inside `.skein/`** (for example `config.zon`, `resources.zon`, `sync/`), settled with the first code.
+5. **Names inside `.skein/`** (for example `config.zon`, `resources.zon`, `overlay/`), settled with the first code.
 6. **Planning's place in the phases:** after rendering (recommended, since its views are rendered pages), or earlier, if Cesium's roadmap should move from the GitHub Project to skein soon.
 
 ## 14. Requirements of skein itself
