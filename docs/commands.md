@@ -124,6 +124,21 @@ Cited in (1):
 
 Both commands take `--json`, and `--markdown` for a summary to put in a pull request. They need git: the earlier state of the project is taken out of the repository.
 
+## `skein export [WHAT]`
+
+Writes the project's graph to standard output, for other tools.
+
+| `WHAT` | Gives |
+| --- | --- |
+| `json` (the default) | Everything as one JSON document: the item types and link types, and every item with its status, fingerprint, attributes, links both ways with their review state, references, approvals, citations and text. |
+| `items` | CSV, one row per item: ID, type, category, status, verification, file, line, fingerprint, a column for each attribute, and the text. |
+| `links` | CSV, one row per link: from, its type, the link type, to, its type, and the review state. A traceability matrix in its long form, ready for a pivot table. |
+| `citations` | CSV, one row per citation: the citation set, file, line, the item and its type. |
+
+`--profile NAME` exports only the items of that profile, with their links and citations.
+
+The output is the same for the same project, byte for byte, so an export can be kept and compared. The JSON is what `skein trace --json` gives for one item, for all of them.
+
 ## `skein review ID...` and `skein clear ID...`
 
 Record that links have been reviewed; see [reviewing](reviewing.md). `review` takes the items whose links you looked at, `clear` the items that changed. `--all` takes every link.
