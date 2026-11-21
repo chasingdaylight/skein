@@ -1,6 +1,6 @@
 # Notes for coding agents
 
-What a coding agent working on skein needs to know besides the code, the [readme](readme.md), the [design](docs/design.md) and the [issues](https://github.com/emanspeaks/skein/issues). Notes about one machine (paths, hosts, caches) go in `CLAUDE.local.md`, which is not committed. Mistakes made more than once are written down here so they are not made again.
+What a coding agent working on skein needs to know besides the code, the [readme](readme.md), the [design](docs/design.md) and the [issues](https://github.com/chasingdaylight/skein/issues). Notes about one machine (paths, hosts, caches) go in `CLAUDE.local.md`, which is not committed. Mistakes made more than once are written down here so they are not made again.
 
 The repository's setup follows zfls (cesiumlang/zfls) and rstd (randyos-org/rstd), the newer Zig projects of emanspeaks's: when something here is missing, do it as they do.
 
@@ -25,7 +25,7 @@ Plain-text requirements, specifications and traceability kept in git. `docs/desi
 
 ## The backlog: GitHub issues
 
-- Open work is the [issues](https://github.com/emanspeaks/skein/issues). Each issue is one task, landed in one pull request; split a larger plan into one issue per step.
+- Open work is the [issues](https://github.com/chasingdaylight/skein/issues). Each issue is one task, landed in one pull request; split a larger plan into one issue per step.
 - The current milestone is the task list in the description of the open `dev` to `main` pull request, in work order; check an issue off there when it lands on `dev`.
 - Labels: `backlog` for what is outside the milestone, `blocked` with a `**Blocked:**` line naming the outside cause, `awaiting input` for a decision emanspeaks makes, `housekeeping` for readability and structure work. `**Needs:**` links the issues that must land first.
 - Pull requests take the release-note labels of `.github/release.yml` (`fix`, `feature`, `performance`, `tests`, `refactor`, `ci`, `skip-changelog`); their titles are the release notes.
