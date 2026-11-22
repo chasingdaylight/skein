@@ -43,7 +43,10 @@ pub const usage =
     \\  --working         the same, with their files as they are, committed or not
     \\  --offline         the same commands, and pin: fetch nothing; a repository
     \\                    by url is read from what its cache holds
-    \\  --all            review, clear: every link, not those of the items named
+    \\  --alias, --no-alias
+    \\                    move: keep the old ID as an alias, or not (default: kept
+    \\                    when the project declares an id, so others can cite it)
+    \\  --all             review, clear: every link, not those of the items named
     \\  --by NAME         approve: who approves (default: git's user.name)
     \\  --on DATE         approve: when, as 2027-03-01 (default: today)
     \\  --type TYPE       import csv: the item type of the rows
@@ -178,6 +181,9 @@ pub const Move = struct {
     old: []const u8,
     /// the ID it is to have
     new: []const u8,
+    /// whether the old ID is kept as an alias; when null, as the project's
+    /// `id` says: kept when it has one, since others can then cite it
+    alias: ?bool = null,
 };
 
 pub const Render = struct {
@@ -258,6 +264,8 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--current", .takes_value = false },
     .{ .name = "--working", .takes_value = false },
     .{ .name = "--offline", .takes_value = false },
+    .{ .name = "--alias", .takes_value = false },
+    .{ .name = "--no-alias", .takes_value = false },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -339,9 +347,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .new = .{ .common = common, .type_name = words[0], .id = if (words.len == 2) words[1] else null, .to = p.value("--to") } };
     }
     if (eql(name, "move")) {
-        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--alias", "--no-alias" })) |problem| return .{ .misuse = problem };
         if (words.len != 2) return .{ .misuse = "move takes the ID an item has, and the ID it is to have" };
-        return .{ .move = .{ .common = common, .old = words[0], .new = words[1] } };
+        if (p.flag("--alias") and p.flag("--no-alias")) return .{ .misuse = "give --alias or --no-alias, not both" };
+        const keep: ?bool = if (p.flag("--alias")) true else if (p.flag("--no-alias")) false else null;
+        return .{ .move = .{ .common = common, .old = words[0], .new = words[1], .alias = keep } };
     }
     if (eql(name, "render")) {
         if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };

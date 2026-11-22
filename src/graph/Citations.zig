@@ -138,9 +138,12 @@ fn isIdChar(c: u8) bool {
 /// of a type their citation set does not cite.
 pub fn check(self: *const Citations, project: *const Project, graph: *const Graph, report: *Report) std.mem.Allocator.Error!void {
     for (self.all) |c| {
-        // an item of another repository; checked once repositories are linked
+        // an item of another repository: network/checks.zig
         if (std.mem.findScalar(u8, c.target, ':') != null) continue;
-        const target = graph.find(c.target) orelse {
+        const target = graph.find(c.target) orelse if (graph.formerly(c.target)) |now| blk: {
+            try report.warn(c.file, c.line, c.column, "the citation names '{s}', which is now '{s}'", .{ c.target, now.id });
+            break :blk now;
+        } else {
             try report.add(c.file, c.line, c.column, "the citation names '{s}', and there is no such item", .{c.target});
             continue;
         };

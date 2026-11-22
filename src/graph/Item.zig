@@ -8,6 +8,8 @@ const Item = @This();
 
 id: []const u8,
 type_name: []const u8,
+/// the IDs it had before, which still name it (`aliases`)
+aliases: []const []const u8 = &.{},
 /// as written; null when the item names none (`effectiveStatus`)
 status: ?[]const u8 = null,
 category: ?[]const u8 = null,

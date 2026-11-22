@@ -19,6 +19,7 @@ const Reviews = @import("../graph/Reviews.zig");
 const Schema = @import("../schema/Schema.zig");
 const Workspace = @import("Workspace.zig");
 const fingerprint = @import("../graph/fingerprint.zig");
+const alias = @import("../edit/alias.zig");
 const rename = @import("../edit/rename.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Move) !Workspace.Outcome {
@@ -41,6 +42,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Move) !Workspace.Outco
     try addParts(arena, &ws.graph, item, options.old, options.new, &renames);
     for (renames.values()) |new_id| {
         if (ws.graph.find(new_id) != null and !renames.contains(new_id)) return misuse(arena, "the ID '{s}' is taken", .{new_id});
+        if (ws.graph.formerly(new_id)) |had| return misuse(arena, "'{s}' is a former ID of '{s}'; take it out of its aliases first", .{ new_id, had.id });
     }
 
     // the records, and which of them are current, before anything changes
@@ -64,6 +66,16 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Move) !Workspace.Outco
         try changed.append(arena, .{ .file = file, .text = result.text });
     }
 
+    // the old IDs kept as aliases: by default when others can cite the project
+    const keep = options.alias orelse (ws.project.id != null);
+    if (keep) for (renames.keys()) |old_id| {
+        const renamed = ws.graph.find(old_id).?;
+        for (changed.items) |*c| {
+            if (!std.mem.eql(u8, c.file, renamed.file)) continue;
+            c.text = if (renamed.in_document) try onLine(arena, c.text, renamed.line, old_id) else try alias.frontMatter(arena, c.text, old_id);
+        }
+    };
+
     // a read-only source is imported again, not edited
     for (changed.items) |c| {
         if (ws.project.readOnlySource(c.file)) |s| return misuse(arena, "the rename would change {s}, which is in the read-only source '{s}'", .{ c.file, s.path });
@@ -76,8 +88,21 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Move) !Workspace.Outco
     var out: std.ArrayList(u8) = .empty;
     try out.print(arena, "skein: {s} is now {s}", .{ options.old, options.new });
     if (renames.count() > 1) try out.print(arena, ", with {d} part{s}", .{ renames.count() - 1, if (renames.count() == 2) "" else "s" });
-    try out.print(arena, ": {d} place{s} in {d} file{s}\n", .{ places, if (places == 1) "" else "s", changed.items.len, if (changed.items.len == 1) "" else "s" });
+    try out.print(arena, ": {d} place{s} in {d} file{s}", .{ places, if (places == 1) "" else "s", changed.items.len, if (changed.items.len == 1) "" else "s" });
+    try out.appendSlice(arena, if (keep) "; the old ID is kept as an alias\n" else "\n");
     return .{ .text = out.items };
+}
+
+/// `text` with `old` added to the aliases of the marker on line `number`
+fn onLine(arena: std.mem.Allocator, text: []const u8, number: u32, old: []const u8) ![]const u8 {
+    var out: std.ArrayList(u8) = .empty;
+    var it = std.mem.splitScalar(u8, text, '\n');
+    var n: u32 = 1;
+    while (it.next()) |line| : (n += 1) {
+        if (n > 1) try out.append(arena, '\n');
+        try out.appendSlice(arena, if (n == number) try alias.marker(arena, line, old) else line);
+    }
+    return out.items;
 }
 
 const Changed = struct { file: []const u8, text: []const u8 };

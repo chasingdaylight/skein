@@ -241,8 +241,9 @@ const Page = struct {
                 else => .unresolved,
             };
         }
-        if (self.ctx.graph.find(id) == null) return .unresolved;
-        return if (try self.href(id)) |link| .{ .link = link } else .plain;
+        // a former ID leads to the item as it is now
+        const item = self.ctx.graph.find(id) orelse self.ctx.graph.formerly(id) orelse return .unresolved;
+        return if (try self.href(item.id)) |link| .{ .link = link } else .plain;
     }
 
     /// Where a link to the item `id` leads, from this file; null when

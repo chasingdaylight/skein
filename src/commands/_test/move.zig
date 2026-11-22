@@ -209,3 +209,40 @@ test "what cannot be done is refused, and nothing is changed" {
     try testing.expectEqualStrings("skein: the ID 'lex.kw.as' is taken\n", try run.move("lex.keywords", "lex.kw"));
     try testing.expectEqualStrings(lex, try run.file("spec/lex.md"));
 }
+
+fn moveAlias(run: *Run, old: []const u8, new: []const u8, keep: ?bool) ![]const u8 {
+    return (try move_command.run(testing.io, run.arena.allocator(), .{ .common = .{ .root = run.root }, .old = old, .new = new, .alias = keep })).text;
+}
+
+// req: move.aliases, items.aliases, check.aliases
+test "an old ID kept as an alias still names the item" {
+    var run: Run = undefined;
+    try run.init();
+    defer run.deinit();
+    try run.settle();
+    try testing.expectEqualStrings("skein: lex.token is now lex.lexeme: 8 places in 3 files; the old ID is kept as an alias\n", try moveAlias(&run, "lex.token", "lex.lexeme", true));
+    const text = try run.file("spec/lex.md");
+    try testing.expect(std.mem.find(u8, text, "%rule[lex.lexeme syntax approved aliases=lex.token] A token") != null);
+    _ = try moveAlias(&run, "SRS-001", "SRS-010", true);
+    try testing.expectEqualStrings("+++\nid = \"SRS-010\"\naliases = [\"SRS-001\"]\n+++\n\nTokens exist.\n", try run.file("requirements/SRS-010.md"));
+
+    // what names the old ID from elsewhere still finds the item, with a warning
+    try write(run.tmp.dir, "spec/old.md", "Narrative about %[lex.token].\n");
+    const out = try run.check();
+    try testing.expect(std.mem.find(u8, out, "spec/old.md:1:17: warning: the text refers to 'lex.token', which is now 'lex.lexeme'") != null);
+    try testing.expect(std.mem.find(u8, out, "no problems, 1 warning") != null);
+
+    // a former ID stays taken
+    try write(run.tmp.dir, "spec/old.md", "%rule[lex.token syntax] Again.\n");
+    try testing.expect(std.mem.find(u8, try run.check(), "lex.lexeme: 'lex.token' is a former ID of it, and the ID of the item at spec/old.md:1") != null);
+    try testing.expectEqualStrings("skein: 'SRS-001' is a former ID of 'SRS-010'; take it out of its aliases first\n", try moveAlias(&run, "SRS-002", "SRS-001", null));
+}
+
+test "without a project id, the old ID is not kept unless asked" {
+    var run: Run = undefined;
+    try run.init();
+    defer run.deinit();
+    try testing.expectEqualStrings("skein: lex.token is now lex.lexeme: 8 places in 3 files\n", try moveAlias(&run, "lex.token", "lex.lexeme", null));
+    try write(run.tmp.dir, ".skein/config.toml", try std.mem.replaceOwned(u8, run.arena.allocator(), try run.file(".skein/config.toml"), "name = \"example\"", "name = \"example\"\nid = \"example/spec\""));
+    try testing.expect(std.mem.endsWith(u8, try moveAlias(&run, "lex.lexeme", "lex.unit", null), "; the old ID is kept as an alias\n"));
+}

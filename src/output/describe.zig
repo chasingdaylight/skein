@@ -170,6 +170,7 @@ pub fn text(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
 
     if (item.parent) |whole| try out.print(a, "\nPart of: {s}\n", .{whole});
     try list(a, out, "\nParts: ", item.parts);
+    try list(a, out, "\nFormer IDs: ", item.aliases);
 
     if (item.links.len > 0) try out.appendSlice(a, "\nLinks to:\n");
     for (item.links) |link| {

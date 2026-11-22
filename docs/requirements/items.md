@@ -48,6 +48,9 @@ The text of a part shall belong to the part only, and not to the containing item
 %req[items.removed]
 A marker with the status that the item type uses for removed items shall be an item without text: the marker alone.
 
+%req[items.aliases]
+An item shall be able to carry the IDs it had before, as `aliases=` in its marker or `aliases = [...]` in its front matter. A former ID still names the item, from this repository and from others, and stays taken: no other item may have it as its ID or as a former one.
+
 ## Items as files
 
 %req[items.file]

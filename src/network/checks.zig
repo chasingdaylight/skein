@@ -41,6 +41,8 @@ const Context = struct {
             },
             .missing => |m| try self.report.add(place.file, place.line, place.column, "{s} '{s}', and {s} has no such item at {s}", .{ place.what, t, m.repository.name, m.at() }),
             .item => |f| {
+                const asked = Network.split(t).?.id;
+                if (!std.mem.eql(u8, asked, f.item.id)) try self.report.warn(place.file, place.line, place.column, "{s} '{s}', which is now '{s}:{s}'", .{ place.what, t, f.member.repository.name, f.item.id });
                 const target_type = f.member.project.schema.itemType(f.item.type_name) orelse return found;
                 if (f.item.isTombstone(target_type)) try self.report.add(place.file, place.line, place.column, "{s} '{s}', which is removed", .{ place.what, t });
             },
