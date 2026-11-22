@@ -9,6 +9,7 @@
 const std = @import("std");
 
 const Builder = @import("Builder.zig");
+const fence = @import("../markdown.zig").fence;
 const Item = @import("Item.zig");
 const markdown = @import("../markdown.zig");
 const Report = @import("../Report.zig");
@@ -76,7 +77,10 @@ const Reader = struct {
                     i += 1;
                 },
                 else => {
-                    if (narrative) try self.mention(r, blocks[i]);
+                    if (isExample(blocks[i])) {
+                        held = true;
+                        try self.example(r, blocks[i], whole);
+                    } else if (narrative) try self.mention(r, blocks[i]);
                     i += 1;
                 },
             }
@@ -134,20 +138,7 @@ const Reader = struct {
             .report = self.report,
             .item = .{ .id = id, .type_name = marker.type_name, .file = self.file, .line = line, .parent = if (whole) |w| w.item.id else null },
         };
-        for (marker.words) |word| {
-            const is_category = Schema.names.contains(item_type.categories, word);
-            const is_status = Schema.names.contains(item_type.statuses, word);
-            if (is_category and b.item.category == null) {
-                b.item.category = word;
-            } else if (is_status and !is_category and b.item.status == null) {
-                b.item.status = word;
-            } else if (is_category or is_status) {
-                try self.report.add(self.file, line, column, "{s}: '{s}' is one category or status too many", .{ id, word });
-            } else {
-                try self.report.add(self.file, line, column, "{s}: '{s}' is neither a category nor a status of a '{s}'", .{ id, word, item_type.name });
-            }
-        }
-        for (marker.fields) |f| try b.set(f.key, f.values, line);
+        try self.words(&b, item_type, marker.words, marker.fields, line, column);
 
         // the whole stands before its parts
         const slot = self.out.items.len;
@@ -167,6 +158,8 @@ const Reader = struct {
                 const block = blocks[next];
                 if (block.kind == .list) {
                     try self.list(r, block, &b);
+                } else if (isExample(block)) {
+                    try self.example(r, block, &b);
                 } else try b.addText(block.text, .{
                     .line = r.line + block.first_line - 1,
                     .first_col = columnsBefore(r.text, block.text),
@@ -181,6 +174,85 @@ const Reader = struct {
         self.out.items[slot] = done;
         if (whole) |w| try w.addPart(done.id);
         return next;
+    }
+
+    /// The category, the status and the fields of a marker, given to `b`
+    fn words(self: *Reader, b: *Builder, item_type: *const Schema.ItemType, list_of_words: []const []const u8, fields: []const markdown.Marker.Field, line: u32, column: u32) Error!void {
+        const id = b.item.id;
+        for (list_of_words) |word| {
+            const is_category = Schema.names.contains(item_type.categories, word);
+            const is_status = Schema.names.contains(item_type.statuses, word);
+            if (is_category and b.item.category == null) {
+                b.item.category = word;
+            } else if (is_status and !is_category and b.item.status == null) {
+                b.item.status = word;
+            } else if (is_category or is_status) {
+                try self.report.add(self.file, line, column, "{s}: '{s}' is one category or status too many", .{ id, word });
+            } else {
+                try self.report.add(self.file, line, column, "{s}: '{s}' is neither a category nor a status of a '{s}'", .{ id, word, item_type.name });
+            }
+        }
+        for (fields) |f| try b.set(f.key, f.values, line);
+    }
+
+    /// The tested example that the fenced code block `block` is, by the
+    /// marker on its opening line: a part of `whole`, when inside an item,
+    /// which it then shows; on its own elsewhere, with an ID of its own
+    fn example(self: *Reader, r: Region, block: markdown.Block, whole: ?*Builder) Error!void {
+        const info = fence.read(block.text).?;
+        const text = info.marker.?;
+        const line = r.line + block.first_line - 1;
+        const column = r.dedent + 1;
+        var type_name: []const u8 = undefined;
+        var id: []const u8 = "";
+        var given: []const []const u8 = &.{};
+        var fields: []const markdown.Marker.Field = &.{};
+        if (fence.bareType(text)) |t| type_name = t else {
+            const m = try markdown.Marker.parse(self.arena, text) orelse return self.report.add(self.file, line, column, "'{s}' after the language of a code block is not a marker", .{text});
+            if (m.problem) |problem| return self.report.add(self.file, line, column, "%{s}[{s}]: {s}", .{ m.type_name, if (m.id.len > 0) m.id else "...", problem });
+            type_name = m.type_name;
+            id = m.id;
+            given = m.words;
+            fields = m.fields;
+        }
+        const item_type = self.schema.itemType(type_name) orelse return self.report.add(self.file, line, column, "there is no item type '{s}'", .{type_name});
+        const ex = item_type.example orelse return self.report.add(self.file, line, column, "a '{s}' cannot be a code block: only an item type with [example] can", .{type_name});
+        // `%example[rejects]`: a word first, and no ID
+        if (id.len > 0 and (Schema.names.contains(item_type.categories, id) or Schema.names.contains(item_type.statuses, id))) {
+            given = try std.mem.concat(self.arena, []const u8, &.{ &.{id}, given });
+            id = "";
+        }
+        if (id.len == 0) {
+            const w = whole orelse return self.report.add(self.file, line, column, "an example outside an item needs an ID: %{s}[ID]", .{type_name});
+            const prefix = try self.arena.print("{s}.example-", .{w.item.id});
+            var n: usize = 1;
+            for (w.parts.items) |p| {
+                if (std.mem.startsWith(u8, p, prefix)) n += 1;
+            }
+            id = try self.arena.print("{s}{d}", .{ prefix, n });
+        } else if (id[0] == '.') {
+            const w = whole orelse return self.report.add(self.file, line, column, "{s}: an ID that starts with a dot extends the ID of a containing item, and this example is not in one", .{id});
+            id = try self.arena.print("{s}{s}", .{ w.item.id, id });
+        }
+
+        var b: Builder = .{
+            .arena = self.arena,
+            .schema = self.schema,
+            .report = self.report,
+            .item = .{ .id = id, .type_name = type_name, .file = self.file, .line = line, .parent = if (whole) |w| w.item.id else null },
+        };
+        try self.words(&b, item_type, given, fields, line, column);
+        try b.addText(block.text, .{ .line = line, .first_col = columnsBefore(r.text, block.text), .dedent = r.dedent });
+        // a part shows its whole, unless it says so itself
+        if (whole) |w| if (ex.link) |l| {
+            const says = for (b.links.items) |link| {
+                if (std.mem.eql(u8, link.type_name, l) and std.mem.eql(u8, link.target, w.item.id)) break true;
+            } else false;
+            if (!says) try b.links.append(self.arena, .{ .type_name = l, .target = w.item.id, .line = line });
+        };
+        b.item.last_line = r.line + block.last_line - 1;
+        try self.out.append(self.arena, try b.finish());
+        if (whole) |w| try w.addPart(id);
     }
 
     /// A list in the text of the item `b`: the entries with markers are
@@ -212,6 +284,13 @@ fn columnsBefore(text: []const u8, piece: []const u8) u32 {
     const offset = @intFromPtr(piece.ptr) - @intFromPtr(text.ptr);
     const line_start = if (std.mem.findScalarLast(u8, text[0..offset], '\n')) |nl| nl + 1 else 0;
     return @intCast(offset - line_start);
+}
+
+/// Whether `block` is a fenced code block with a marker on its opening line
+fn isExample(block: markdown.Block) bool {
+    if (block.kind != .code) return false;
+    const info = fence.read(block.text) orelse return false;
+    return info.marker != null;
 }
 
 /// Whether a block of this kind can be the first of an item's text

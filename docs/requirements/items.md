@@ -30,6 +30,20 @@ A marker shall be recognized only at the start of a paragraph or of a list entry
 %req[items.marker.words]
 After the ID, a bare word shall be read as a category if the item type declares it as one, and otherwise as a status if the item type declares it as one; a marker has at most one of each, and a word that is neither is reported. A word of the form `key=value` gives the status, the verification method, links (when the key is a link type) or an attribute. Several values are separated by commas; a value in double quotes may hold spaces, and a closing bracket.
 
+%req[items.marker.repeated]
+A key that takes several values (a link type, `aliases`) may be given more than once in a marker: `shows=a shows=b` is `shows=a,b`. A key that takes one value, given twice, is reported.
+
+## Tested examples
+
+%req[examples.marked]
+An item type with an `[example]` table in its file shall be one of tested examples. A fenced code block whose opening line has, after the language, a marker of such a type (```` ```cesium %example[ID words] ````, or a bare `%example`) is an item of it, whose text is the code block. A marker of any other type there is reported.
+
+%req[examples.parts]
+An example inside the text of an item shall be a part of it: with a leading-dot ID it is named within the item, and without an ID it is numbered in the item, `ID.example-1` and on. When the example type gives a link type (`link`), the part has a link of that type to the item, unless it gives one itself. An example outside an item needs an ID. An example with the category the type gives as `rejects` must be rejected; one without a category must be accepted, so an example type requires none.
+
+%req[examples.coverage]
+The links of examples, given or added for a part, shall count for coverage as any links do, so that `skein coverage` counts the items that have an example.
+
 %req[items.marker.mistakes]
 A marker that is not closed, has no ID, or has words that cannot be read as a category, a status or `key=value` shall be reported with its file, line and column, and shall not create an item.
 

@@ -19,6 +19,9 @@ pub const usage =
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  link FROM TYPE TO Add a link of a type from one item to another
     \\  baseline [NAME]   Tag what is committed as a baseline; without NAME, list them
+    \\  examples --out DIR
+    \\                    Write the tested examples as files, with an index, for
+    \\                    the project's own test driver
     \\  pin [NAME [REV]]  Record the commits of the other repositories that the items
     \\                    are checked against (default: what each has checked out)
     \\  import doorstop DIR...
@@ -60,7 +63,7 @@ pub const usage =
     \\  --status-from NAME, --verification-from NAME
     \\                    import doorstop: the attribute that gives the status,
     \\                    or the verification method
-    \\  --out DIR         render: where the rendered files go
+    \\  --out DIR         render, examples: where the files go
     \\  --format NAME     render: markdown for a site generator (the default),
     \\                    html: the site itself, or document: one file per document
     \\
@@ -82,6 +85,7 @@ pub const Command = union(enum) {
     link: Link,
     baseline: Baseline,
     pin: Pin,
+    examples: Examples,
     /// the language server
     lsp,
     import: Import,
@@ -135,6 +139,12 @@ pub const Diff = struct {
     impact: bool = false,
     json: bool = false,
     markdown: bool = false,
+};
+
+pub const Examples = struct {
+    common: Common = .{},
+    /// the directory the examples go to, from where skein is run
+    out: []const u8,
 };
 
 pub const Export = struct {
@@ -298,6 +308,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (try p.allow(&.{ "--root", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "check takes no items" };
         return .{ .check = common };
+    }
+    if (eql(name, "examples")) {
+        if (try p.allow(&.{ "--root", "--out" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "examples takes no items" };
+        const out = p.value("--out") orelse return .{ .misuse = "examples: say where the files go, with --out DIR" };
+        return .{ .examples = .{ .common = common, .out = out } };
     }
     if (eql(name, "pin")) {
         if (try p.allow(&.{ "--root", "--offline" })) |problem| return .{ .misuse = problem };

@@ -82,7 +82,8 @@ fn checkOwn(ctx: Context, item: *const Item, item_type: *const Schema.ItemType) 
         } else if (!Schema.names.contains(item_type.categories, c)) {
             try ctx.problem(item, 0, "'{s}' is not a category of a '{s}'", .{ c, item_type.name });
         }
-    } else if (item_type.categories.len > 0 and !item.isTombstone(item_type)) {
+    } else if (item_type.categories.len > 0 and !item.isTombstone(item_type) and item_type.example == null) {
+        // an example without one is one that must be accepted
         try ctx.problem(item, 0, "a '{s}' needs a category", .{item_type.name});
     }
     if (item.status) |s| {
