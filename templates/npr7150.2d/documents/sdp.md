@@ -1,6 +1,8 @@
 +++
 document = "SW-SDP"
 revision = "Draft"
+item = "PRD-01"
+maturity = "D"
 +++
 
 # Software development and management plan

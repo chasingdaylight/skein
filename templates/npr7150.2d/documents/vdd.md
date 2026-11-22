@@ -1,6 +1,8 @@
 +++
 document = "SW-VDD"
 revision = "Draft"
+item = "PRD-19"
+maturity = "D"
 +++
 
 # Version description

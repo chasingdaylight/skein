@@ -211,6 +211,26 @@ Its rendered page gets, under its title, a table with its identifier, its revisi
 
 A request skein cannot read becomes a note in its place, saying what is wrong.
 
+A document may also say what item it is and how mature it is, to be held to what that item expects at the project's milestone:
+
+```markdown
++++
+document = "SW-SDP"
+revision = "B"
+item = "PRD-01"
+maturity = "B"
++++
+```
+
+```toml
+# .skein/config.toml
+[maturity]
+order = ["D", "P", "B", "U", "F"]   # lowest first
+milestone = "pdr"                   # the attribute of the items that says what is expected now
+```
+
+`skein check` then warns of a document below its item's value of `pdr` (the npr7150.2d template gives each product's expected maturity at each review), of one with no maturity, and of one naming an item there is not.
+
 ### `--format document`: one file per document
 
 `skein render --format document --out DIR` writes each document as one HTML file that stands alone, for delivery: no navigation, its images inside it, and a style sheet for printing (or saving as PDF from a browser).

@@ -1,6 +1,8 @@
 +++
 document = "SW-SRS"
 revision = "Draft"
+item = "PRD-10"
+maturity = "D"
 +++
 
 # Software requirements specification

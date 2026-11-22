@@ -32,7 +32,25 @@ results: []const []const u8 = &.{},
 forge: ?Forge = null,
 /// the templates it uses, with their options
 templates: []const template_use.Use = &.{},
+/// how mature its documents are expected to be, at which milestone
+maturity: Maturity = .{},
 schema: Schema = .{},
+
+/// `[maturity]`: the maturities a document may be at, lowest first
+/// (`order = ["D", "P", "B", "U", "F"]`), and the milestone the project is
+/// at (`milestone = "pdr"`): a document whose front matter names an item
+/// (`item = "PRD-02"`) is expected at least at that item's value of the
+/// attribute the milestone names
+pub const Maturity = struct {
+    order: []const []const u8 = &.{},
+    milestone: ?[]const u8 = null,
+
+    /// The rank of `value` in the order; null for one outside it (X, PPS)
+    pub fn rank(self: Maturity, value: []const u8) ?usize {
+        for (self.order, 0..) |o, i| if (std.mem.eql(u8, o, value)) return i;
+        return null;
+    }
+};
 
 pub const Repository = @import("network/Repository.zig");
 pub const Forge = @import("forge/Forge.zig");
@@ -113,9 +131,13 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template" });
+    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template", "maturity" });
     self.templates = try template_use.readAll(r);
     self.forge = try Forge.read(r);
+    if (try r.child("maturity")) |m| {
+        try m.known(&.{ "order", "milestone" });
+        self.maturity = .{ .order = try m.strings("order"), .milestone = try m.string("milestone") };
+    }
     if (try r.child("results")) |results| {
         try results.known(&.{"paths"});
         for (try results.strings("paths")) |p| {

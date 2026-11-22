@@ -1,6 +1,8 @@
 +++
 document = "SW-RTM"
 revision = "Draft"
+item = "PRD-12"
+maturity = "D"
 +++
 
 # Bidirectional traceability

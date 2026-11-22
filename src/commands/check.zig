@@ -9,6 +9,7 @@ const Results = @import("../results/Results.zig");
 const Reviews = @import("../graph/Reviews.zig");
 const Workspace = @import("Workspace.zig");
 const forge_checks = @import("../forge/checks.zig");
+const maturity = @import("../graph/maturity.zig");
 const network_checks = @import("../network/checks.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Outcome {
@@ -63,6 +64,7 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
     try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
+    try maturity.check(io, arena, ws.root, &ws.project, &ws.graph, &ws.report);
     // the results the project keeps: a result that belongs to no item is to be looked at
     const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, &.{}, &ws.report);
     const idx = try results.index(arena, &ws.graph, &ws.citations);

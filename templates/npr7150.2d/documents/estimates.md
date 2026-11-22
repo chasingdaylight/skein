@@ -1,6 +1,8 @@
 +++
 document = "SW-EST"
 revision = "Draft"
+item = "PRD-03"
+maturity = "D"
 +++
 
 # Cost estimate and schedule
