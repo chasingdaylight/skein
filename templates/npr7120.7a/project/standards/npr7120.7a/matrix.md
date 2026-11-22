@@ -42,13 +42,13 @@ Appendix D's Tables D-1 (service line gate products), D-2 (pre-formulation) and 
 
 %it-action[ITA-C1.17 scope=both table=C-1 phase="Policy requirements" para="5.2a" covers=IT-5.2.a] NASA Software Engineering Requirements, NPR 7150.2
 
-%it-action[ITA-C1.18 scope=both table=C-1 phase="Policy requirements" para="5.2" covers=IT-5.2.a,IT-5.2.d,IT-5.2.e,IT-5.2.f,IT-5.2.g] Incremental Development
+%it-action[ITA-C1.18 scope=both table=C-1 phase="Policy requirements" para="5.2" covers=IT-5.2.a,IT-5.2.d,IT-5.2.e,IT-5.2.f,IT-5.2.g,IT-5.2.g.3] Incremental Development
 
 ## Table C-2. IT Service Line: Formulation Phase (Phase 0)
 
 %it-action[ITA-C2.1 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="SCDR" state=Final para="4.5.1a, 4.5.1b(1), 4.5.1e(1)" covers=IT-4.5.1.a,IT-4.5.1.b,IT-4.5.1.e] Service Line Organizational Summary
 
-%it-action[ITA-C2.2 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="SCDR" state=Preliminary para="4.4b, 4.4.1e, 4.4.2c, 4.5a(1), 4.5d(2), 4.5.1b(1), 4.5.1d, 4.5.1d(2), 4.5.1g" covers=IT-4.4.1.e,IT-4.4.2.c,IT-4.5.d.2,IT-4.5.1.b,IT-4.5.1.d,IT-4.5.1.g] Service Line Plan
+%it-action[ITA-C2.2 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="SCDR" state=Preliminary para="4.4b, 4.4.1e, 4.4.2c, 4.5a(1), 4.5d(2), 4.5.1b(1), 4.5.1d, 4.5.1d(2), 4.5.1g" covers=IT-4.4.1.e,IT-4.4.2.c,IT-4.5.d.2,IT-4.5.1.b,IT-4.5.1.d,IT-4.5.1.g.1,IT-4.5.1.g.2] Service Line Plan
 
 %it-action[ITA-C2.3 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="SCDR" state=Preliminary para="P.5b, 3.2e, 3.3a, 3.4, 3.5, 3.6, 3.7, 4.4.1b(2), 4.5.1d, 4.5.1e(3)" covers=IT-P.5.b,IT-3.2.e,IT-3.3.a,IT-3.4,IT-3.5,IT-3.6,IT-3.7,IT-4.4.1.b,IT-4.5.1.d,IT-4.5.1.e] Compliance Matrix
 
@@ -56,9 +56,9 @@ Appendix D's Tables D-1 (service line gate products), D-2 (pre-formulation) and 
 
 %it-action[ITA-C2.5 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="SCDR" state=Final para="4.5.1c, 4.5.1e" covers=IT-4.5.1.c,IT-4.5.1.e] Conduct SCDR
 
-%it-action[ITA-C2.6 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="KDP-1" state=Final para="3.12, 3.13c, 4.5.1g" covers=IT-3.12.b,IT-3.12.c,IT-4.5.1.g] Conduct IA
+%it-action[ITA-C2.6 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="KDP-1" state=Final para="3.12, 3.13c, 4.5.1g" covers=IT-3.12.b,IT-3.12.c,IT-4.5.1.g.1,IT-4.5.1.g.2] Conduct IA
 
-%it-action[ITA-C2.7 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="KDP-1" state=Final para="4.5.1g(2)" covers=IT-4.5.1.g] IA Presentation
+%it-action[ITA-C2.7 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="KDP-1" state=Final para="4.5.1g(2)" covers=IT-4.5.1.g.2] IA Presentation
 
 %it-action[ITA-C2.8 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="KDP-1" state=Final para="4.5.1h(1)(a)" covers=IT-4.5.1.h.1] Service Line Plan
 
@@ -68,7 +68,7 @@ Appendix D's Tables D-1 (service line gate products), D-2 (pre-formulation) and 
 
 %it-action[ITA-C2.11 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="KDP-1" state=Final para="4.5.1b(2), 4.5.1h(1)(d)" covers=IT-4.5.1.b,IT-4.5.1.h.1] Service Line Board Charter
 
-%it-action[ITA-C2.12 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="KDP-1" state=Final para="4.4c, 4.5c, 4.5.1g(2), 4.5.1h" covers=IT-4.4.c,IT-4.5.1.g,IT-4.5.1.h.1,IT-4.5.1.h.2] Conduct KDP-1
+%it-action[ITA-C2.12 scope=service-line table=C-2 phase="Service Line Formulation Phase (Phase 0)" gate="KDP-1" state=Final para="4.4c, 4.5c, 4.5.1g(2), 4.5.1h" covers=IT-4.4.c,IT-4.5.1.g.2,IT-4.5.1.h.1,IT-4.5.1.h.2] Conduct KDP-1
 
 ## Table C-3. IT Service Line: Implementation/Operations Phase (Phase 1-n)
 
