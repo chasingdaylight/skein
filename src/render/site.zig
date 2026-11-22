@@ -16,6 +16,7 @@ const inline_html = @import("../html/inline.zig");
 const layout = @import("layout.zig");
 const markdown = @import("markdown.zig");
 const order = @import("order.zig");
+const vendor = @import("vendor");
 const walk = @import("../graph/walk.zig");
 
 /// The files of the sources copied as they are, for the pages to use
@@ -34,7 +35,13 @@ pub fn build(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Con
     try pages.append(arena, .{ .path = "items.html", .title = "All items" });
     const name = if (ws.project.name.len > 0) ws.project.name else "Project";
 
-    for (rendered) |r| try write(io, out, r.page.path, try layout.page(arena, name, pages.items, r.page, r.body));
+    var diagrams = false;
+    for (rendered) |r| {
+        try write(io, out, r.page.path, try layout.page(arena, name, pages.items, r.page, r.body));
+        if (layout.hasDiagram(r.body)) diagrams = true;
+    }
+    // mermaid.js once, for the pages with diagrams
+    if (diagrams) try write(io, out, layout.mermaid_file, vendor.mermaid);
     try write(io, out, "index.html", try layout.page(arena, name, pages.items, pages.items[0], try front(arena, name, ws, ctx, rendered.len, pages.items)));
     try write(io, out, "items.html", try layout.page(arena, name, pages.items, pages.items[pages.items.len - 1], try index(arena, ws, ctx)));
     return pages.items.len;
@@ -248,6 +255,7 @@ fn ref(arena: std.mem.Allocator, out: *std.ArrayList(u8), ctx: markdown.Context,
 test {
     _ = Graph;
     _ = @import("_test/site.zig");
+    _ = @import("_test/mermaid.zig");
 }
 
 /// How many items are rendered

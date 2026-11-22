@@ -231,6 +231,17 @@ milestone = "pdr"                   # the attribute of the items that says what 
 
 `skein check` then warns of a document below its item's value of `pdr` (the npr7150.2d template gives each product's expected maturity at each review), of one with no maturity, and of one naming an item there is not.
 
+### Diagrams
+
+A fenced block of the language `mermaid` is drawn as a diagram in HTML (`--format html` and `--format document`), by mermaid.js, which skein carries (`vendor/mermaid`): the site has one copy of it, which only the pages with a diagram load, and a standalone document with a diagram has it inside (about 5 MB more). Markdown output leaves the block for the site generator.
+
+````markdown
+```mermaid
+graph TD
+  requirement --> design --> code
+```
+````
+
 ### `--format document`: one file per document
 
 `skein render --format document --out DIR` writes each document as one HTML file that stands alone, for delivery: no navigation, its images inside it, and a style sheet for printing (or saving as PDF from a browser).
