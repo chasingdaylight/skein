@@ -20,7 +20,7 @@ A requirement that names no status is implemented. One marked `planned` describe
 | [checking](checking.md) | What `skein check` reports. |
 | [reviewing](reviewing.md) | Fingerprints, reviewed links, approvals. |
 | [views](views.md) | `trace`, `coverage`, `diff`, `impact`, `export`, `render`. |
-| [editing](editing.md) | `move`, `new`, and the language server `lsp`. |
+| [editing](editing.md) | `move`, `new`, `link`, and the language server `lsp`. |
 | [importing](importing.md) | `import doorstop`, `import csv`. |
 | [planned](planned.md) | What is to come. |
 

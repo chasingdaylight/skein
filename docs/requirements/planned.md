@@ -47,8 +47,7 @@ What a forge holds about an issue shall stay there and be read through the adapt
 
 ## Editing
 
-%req[edit.commands planned]
-`skein link` shall add links. Renaming (`skein move`) and starting items (`skein new`) are built. (Design, section 5.)
+%req[edit.commands removed]
 
 %req[edit.lsp removed]
 

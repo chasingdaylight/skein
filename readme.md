@@ -8,7 +8,7 @@ skein holds the threads of a project together: what is needed, what is decided, 
 
 It is for projects that want the rigor of requirements management without a database or a proprietary tool: from a language specification written as atomic, numbered paragraphs (like the Ferrocene Language Specification) to a NASA-style V-model of system requirements, software requirements, design and tests.
 
-**Status:** early. The core and the command line work: a project's schema, items in documents and in files of their own, citations in code and tests, and the commands `check`, `trace`, `coverage`, `diff`, `impact`, `review`, `clear`, `approve`, `export`, `import`, `render` (Markdown for a site generator) `move` (renaming an ID everywhere), `new` (starting an item with the next free ID) and `lsp` (a language server: problems, go to definition, references, hover, completion and rename in any editor). Rendering HTML sites and documents by itself, test results, planning and the editor support are to come; `docs/design.md` describes all of it.
+**Status:** early. The core and the command line work: a project's schema, items in documents and in files of their own, citations in code and tests, and the commands `check`, `trace`, `coverage`, `diff`, `impact`, `review`, `clear`, `approve`, `export`, `import`, `render` (Markdown for a site generator) `move` (renaming an ID everywhere), `new` (starting an item with the next free ID), `link` (adding a link) and `lsp` (a language server: problems, go to definition, references, hover, completion and rename in any editor). Rendering HTML sites and documents by itself, test results, planning and the editor support are to come; `docs/design.md` describes all of it.
 
 ## Installing
 

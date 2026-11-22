@@ -215,6 +215,19 @@ $ skein new rule lex.comment.block
 
 `skein check` reports the new item as having no text until its text is written.
 
+## `skein link FROM TYPE TO`
+
+Adds a link of a type from one item to another:
+
+```text
+$ skein link c.one verifies lex.comment
+skein: c.one verifies lex.comment
+```
+
+- **In a document**, the link goes in the item's marker: `%case[c.one verifies=lex.comment]`, or added to the values already there (`verifies=lex.token,lex.comment`).
+- **In an item file**, it goes in the front matter: added to the key's list (`refines = ["SRS-001", "SRS-003"]`), or as a new key after the ID.
+- **Refused**, with nothing written, is anything `skein check` would report: a link type the item cannot have, a target the link cannot point to, a removed target, a link to the item itself, or one that is there already.
+
 ## `skein lsp`
 
 A language server for editors, on standard input and output. It works in the Markdown documents of a project and in the code and tests that cite its items.
