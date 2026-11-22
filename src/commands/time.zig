@@ -23,7 +23,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.TimeSpent) !Workspace.
     if (!ws.items_read) return ws.problems();
     const before = ws.report.problems.items.len;
     var time = try Time.load(io, arena, ws.root, &ws.report);
-    const resources = try Resources.load(io, arena, ws.root, &ws.report);
+    const resources = try Resources.of(io, arena, &ws, &ws.report);
     if (ws.report.problems.items.len > before) return ws.problems();
     const works = (try planning_forge.collect(io, arena, ws.root, &ws.project, &ws.graph, options.common.offline)).works;
     if (works.len == 0) return misuse(arena, "there are no work items: no item type has [planning]", .{});

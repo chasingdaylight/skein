@@ -131,7 +131,8 @@ pub fn summarize(arena: Allocator, works: []const Work, entries: []const Entry, 
         var spent: f64 = 0;
         var by: std.ArrayList(Row.By) = .empty;
         for (entries) |e| {
-            if (!std.mem.eql(u8, e.item, w.item.id)) continue;
+            // time is logged in this repository, on its own items
+            if (w.repo != null or !std.mem.eql(u8, e.item, w.item.id)) continue;
             spent += e.hours;
             const who = for (by.items) |*b| {
                 if (std.mem.eql(u8, b.name, e.by)) break b;

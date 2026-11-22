@@ -54,11 +54,10 @@ pub fn board(ctx: generated.Context, args: []const []const u8) Error![]const u8 
     }
     var shown: usize = 0;
     for (plan.entries) |*e| {
-        const item = e.work.item;
-        if (!filter.passes(schema, ctx.graph, item)) continue;
+        if (!generated.passesWork(&filter, schema, ctx.graph, e.work)) continue;
         shown += 1;
         switch (by) {
-            .status => try (try columnOf(a, &columns, item.effectiveStatus(schema.itemType(item.type_name).?))).entries.append(a, e),
+            .status => try (try columnOf(a, &columns, generated.statusOf(schema, e.work))).entries.append(a, e),
             .milestone => try (try columnOf(a, &columns, e.work.milestone orelse "(none)")).entries.append(a, e),
             .assignee => {
                 if (e.work.assignees.len == 0) try (try columnOf(a, &columns, "(unassigned)")).entries.append(a, e);
@@ -98,7 +97,7 @@ fn columnOf(a: std.mem.Allocator, columns: *std.ArrayList(Column), name: []const
 
 /// A card: the ID, linked, and the first line of the text
 fn card(ctx: generated.Context, out: *std.ArrayList(u8), e: *const schedule.Entry) Error!void {
-    try generated.link(ctx, out, e.work.item);
+    try generated.linkWork(ctx, out, e.work);
     const first = generated.firstParagraph(e.work.item.text);
     const line = first[0 .. std.mem.findScalar(u8, first, '\n') orelse first.len];
     if (line.len > 0) {
@@ -120,10 +119,10 @@ pub fn timeTable(ctx: generated.Context, args: []const []const u8) Error![]const
     var spent: f64 = 0;
     var rows: usize = 0;
     for (try Time.summarize(a, plan.works, plan.spent, plan.hours_a_day)) |r| {
-        if (!filter.passes(&ctx.project.schema, ctx.graph, r.work.item)) continue;
+        if (!generated.passesWork(&filter, &ctx.project.schema, ctx.graph, r.work)) continue;
         rows += 1;
         try out.appendSlice(a, "| ");
-        try generated.link(ctx, &out, r.work.item);
+        try generated.linkWork(ctx, &out, r.work);
         if (r.estimate) |e| {
             try out.print(a, " | {d:.1} | {d:.1} | {s}{d:.1} |", .{ e, r.spent, if (r.spent > e) "+" else "", r.spent - e });
             estimate += e;
@@ -153,7 +152,7 @@ pub fn roadmap(ctx: generated.Context, args: []const []const u8) Error![]const u
     var rows: std.ArrayList(Row) = .empty;
     for (names.items) |n| {
         const entry = for (plan.entries) |*e| {
-            if (std.mem.eql(u8, e.work.item.id, n)) break e;
+            if (std.mem.eql(u8, e.work.id, n)) break e;
         } else null;
         try rows.append(a, .{ .name = n, .entry = entry });
     }
@@ -191,7 +190,7 @@ pub fn roadmap(ctx: generated.Context, args: []const []const u8) Error![]const u
         try out.print(a, "{d} of {d} ({d}%) {s} | ", .{ @as(u64, @intFromFloat(m.done)), @as(u64, @intFromFloat(m.total)), percent, try bar(a, percent) });
         for (work.items, 0..) |e, i| {
             if (i > 0) try out.appendSlice(a, ", ");
-            try generated.link(ctx, &out, e.work.item);
+            try generated.linkWork(ctx, &out, e.work);
         }
         try out.appendSlice(a, " |\n");
     }

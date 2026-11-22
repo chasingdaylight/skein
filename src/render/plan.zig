@@ -28,7 +28,7 @@ pub fn load(io: Io, arena: std.mem.Allocator, ws: *const Workspace, offline: boo
     // the resources file's mistakes are `check`'s to report
     var ignored: Report = .{ .arena = arena };
     const calendar = try arena.create(Calendar);
-    calendar.* = if (try Resources.load(io, arena, ws.root, &ignored)) |r| r.calendar else .every_day;
+    calendar.* = if (try Resources.of(io, arena, ws, &ignored)) |r| r.calendar else .every_day;
     const spent = try Time.load(io, arena, ws.root, &ignored);
     const at = try arena.create(History);
     at.* = .{ .io = io, .arena = arena, .root = ws.root, .works = works };

@@ -92,7 +92,7 @@ pub fn render(ctx: generated.Context, args: []const []const u8) Error![]const u8
     var shown: std.ArrayList(*const schedule.Entry) = .empty;
     var unscheduled: std.ArrayList(*const schedule.Entry) = .empty;
     for (plan.entries) |*e| {
-        if (!filter.passes(&ctx.project.schema, ctx.graph, e.work.item)) continue;
+        if (!generated.passesWork(&filter, &ctx.project.schema, ctx.graph, e.work)) continue;
         if (e.start == null or e.finish == null) try unscheduled.append(a, e) else try shown.append(a, e);
     }
     if (shown.items.len == 0 and unscheduled.items.len == 0) return a.print("*No work item is selected.*\n", .{});
@@ -115,7 +115,7 @@ pub fn render(ctx: generated.Context, args: []const []const u8) Error![]const u8
         try out.appendSlice(a, if (shown.items.len > 0) "\nNot scheduled: " else "Not scheduled: ");
         for (unscheduled.items, 0..) |e, i| {
             if (i > 0) try out.appendSlice(a, ", ");
-            try generated.link(ctx, &out, e.work.item);
+            try generated.linkWork(ctx, &out, e.work);
         }
         try out.appendSlice(a, ".\n");
     }
@@ -145,36 +145,45 @@ const Rows = struct {
     n: usize = 0,
 
     fn section(self: *Rows, name: []const u8) Error!void {
-        try self.out.print(self.a, "  section {s}\n", .{name});
+        try self.out.print(self.a, "  section {s}\n", .{try safe(self.a, name)});
     }
 
     fn bar(self: *Rows, e: *const schedule.Entry) Error!void {
         const a = self.a;
-        const id = e.work.item.id;
+        const id = e.work.id;
+        const label = try safe(a, id);
         self.n += 1;
         const start = e.start.?;
         const finish = e.finish.?;
         if (e.work.duration != null and e.work.duration.? == 0) {
-            try self.out.print(a, "  {s} :milestone, t{d}, {s}, 0d\n", .{ id, self.n, &day.format(start) });
+            try self.out.print(a, "  {s} :milestone, t{d}, {s}, 0d\n", .{ label, self.n, &day.format(start) });
         } else {
             // the end Mermaid takes is the day after the last
-            try self.out.print(a, "  {s} :{s}t{d}, {s}, {s}\n", .{ id, if (e.critical()) "crit, " else "", self.n, &day.format(start), &day.format(finish + 1) });
+            try self.out.print(a, "  {s} :{s}t{d}, {s}, {s}\n", .{ label, if (e.critical()) "crit, " else "", self.n, &day.format(start), &day.format(finish + 1) });
         }
         const old = self.old orelse return;
         for (old) |b| if (std.mem.eql(u8, b.id, id)) {
             self.n += 1;
-            try self.out.print(a, "  {s} at {s} :done, t{d}, {s}, {s}\n", .{ id, self.baseline, self.n, &day.format(b.start), &day.format(b.finish + 1) });
+            try self.out.print(a, "  {s} at {s} :done, t{d}, {s}, {s}\n", .{ label, self.baseline, self.n, &day.format(b.start), &day.format(b.finish + 1) });
             break;
         };
     }
 };
+
+/// A name as Mermaid takes it: a colon ends a task's name, so `repo:id` is `repo/id`
+fn safe(a: std.mem.Allocator, name: []const u8) Error![]const u8 {
+    if (std.mem.findScalar(u8, name, ':') == null) return name;
+    const out = try a.dupe(u8, name);
+    std.mem.replaceScalar(u8, out, ':', '/');
+    return out;
+}
 
 /// A section for each item with parts, holding it and its parts; the rest
 /// together
 fn byParent(rows: *Rows, entries: []const *const schedule.Entry) Error!void {
     var done: std.StringHashMapUnmanaged(void) = .empty;
     for (entries) |e| {
-        const id = e.work.item.id;
+        const id = e.work.id;
         var parts: std.ArrayList(*const schedule.Entry) = .empty;
         for (entries) |c| for (c.work.parents) |p| if (std.mem.eql(u8, p, id)) {
             try parts.append(rows.a, c);
@@ -185,13 +194,13 @@ fn byParent(rows: *Rows, entries: []const *const schedule.Entry) Error!void {
         try rows.bar(e);
         try done.put(rows.a, id, {});
         for (parts.items) |c| {
-            if ((try done.getOrPut(rows.a, c.work.item.id)).found_existing) continue;
+            if ((try done.getOrPut(rows.a, c.work.id)).found_existing) continue;
             try rows.bar(c);
         }
     }
     var rest = false;
     for (entries) |e| {
-        if (done.contains(e.work.item.id)) continue;
+        if (done.contains(e.work.id)) continue;
         if (!rest) try rows.section("Work");
         rest = true;
         try rows.bar(e);
@@ -227,7 +236,7 @@ fn table(ctx: generated.Context, out: *std.ArrayList(u8), entries: []const *cons
     try out.appendSlice(a, "| Item | Start | Finish | Slack | After |\n| --- | --- | --- | ---: | --- |\n");
     for (entries) |e| {
         try out.appendSlice(a, "| ");
-        try generated.link(ctx, out, e.work.item);
+        try generated.linkWork(ctx, out, e.work);
         try out.print(a, " | {s} | {s} | ", .{ &day.format(e.start.?), &day.format(e.finish.?) });
         if (e.slack) |s| try out.print(a, "{s}{d}", .{ if (e.critical()) "**critical** " else "", s });
         try out.appendSlice(a, " | ");

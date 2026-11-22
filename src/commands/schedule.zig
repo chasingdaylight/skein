@@ -23,7 +23,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Schedule) !Workspace.O
     defer ws.close();
     if (!ws.items_read) return ws.problems();
     const before = ws.report.problems.items.len;
-    const resources = try Resources.load(io, arena, ws.root, &ws.report);
+    const resources = try Resources.of(io, arena, &ws, &ws.report);
     if (ws.report.problems.items.len > before) return ws.problems();
     const calendar: *const Calendar = if (resources) |*r| &r.calendar else &Calendar.every_day;
 
@@ -36,6 +36,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Schedule) !Workspace.O
     var marked: usize = 0;
     var by_hand: std.ArrayList([]const u8) = .empty;
     for (entries) |*e| {
+        // another repository's work is written by its own `skein schedule`
+        if (e.work.repo != null) continue;
         if (e.mode != .float or e.work.written_mode != null) continue;
         const item = e.work.item;
         const t = ws.project.schema.itemType(item.type_name).?;

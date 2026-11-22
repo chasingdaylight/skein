@@ -95,6 +95,6 @@ fn walk(arena: std.mem.Allocator, works: []Work, state: []u8, path: *std.ArrayLi
 }
 
 fn indexOf(works: []const Work, id: []const u8) ?usize {
-    for (works, 0..) |w, i| if (std.mem.eql(u8, w.item.id, id)) return i;
+    for (works, 0..) |w, i| if (std.mem.eql(u8, w.id, id)) return i;
     return null;
 }

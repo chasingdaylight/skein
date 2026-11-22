@@ -27,6 +27,7 @@ const Project = @import("../Project.zig");
 const Schema = @import("../schema/Schema.zig");
 const coverage = @import("../graph/coverage.zig");
 const Results = @import("../results/Results.zig");
+const Work = @import("../planning/Work.zig");
 const summary = @import("../results/summary.zig");
 const matrix_columns = @import("matrix_columns.zig");
 const Control = @import("control.zig");
@@ -121,6 +122,26 @@ pub const Filter = struct {
     }
 };
 
+/// Whether the work item passes: as an item does, and, for one of another
+/// repository, by what is known of it here (its type's name, category,
+/// status as written, and attributes; not a profile, which is this project's)
+pub fn passesWork(filter: *const Filter, schema: *const Schema, graph: *const Graph, w: *const Work) bool {
+    if (w.repo == null) return filter.passes(schema, graph, w.item);
+    const item = w.item;
+    if (filter.types.items.len > 0 and !Schema.names.contains(filter.types.items, item.type_name)) return false;
+    if (filter.category) |c| if (!std.mem.eql(u8, item.category orelse "", c)) return false;
+    if (filter.status) |s| if (!std.mem.eql(u8, item.status orelse "", s)) return false;
+    for (filter.attributes.items) |want| if (!item.hasValue(want.name, want.value)) return false;
+    return true;
+}
+
+/// The status of a work item: its type's default when it names none; for one
+/// of another repository, what it names
+pub fn statusOf(schema: *const Schema, w: *const Work) []const u8 {
+    if (w.repo != null) return w.item.status orelse "(not named)";
+    return w.item.effectiveStatus(schema.itemType(w.item.type_name).?);
+}
+
 /// Reads `KEY=VALUE` words into `filter`, and bare words as item types;
 /// a message when one cannot be read
 pub fn readFilter(ctx: Context, args: []const []const u8, filter: *Filter, bare_types: bool) Error!?[]const u8 {
@@ -173,6 +194,13 @@ pub fn firstParagraph(text: []const u8) []const u8 {
 
 pub fn link(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void {
     try out.print(ctx.arena, "[`{s}`]({s})", .{ item.id, try ctx.href(ctx.href_ctx, item) });
+}
+
+/// A work item: linked when it is an item of this repository, else, an item
+/// of another (`repository:ID`) of a planning repository's network, by its name
+pub fn linkWork(ctx: Context, out: *std.ArrayList(u8), w: *const Work) Error!void {
+    if (w.repo == null) return link(ctx, out, w.item);
+    try out.print(ctx.arena, "`{s}`", .{w.id});
 }
 
 fn list(ctx: Context, args: []const []const u8) Error![]const u8 {

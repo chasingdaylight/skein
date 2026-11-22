@@ -45,6 +45,9 @@ pub const Member = struct {
     submodule: bool = false,
     /// its own record of its network, as it was at the commit read
     recorded: record.Record = .{},
+    /// its `.skein/resources.toml`, as it was at the commit read, when it has
+    /// one: a planning repository's people and calendar
+    resources: ?[]const u8 = null,
 
     /// The commit, short, for messages
     pub fn at(self: *const Member) []const u8 {
@@ -171,6 +174,7 @@ fn read(io: Io, arena: std.mem.Allocator, root: Io.Dir, root_path: []const u8, g
         m.project = try Project.load(io, arena, o.dir, &ignored);
         m.graph = try Graph.load(io, arena, o.dir, &m.project, &ignored);
         m.recorded = try record.read(io, arena, o.dir, &ignored);
+        m.resources = o.dir.readFileAlloc(io, resources_file, arena, .limited(1 << 22)) catch null;
         return;
     }
     const gitlink = if (o.fetched) null else try submoduleCommit(io, arena, root, m.repository.path.?);
@@ -215,7 +219,11 @@ fn read(io: Io, arena: std.mem.Allocator, root: Io.Dir, root_path: []const u8, g
     m.project = snap.project;
     m.graph = snap.graph;
     m.recorded = try record.read(io, arena, snap.dir, &ignored);
+    m.resources = snap.dir.readFileAlloc(io, resources_file, arena, .limited(1 << 22)) catch null;
 }
+
+/// The file of people and the calendar, in a repository
+const resources_file = Project.dir_name ++ "/resources.toml";
 
 /// Why a repository by url could not be read: offline, or not fetched
 pub fn notFetched(arena: std.mem.Allocator, repository: Project.Repository, offline: bool, commit: ?[]const u8) ![]const u8 {
