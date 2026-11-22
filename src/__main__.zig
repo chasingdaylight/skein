@@ -32,7 +32,7 @@ pub fn main(init: std.process.Init) !void {
     const outcome: Workspace.Outcome = switch (try cli.parse(arena, argv[1..])) {
         .help => .{ .text = cli.usage },
         .version => .{ .text = version ++ "\n" },
-        .check => |options| try check.run(io, arena, options),
+        .check => |options| try check.runFormatted(io, arena, options),
         .review => |options| try review.run(io, arena, options, .from),
         .clear => |options| try review.run(io, arena, options, .to),
         .approve => |options| try approve.run(io, arena, options),
@@ -63,6 +63,10 @@ pub fn main(init: std.process.Init) !void {
         },
     };
     if (outcome.status == .ok) return stdio.stdout().writeStreamingAll(io, outcome.text);
+    if (outcome.to_stdout) {
+        try stdio.stdout().writeStreamingAll(io, outcome.text);
+        std.process.exit(@backingInt(outcome.status));
+    }
     try stdio.stderr().writeStreamingAll(io, outcome.text);
     std.process.exit(@backingInt(outcome.status));
 }

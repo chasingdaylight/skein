@@ -28,6 +28,27 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Out
     };
 }
 
+/// `check` in the format `options` asks for: as text, or for a CI system
+/// to show on the lines of a change
+pub fn runFormatted(io: Io, arena: std.mem.Allocator, options: cli.Check) !Workspace.Outcome {
+    if (options.format == .text) return run(io, arena, options.common);
+    var ws = switch (try Workspace.open(io, arena, options.common)) {
+        .ok => |ws| ws,
+        .failed => |outcome| return outcome,
+    };
+    defer ws.close();
+    try all(io, arena, &ws);
+    return .{
+        .text = switch (options.format) {
+            .text => unreachable,
+            .github => try ws.report.renderGithub(arena),
+            .gitlab => try ws.report.renderGitlab(arena),
+        },
+        .status = if (ws.report.ok()) .ok else .problems,
+        .to_stdout = true,
+    };
+}
+
 /// Adds to the report of `ws` everything that is wrong with the project.
 /// When the configuration or the schema has problems, the items were not
 /// read and only those problems are in it.

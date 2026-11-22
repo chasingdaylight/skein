@@ -53,7 +53,83 @@ pub fn ok(self: *const Report) bool {
 /// The problems and warnings as text, one per line (`file:line:column:
 /// error: message`, or `warning:`), ordered by file and place.
 pub fn render(self: *Report, arena: std.mem.Allocator) std.mem.Allocator.Error![]const u8 {
-    const Line = struct { p: Problem, kind: []const u8 };
+    var out: std.ArrayList(u8) = .empty;
+    for (try self.sorted(arena)) |l| {
+        try out.appendSlice(arena, l.p.file);
+        if (l.p.line > 0) try out.print(arena, ":{d}:{d}", .{ l.p.line, l.p.column });
+        try out.print(arena, ": {s}: {s}\n", .{ l.kind, l.p.message });
+    }
+    return out.items;
+}
+
+/// The problems and warnings as GitHub Actions workflow commands, which
+/// show each on its line of a pull request:
+/// `::error file=F,line=L,col=C::message`
+pub fn renderGithub(self: *Report, arena: std.mem.Allocator) std.mem.Allocator.Error![]const u8 {
+    var out: std.ArrayList(u8) = .empty;
+    for (try self.sorted(arena)) |l| {
+        try out.print(arena, "::{s} file={s}", .{ l.kind, try escapeGithub(arena, l.p.file, true) });
+        if (l.p.line > 0) try out.print(arena, ",line={d},col={d}", .{ l.p.line, @max(l.p.column, 1) });
+        try out.print(arena, ",title=skein::{s}\n", .{try escapeGithub(arena, l.p.message, false)});
+    }
+    return out.items;
+}
+
+/// A value of a workflow command: `%`, line ends, and in a property `:`
+/// and `,`, written as GitHub reads them
+fn escapeGithub(arena: std.mem.Allocator, s: []const u8, property: bool) std.mem.Allocator.Error![]const u8 {
+    var out: std.ArrayList(u8) = .empty;
+    for (s) |c| switch (c) {
+        '%' => try out.appendSlice(arena, "%25"),
+        '\r' => try out.appendSlice(arena, "%0D"),
+        '\n' => try out.appendSlice(arena, "%0A"),
+        ':' => if (property) try out.appendSlice(arena, "%3A") else try out.append(arena, c),
+        ',' => if (property) try out.appendSlice(arena, "%2C") else try out.append(arena, c),
+        else => try out.append(arena, c),
+    };
+    return out.items;
+}
+
+/// The problems and warnings as a GitLab Code Quality report, which a job
+/// keeps as an artifact (`artifacts: reports: codequality:`) and GitLab
+/// shows on the merge request: a JSON array of findings
+pub fn renderGitlab(self: *Report, arena: std.mem.Allocator) std.mem.Allocator.Error![]const u8 {
+    const Json = @import("output/Json.zig");
+    var j: Json = .{ .arena = arena };
+    try j.beginArray();
+    for (try self.sorted(arena)) |l| {
+        try j.beginObject();
+        try j.key("description");
+        try j.string(l.p.message);
+        try j.key("check_name");
+        try j.string("skein");
+        try j.key("fingerprint");
+        const id = try arena.print("{s}:{d}:{d}:{s}:{s}", .{ l.p.file, l.p.line, l.p.column, l.kind, l.p.message });
+        var digest: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
+        std.crypto.hash.sha2.Sha256.hash(id, &digest, .{});
+        try j.string(&std.fmt.bytesToHex(digest[0..16].*, .lower));
+        try j.key("severity");
+        try j.string(if (std.mem.eql(u8, l.kind, "error")) "major" else "minor");
+        try j.key("location");
+        try j.beginObject();
+        try j.key("path");
+        try j.string(l.p.file);
+        try j.key("lines");
+        try j.beginObject();
+        try j.key("begin");
+        try j.integer(@max(l.p.line, 1));
+        try j.endObject();
+        try j.endObject();
+        try j.endObject();
+    }
+    try j.endArray();
+    return j.finish();
+}
+
+const Line = struct { p: Problem, kind: []const u8 };
+
+/// The problems and warnings together, in order of file and place
+fn sorted(self: *const Report, arena: std.mem.Allocator) std.mem.Allocator.Error![]const Line {
     var lines: std.ArrayList(Line) = .empty;
     for (self.problems.items) |p| try lines.append(arena, .{ .p = p, .kind = "error" });
     for (self.warnings.items) |p| try lines.append(arena, .{ .p = p, .kind = "warning" });
@@ -62,13 +138,7 @@ pub fn render(self: *Report, arena: std.mem.Allocator) std.mem.Allocator.Error![
             return before({}, a.p, b.p);
         }
     }.lt);
-    var out: std.ArrayList(u8) = .empty;
-    for (lines.items) |l| {
-        try out.appendSlice(arena, l.p.file);
-        if (l.p.line > 0) try out.print(arena, ":{d}:{d}", .{ l.p.line, l.p.column });
-        try out.print(arena, ": {s}: {s}\n", .{ l.kind, l.p.message });
-    }
-    return out.items;
+    return lines.items;
 }
 
 fn before(_: void, a: Problem, b: Problem) bool {
