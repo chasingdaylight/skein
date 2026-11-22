@@ -1,0 +1,3 @@
+description = "A product is filed for a review: one of the documents its success criteria list"
+from = ["it-product"]
+to = ["it-review"]

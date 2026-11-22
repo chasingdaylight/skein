@@ -34,6 +34,9 @@ skein shall carry a template for AI in software projects under NPR 7150.2D, `npr
 %req[templates.npr7123.1d]
 skein shall carry a template for systems engineering under NASA's NPR 7123.1D, `npr7123.1d`: its 62 requirements and the entrance and success criteria of its 21 review tables (Appendix G) as a read-only source written into the project, the rows of its compliance matrix (Appendix H), the project's reviews with their kind and date, the checks of their criteria, and skeletons of the compliance matrix, the reviews and the systems engineering management plan.
 
+%req[templates.npr7120.7a]
+skein shall carry a template for IT program and project management under NASA's NPR 7120.7A (updated with Change 2), `npr7120.7a`: the 103 statements of the NPR that say "shall" (the preface and chapters 2 to 5) as a read-only source written into the project, each named by its paragraph and item and marked with whom it binds (IT service lines, IT projects, or both), with the documents the success criteria of each review list; the rows of the compliance matrix (Appendix C: comply, partially comply, not comply, not applicable), expected of the requirements of the kind of effort its option `kind` names; the project's reviews and key decision points with their dates, and the products filed for each; and skeletons of the matrix and the life cycle. The NPR's compliance matrices are images in the NPR and are not carried.
+
 %req[templates.npr7120.5f]
 skein shall carry a template for space flight program and project management under NASA's NPR 7120.5F, `npr7120.5f`: its 51 requirements as its compliance matrix (Table C-1) lists them, with their owners and who approves their tailoring, as a read-only source written into the project, the rows of the compliance matrix, the project's key decision points with their phases and dates, and skeletons of the matrix, the life cycle and the project plan.
 

@@ -1,0 +1,5 @@
+description = "The requirements of NPR 7120.7A for the kind of effort the project is ({{kind}}): those of its chapter and those common to both"
+types = ["it"]
+
+[where]
+scope = {{scope}}

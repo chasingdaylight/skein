@@ -1,0 +1,12 @@
+description = "A product filed in the records repository for a review (NPR 7120.7A: the success criteria of each review list them): what it is and in what state"
+id = "numbered"
+prefix = "ITP"
+statuses = ["planned", "filed", "approved"]
+
+# preliminary, final or updated, as the criteria say it ("Final Project Plan")
+[attributes.state]
+values = ["preliminary", "final", "updated"]
+
+# where it is filed, in the records repository the Agency CIO can reach
+[attributes.filed_in]
+normative = false
