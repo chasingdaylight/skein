@@ -139,6 +139,11 @@ pub fn update(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Re
     return try arena.print("gh: {s}", .{std.mem.trim(u8, result.stderr, " \r\n")});
 }
 
+/// Sends `json` to `path` of the forge's REST API, through `gh`
+pub fn send(io: Io, arena: std.mem.Allocator, forge: *const Forge, method: []const u8, path: []const u8, json: []const u8, body_path: []const u8) !Reply {
+    return tool.send(io, arena, "gh", if (forge.url != null) forge.host() else null, &.{}, method, path, json, body_path);
+}
+
 /// The number of the milestone titled `title` of `repository`
 fn milestoneNumber(io: Io, arena: std.mem.Allocator, forge: *const Forge, repository: []const u8, title: []const u8) !?u64 {
     const reply = try api(io, arena, forge, try arena.print("repos/{s}/milestones?state=all&per_page=100", .{repository}));

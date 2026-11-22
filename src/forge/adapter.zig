@@ -13,7 +13,7 @@ pub fn lookup(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Re
     return switch (forge.kind) {
         .github => github.lookup(io, arena, forge, r),
         .gitlab => gitlab.lookup(io, arena, forge, r),
-        .forgejo => .{ .unreachable_ = "skein has no adapter for Forgejo yet" },
+        .forgejo => .{ .unreachable_ = no_forgejo },
     };
 }
 
@@ -22,6 +22,27 @@ pub fn update(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Re
     return switch (forge.kind) {
         .github => github.update(io, arena, forge, r, changes, body_path),
         .gitlab => gitlab.update(io, arena, forge, r, changes, body_path),
-        .forgejo => "skein has no adapter for Forgejo yet",
+        .forgejo => no_forgejo,
     };
 }
+
+/// GET `path` of the forge's REST API (`repos/...` for GitHub, `projects/...`
+/// for GitLab)
+pub fn api(io: Io, arena: std.mem.Allocator, forge: *const Forge, path: []const u8) !github.Reply {
+    return switch (forge.kind) {
+        .github => github.api(io, arena, forge, path),
+        .gitlab => gitlab.api(io, arena, forge, path),
+        .forgejo => .{ .unreachable_ = no_forgejo },
+    };
+}
+
+/// Sends `json` with `method` to `path` of the forge's REST API
+pub fn send(io: Io, arena: std.mem.Allocator, forge: *const Forge, method: []const u8, path: []const u8, json: []const u8, body_path: []const u8) !github.Reply {
+    return switch (forge.kind) {
+        .github => github.send(io, arena, forge, method, path, json, body_path),
+        .gitlab => gitlab.send(io, arena, forge, method, path, json, body_path),
+        .forgejo => .{ .unreachable_ = no_forgejo },
+    };
+}
+
+const no_forgejo = "skein has no adapter for Forgejo yet";
