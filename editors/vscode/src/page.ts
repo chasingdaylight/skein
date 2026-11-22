@@ -61,6 +61,24 @@ export function graphPage(scriptUri: string, cspSource: string, scriptNonce: str
   return scriptPage("skein Graph", graphStyle, scriptUri, cspSource, scriptNonce);
 }
 
+/** The item form's page, drawn by its script */
+export function formPage(scriptUri: string, cspSource: string, scriptNonce: string): string {
+  return scriptPage("skein Item", formStyle, scriptUri, cspSource, scriptNonce);
+}
+
+// the form's fields in the theme's colors
+const formStyle = `
+.fields { display: grid; gap: 8px; max-width: 640px; }
+.field { display: grid; grid-template-columns: 140px 1fr; align-items: start; gap: 8px; }
+.label { padding-top: 4px; font-family: var(--vscode-editor-font-family); }
+input, select, textarea { background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, transparent); padding: 4px 6px; font: inherit; width: 100%; box-sizing: border-box; }
+.buttons { display: flex; gap: 8px; margin-top: 16px; }
+button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 5px 14px; cursor: pointer; }
+button.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+.hint { color: var(--vscode-descriptionForeground); }
+.said.error { color: var(--vscode-errorForeground); }
+`;
+
 /** A page that its script, from the extension's files, draws into `#root` */
 function scriptPage(title: string, extraStyle: string, scriptUri: string, cspSource: string, scriptNonce: string): string {
   return `<!DOCTYPE html>
@@ -117,7 +135,10 @@ body { padding: 0 12px; }
 .choose { background: var(--vscode-input-background); padding: 3px 6px; }
 .choose label { display: block; }
 .main { display: flex; gap: 12px; height: calc(100vh - 70px); }
-.canvas { flex: 1; min-width: 0; border: 1px solid var(--vscode-panel-border, transparent); overflow: hidden; }
+.canvas { flex: 1; min-width: 0; border: 1px solid var(--vscode-panel-border, transparent); overflow: hidden; position: relative; }
+.zoom { position: absolute; top: 8px; right: 8px; display: flex; gap: 2px; }
+.zoom button { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; min-width: 28px; padding: 3px 8px; cursor: pointer; }
+.zoom button:hover { background: var(--vscode-button-secondaryHoverBackground); }
 .graph { width: 100%; height: 100%; cursor: grab; }
 .node { cursor: pointer; }
 .node rect { fill: var(--vscode-editor-background); stroke-width: 2; }
