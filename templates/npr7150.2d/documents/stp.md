@@ -1,6 +1,8 @@
 +++
 document = "SW-STP"
 revision = "Draft"
+item = "PRD-06"
+maturity = "D"
 +++
 
 # Software test plan

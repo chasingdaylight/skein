@@ -43,6 +43,10 @@ pub const Document = struct {
     revision: []const u8,
     /// its first heading of level 1
     title: []const u8,
+    /// the item it is, such as a product whose maturity at each milestone
+    /// is given (`item = "PRD-02"`), and the maturity it is at
+    item: []const u8 = "",
+    maturity: []const u8 = "",
 };
 
 /// What git knows of `files` (documents and item files, from the root);
@@ -117,7 +121,9 @@ pub fn documentOf(arena: std.mem.Allocator, file: []const u8, text: []const u8) 
             break;
         }
     }
-    return .{ .file = file, .id = id.string, .revision = revision, .title = title };
+    const item: []const u8 = if (front.get("item")) |v| (if (v == .string) v.string else "") else "";
+    const maturity: []const u8 = if (front.get("maturity")) |v| (if (v == .string) v.string else "") else "";
+    return .{ .file = file, .id = id.string, .revision = revision, .title = title, .item = item, .maturity = maturity };
 }
 
 pub fn document(self: *const Control, file: []const u8) ?Document {

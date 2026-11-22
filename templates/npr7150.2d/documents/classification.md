@@ -1,6 +1,8 @@
 +++
 document = "SW-CLASS"
 revision = "Draft"
+item = "PRD-31"
+maturity = "D"
 +++
 
 # Software classification and safety-criticality

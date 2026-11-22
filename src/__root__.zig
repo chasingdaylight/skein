@@ -37,6 +37,7 @@ test {
     _ = @import("template/Template.zig");
     _ = @import("template/_test/use.zig");
     _ = @import("template/_test/start.zig");
+    _ = @import("graph/_test/maturity.zig");
     _ = @import("commands/new.zig");
     _ = @import("commands/link.zig");
     _ = @import("commands/baseline.zig");

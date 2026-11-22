@@ -145,6 +145,9 @@ A fenced code block of the language `skein` in a document shall be a request for
 %req[render.generated.coverage]
 `coverage [profile=P]` shall give what `skein coverage` counts, as a table, with links to the items that are not covered.
 
+%req[control.maturity]
+A controlled document's front matter may name the item it is (`item`) and the maturity it is at (`maturity`). With `[maturity]` in the configuration, giving the maturities lowest first (`order`) and the milestone the project is at (`milestone`), `skein check` shall warn of a document below the value its item has for the attribute the milestone names, of a document that gives no maturity or one outside the order, and of one that names no item there is; a value outside the order (complete, per schedule) expects nothing.
+
 %req[render.control]
 A document that gives `document` (its identifier) and `revision` in TOML front matter shall be rendered with, under its first heading of level 1, a table of its identifier, its revision and its last change (the date, the author and the commit, linked on the forge when the project names one), and at its end a change record: each baseline in which its items changed, oldest first, with its date, the message given to `skein baseline`, and how many of its items were added, changed and removed since the baseline before. A rendered item file gives the date, author and commit of its last change in its front matter. A generated `documents` page lists the controlled documents with their identifier, title, revision and last change. All of it is read from git; outside a git repository there is none.
 

@@ -1,6 +1,8 @@
 +++
 document = "SW-STPR"
 revision = "Draft"
+item = "PRD-07"
+maturity = "D"
 +++
 
 # Software test procedures

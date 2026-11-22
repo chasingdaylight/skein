@@ -99,6 +99,12 @@ test "a project under NPR 7150.2D: its class chooses the requirements and the tr
     try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = safety });
     try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies links to swe items: 0 of 92");
 
+    // at PDR, the development plan is expected updated; the skeleton is a draft
+    const at_pdr = try std.mem.replaceOwned(u8, a, given, "# milestone = \"pdr\"", "milestone = \"pdr\"");
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = at_pdr });
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "document SW-SDP is at D; at pdr, PRD-01 is expected to be at U");
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = given });
+
     // the handbook's product maturity and review checklists, read-only
     const maturity = try tmp.dir.readFileAlloc(testing.io, "standards/npr7150.2d/maturity.md", a, .limited(1 << 20));
     try testing.expectEqual(54, std.mem.count(u8, maturity, "\n%product[PRD-"));

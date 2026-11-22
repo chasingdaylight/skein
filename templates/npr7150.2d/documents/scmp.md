@@ -1,6 +1,8 @@
 +++
 document = "SW-SCMP"
 revision = "Draft"
+item = "PRD-05"
+maturity = "D"
 +++
 
 # Software configuration management plan

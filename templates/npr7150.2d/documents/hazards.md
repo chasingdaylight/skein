@@ -1,6 +1,8 @@
 +++
 document = "SW-HAZ"
 revision = "Draft"
+item = "PRD-37"
+maturity = "D"
 +++
 
 # Software and hazards
