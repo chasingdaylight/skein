@@ -44,6 +44,9 @@ pub const usage =
     \\                    carried out by hand, in the results the project keeps
     \\  schedule          Schedule the work items, and write .skein/schedule.toml
     \\  time [ITEM HOURS] Log hours spent on a work item; without them, spent against estimate
+    \\  overlay [ISSUE FIELD VALUE]
+    \\                    A what-if plan's deviations from the forge: list, record or --remove
+    \\  apply             Write the overlay to the forge, and take it out (--dry-run, --force)
     \\  load              Each person's work, week by week, beside the time they have
     \\  lsp               Serve editors as a language server, on standard input and output
     \\  mcp               Serve AI agents skein's tools (Model Context Protocol), on
@@ -109,6 +112,8 @@ pub const Command = union(enum) {
     load: Load,
     schedule: Schedule,
     time: TimeSpent,
+    overlay: OverlayCommand,
+    apply: Apply,
     /// `diff`, and `impact`
     diff: Diff,
     /// `export`
@@ -210,6 +215,23 @@ pub const Load = struct {
 
 pub const Schedule = struct {
     common: Common = .{},
+};
+
+pub const OverlayCommand = struct {
+    common: Common = .{},
+    /// the issue (`#12`), its field and the value; none of them to list
+    issue: ?[]const u8 = null,
+    field: ?[]const u8 = null,
+    value: ?[]const u8 = null,
+    remove: bool = false,
+};
+
+pub const Apply = struct {
+    common: Common = .{},
+    /// say what would be written, and write nothing
+    dry_run: bool = false,
+    /// write also what changed on both sides
+    force: bool = false,
 };
 
 pub const TimeSpent = struct {
@@ -402,6 +424,9 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--evidence", .takes_value = true },
     .{ .name = "--as", .takes_value = true },
     .{ .name = "--template", .takes_value = true },
+    .{ .name = "--remove", .takes_value = false },
+    .{ .name = "--dry-run", .takes_value = false },
+    .{ .name = "--force", .takes_value = false },
     .{ .name = "--skill", .takes_value = false },
     .{ .name = "--file", .takes_value = true },
 };
@@ -484,6 +509,23 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
         return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.values("--results") } };
+    }
+    if (eql(name, "overlay")) {
+        if (try p.allow(&.{ "--root", "--offline", "--remove" })) |problem| return .{ .misuse = problem };
+        const remove = p.flag("--remove");
+        if (words.len != 0 and words.len != (if (remove) @as(usize, 2) else 3)) return .{ .misuse = "overlay takes an issue, a field and a value (or, with --remove, an issue and a field), or nothing to list" };
+        return .{ .overlay = .{
+            .common = common,
+            .issue = if (words.len > 0) words[0] else null,
+            .field = if (words.len > 1) words[1] else null,
+            .value = if (words.len > 2) words[2] else null,
+            .remove = remove,
+        } };
+    }
+    if (eql(name, "apply")) {
+        if (try p.allow(&.{ "--root", "--offline", "--dry-run", "--force" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "apply takes no items" };
+        return .{ .apply = .{ .common = common, .dry_run = p.flag("--dry-run"), .force = p.flag("--force") } };
     }
     if (eql(name, "time")) {
         if (try p.allow(&.{ "--root", "--by", "--on", "--note", "--json", "--offline" })) |problem| return .{ .misuse = problem };

@@ -32,6 +32,8 @@ test {
     _ = @import("planning/_test/burn.zig");
     _ = @import("planning/_test/forge.zig");
     _ = @import("planning/_test/time.zig");
+    _ = @import("planning/_test/overlay.zig");
+    _ = @import("forge/Overlay.zig");
     _ = @import("planning/Time.zig");
     _ = @import("edit/attribute.zig");
     _ = @import("graph/coverage.zig");
