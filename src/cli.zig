@@ -16,6 +16,7 @@ pub const usage =
     \\  move OLD NEW      Give an item another ID, everywhere the old one is used
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  link FROM TYPE TO Add a link of a type from one item to another
+    \\  baseline [NAME]   Tag what is committed as a baseline; without NAME, list them
     \\  import doorstop DIR...
     \\                    Turn Doorstop documents into skein items, in place
     \\  import csv FILE --type TYPE --to DIR
@@ -61,6 +62,7 @@ pub const Command = union(enum) {
     move: Move,
     new: New,
     link: Link,
+    baseline: Baseline,
     /// the language server
     lsp,
     import: Import,
@@ -117,6 +119,13 @@ pub const Export = struct {
         links,
         citations,
     };
+};
+
+pub const Baseline = struct {
+    common: Common = .{},
+    /// the name of the tag; null lists the baselines
+    name: ?[]const u8 = null,
+    message: ?[]const u8 = null,
 };
 
 pub const Link = struct {
@@ -207,6 +216,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--replace", .takes_value = false },
     .{ .name = "--out", .takes_value = true },
     .{ .name = "--format", .takes_value = true },
+    .{ .name = "--message", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -260,6 +270,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
             return .{ .misuse = "export: json, items, links or citations" };
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
+    }
+    if (eql(name, "baseline")) {
+        if (try p.allow(&.{ "--root", "--message" })) |problem| return .{ .misuse = problem };
+        if (words.len > 1) return .{ .misuse = "baseline takes one name" };
+        if (words.len == 0 and p.value("--message") != null) return .{ .misuse = "baseline: a message goes with a name" };
+        return .{ .baseline = .{ .common = common, .name = if (words.len == 1) words[0] else null, .message = p.value("--message") } };
     }
     if (eql(name, "link")) {
         if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };

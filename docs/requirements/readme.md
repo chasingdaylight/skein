@@ -19,7 +19,7 @@ A requirement that names no status is implemented. One marked `planned` describe
 | [items](items.md) | How items, references and citations are written and read. |
 | [checking](checking.md) | What `skein check` reports. |
 | [reviewing](reviewing.md) | Fingerprints, reviewed links, approvals. |
-| [views](views.md) | `trace`, `coverage`, `diff`, `impact`, `export`, `render`. |
+| [views](views.md) | `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `baseline`. |
 | [editing](editing.md) | `move`, `new`, `link`, and the language server `lsp`. |
 | [importing](importing.md) | `import doorstop`, `import csv`. |
 | [planned](planned.md) | What is to come. |

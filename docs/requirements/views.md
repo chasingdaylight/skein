@@ -74,6 +74,17 @@ Tables shall be rendered with their header, their rows, and the alignment of eac
 %req[html.inline]
 Inline Markdown shall be rendered: emphasis and strong with `*` and `_` (not `_` inside a word), strikethrough with `~~`, code spans, links with an optional title, images, autolinks in angle brackets, bare `http://` and `https://` URLs, raw inline HTML passed through, backslash escapes, and hard line breaks. Text is escaped, and character references such as `&copy;` are kept. For a site, a relative link to a `.md` file can be made one to the `.html` file, its anchor kept.
 
+## Baselines
+
+%req[baseline.tag]
+`skein baseline NAME [--message TEXT]` shall make an annotated git tag `NAME` of the commit checked out, whose message starts with `skein baseline NAME`, then gives the message, and then what the project held: its number of items and what `skein coverage` counts. The tag is made in the local repository only; skein says how to share it. `skein diff` and `skein impact` take a baseline's name as they take any commit.
+
+%req[baseline.refusals]
+`skein baseline` shall refuse, and make no tag, when the project is not in a git repository, when the name cannot be a tag, when a tag of that name exists, when the project has changes that are not committed, and when `skein check` reports problems: a baseline is of a committed state without problems.
+
+%req[baseline.list]
+`skein baseline` without a name shall list the baselines, oldest first, with their dates: the tags whose message starts as a baseline's does. Other tags are not listed.
+
 ## Export
 
 %req[export.json]
