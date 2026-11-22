@@ -1,0 +1,32 @@
+description = "A row of the compliance matrix of NPR 7120.7A (Appendix C, Tables C-1 to C-9): a mandatory action, the state its product is due in, and the requirement paragraphs it answers; read-only, from skein's template"
+id = "numbered"
+prefix = "ITA"
+names = true
+
+# whom the row binds: service lines (Tables C-2, C-3), projects (C-4 to C-9), or both (C-1)
+[attributes.scope]
+values = ["both", "service-line", "project"]
+normative = false
+
+# the table of the NPR, and the phase and review it is under
+[attributes.table]
+values = ["C-1", "C-2", "C-3", "C-4", "C-5", "C-6", "C-7", "C-8", "C-9"]
+normative = false
+
+[attributes.phase]
+normative = false
+
+[attributes.gate]
+normative = false
+
+# what state the product is due in at the review (Appendix D marks them P, F and U)
+[attributes.state]
+values = ["Preliminary", "Final", "Update"]
+normative = false
+
+# the requirement paragraphs, as the table gives them ("5.4.3.2c(10)")
+[attributes.para]
+normative = false
+
+[attributes.note]
+normative = false

@@ -217,14 +217,14 @@ test "IT project management under NPR 7120.7A: the matrix is expected of the kin
     try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7120.7a"} })).status);
     try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
     // a project: its chapter and what both kinds share
-    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies-it links to it items: 0 of 74");
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies-it links to it-action items: 0 of 134");
 
     // a service line instead
     const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
     const lined = try std.mem.replaceOwned(u8, a, config, "\"kind\" = \"project\"", "\"kind\" = \"service-line\"");
     try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = lined });
     try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
-    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies-it links to it items: 0 of 46");
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies-it links to it-action items: 0 of 39");
 
     // the reviews in a list
     const out_dir = try std.Io.Dir.path.join(a, &.{ root, "out" });

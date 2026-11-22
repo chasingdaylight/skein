@@ -1,8 +1,8 @@
 # A template of skein's: see docs/templates.md.
-description = "IT program and project management under NASA's NPR 7120.7A: its requirements, read-only; the compliance matrix, the project's reviews and decision points, and the products filed for each"
+description = "IT program and project management under NASA's NPR 7120.7A: its requirements, read-only; its compliance matrix as the NPR's Appendix C gives it, the project's compliance rows, its reviews and decision points, and the products filed for each"
 
 [options.kind]
-description = "What the effort is: an IT project (chapter 5) or an IT service line (chapter 4); the compliance matrix is expected of the requirements of its kind and of those common to both"
+description = "What the effort is: an IT project (chapter 5) or an IT service line (chapter 4); the compliance matrix is expected of the rows of the NPR's matrix for its kind and of those common to both"
 values = ["project", "service-line"]
 default = "project"
 

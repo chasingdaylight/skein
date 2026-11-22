@@ -1,0 +1,5 @@
+description = "The rows of the NPR's compliance matrix (Appendix C) for the kind of effort the project is ({{kind}}): those of its tables and those common to both"
+types = ["it-action"]
+
+[where]
+scope = {{scope}}
