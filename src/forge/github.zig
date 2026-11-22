@@ -8,9 +8,10 @@ const Io = std.Io;
 
 const Forge = @import("Forge.zig");
 const env = @import("../env.zig");
+const tool = @import("tool.zig");
 
 /// How long `gh` may take to answer
-pub const idle_seconds = 30;
+pub const idle_seconds = tool.idle_seconds;
 
 pub const Issue = struct {
     title: []const u8,
@@ -63,44 +64,20 @@ fn viaGh(io: Io, arena: std.mem.Allocator, forge: *const Forge, path: []const u8
     var argv: std.ArrayList([]const u8) = .empty;
     try argv.appendSlice(arena, &.{ "gh", "api", path });
     if (forge.url != null) try argv.appendSlice(arena, &.{ "--hostname", forge.host() });
-    const result = std.process.run(arena, io, .{
-        .argv = argv.items,
-        .stdout_limit = .limited(1 << 22),
-        .timeout = .{ .duration = .{ .raw = .fromSeconds(idle_seconds), .clock = .awake } },
-    }) catch |e| switch (e) {
-        error.OutOfMemory => return error.OutOfMemory,
-        error.FileNotFound => return null,
-        error.Timeout => return .{ .unreachable_ = "gh did not answer in time" },
-        else => return .{ .unreachable_ = try arena.print("gh could not be run ({t})", .{e}) },
-    };
-    if (result.term.success()) return .{ .body = result.stdout };
-    if (std.mem.find(u8, result.stderr, "Not Found") != null or std.mem.find(u8, result.stdout, "Not Found") != null) return .missing;
-    return .{ .unreachable_ = try arena.print("gh: {s}", .{std.mem.trim(u8, result.stderr, " \r\n")}) };
+    return tool.cli(io, arena, argv.items);
 }
 
 /// Through GitHub's API, over HTTPS
 fn viaHttps(io: Io, arena: std.mem.Allocator, forge: *const Forge, path: []const u8) !Reply {
     const base = if (forge.url) |u| try arena.print("{s}/api/v3", .{u}) else "https://api.github.com";
     const url = try arena.print("{s}/{s}", .{ base, path });
-    var client: std.http.Client = .{ .allocator = arena, .io = io };
-    defer client.deinit();
-    var body: Io.Writer.Allocating = .init(arena);
     var headers: std.ArrayList(std.http.Header) = .empty;
     try headers.append(arena, .{ .name = "Accept", .value = "application/vnd.github+json" });
     try headers.append(arena, .{ .name = "User-Agent", .value = "skein" });
     if (env.get("GH_TOKEN") orelse env.get("GITHUB_TOKEN")) |token| {
         try headers.append(arena, .{ .name = "Authorization", .value = try arena.print("Bearer {s}", .{token}) });
     }
-    const result = client.fetch(.{
-        .location = .{ .url = url },
-        .response_writer = &body.writer,
-        .privileged_headers = headers.items,
-    }) catch |e| return .{ .unreachable_ = try arena.print("{s} could not be reached ({t})", .{ forge.host(), e }) };
-    return switch (result.status) {
-        .ok => .{ .body = body.written() },
-        .not_found, .gone => .missing,
-        else => .{ .unreachable_ = try arena.print("GitHub answered {d}", .{@backingInt(result.status)}) },
-    };
+    return tool.https(io, arena, url, headers.items, forge.host(), "GitHub");
 }
 
 /// What `skein apply` writes to an issue

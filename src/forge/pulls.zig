@@ -6,6 +6,7 @@ const Io = std.Io;
 
 const Forge = @import("Forge.zig");
 const github = @import("github.zig");
+const gitlab = @import("gitlab.zig");
 
 /// How the forge's API is asked: the forge itself, or something else in tests
 pub var call: *const fn (Io, std.mem.Allocator, *const Forge, []const u8) anyerror!github.Reply = github.api;
@@ -29,6 +30,11 @@ pub const Got = union(enum) {
 
 /// What the forge says of pull request `number` of the project's repository
 pub fn get(io: Io, arena: std.mem.Allocator, forge: *const Forge, number: u64) !Got {
+    switch (forge.kind) {
+        .github => {},
+        .gitlab => return gitlab.pull(io, arena, forge, number),
+        .forgejo => return .{ .unreachable_ = "skein has no adapter for Forgejo yet" },
+    }
     const head = try call(io, arena, forge, try arena.print("repos/{s}/pulls/{d}", .{ forge.repository, number }));
     const json = switch (head) {
         .body => |b| b,
