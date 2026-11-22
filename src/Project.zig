@@ -56,6 +56,9 @@ pub const Source = struct {
     /// what skein's editing commands do not change: an external standard,
     /// which is imported again, not edited
     read_only: bool = false,
+    /// items: the attribute whose values give the order the files are
+    /// rendered in, such as Doorstop's `level`
+    order_by: ?[]const u8 = null,
 
     pub const Kind = enum {
         /// Markdown documents whose paragraphs can be items
@@ -98,7 +101,7 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
     }
     var sources: std.ArrayList(Source) = .empty;
     for (try r.children("sources")) |s| {
-        try s.known(&.{ "path", "kind", "type", "read_only" });
+        try s.known(&.{ "path", "kind", "type", "read_only", "order_by" });
         const path = try s.string("path") orelse {
             try s.complain("path", "a source needs a path", .{});
             continue;
@@ -114,6 +117,7 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
             .kind = kind,
             .item_type = try s.string("type"),
             .read_only = try s.boolean("read_only", false),
+            .order_by = try s.string("order_by"),
         });
     }
     self.sources = sources.items;

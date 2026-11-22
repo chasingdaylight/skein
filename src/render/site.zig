@@ -15,6 +15,7 @@ const html = @import("../html/blocks.zig");
 const inline_html = @import("../html/inline.zig");
 const layout = @import("layout.zig");
 const markdown = @import("markdown.zig");
+const order = @import("order.zig");
 const walk = @import("../graph/walk.zig");
 
 /// The files of the sources copied as they are, for the pages to use
@@ -57,7 +58,8 @@ fn renderAll(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Con
     var rendered: std.ArrayList(Rendered) = .empty;
     for (ws.project.sources) |source| {
         // a source that cannot be read was reported when the items were
-        const paths = files.list(io, arena, ws.root, source.path, &.{".md"}) catch continue;
+        const listed = files.list(io, arena, ws.root, source.path, &.{".md"}) catch continue;
+        const paths = if (source.order_by) |attribute| try order.sortFiles(arena, &ws.graph, listed, attribute) else listed;
         for (paths) |file| {
             if (source.kind == .items and !markdown.fileIncluded(ctx, file)) continue;
             const text = ws.root.readFileAlloc(io, file, arena, .limited(1 << 26)) catch continue;

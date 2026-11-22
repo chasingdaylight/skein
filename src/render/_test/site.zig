@@ -69,3 +69,27 @@ test "every document and item file is a page, with an index of the items" {
     // nothing is loaded from elsewhere
     try testing.expect(std.mem.find(u8, front, "http") == null);
 }
+
+// req: render.order
+test "a source's item files are in the order of an attribute it names" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const dir = tmp.dir;
+    try write(dir, ".skein/config.toml", "[project]\nname = \"Example\"\n[[sources]]\npath = \"requirements\"\nkind = \"items\"\ntype = \"srs\"\norder_by = \"level\"\n");
+    try write(dir, ".skein/types/srs.toml", "id = \"numbered\"\nprefix = \"SRS\"\n[attributes.level]\n");
+    try write(dir, "requirements/SRS-001.md", "+++\nid = \"SRS-001\"\nlevel = \"2.10\"\n+++\n\nTen.\n");
+    try write(dir, "requirements/SRS-002.md", "+++\nid = \"SRS-002\"\nlevel = \"2.9\"\n+++\n\nNine.\n");
+    try write(dir, "requirements/SRS-003.md", "+++\nid = \"SRS-003\"\n+++\n\nNo level.\n");
+    try write(dir, "requirements/SRS-004.md", "+++\nid = \"SRS-004\"\nlevel = \"1\"\n+++\n\nOne.\n");
+    const root = try dir.realPathFileAlloc(testing.io, ".", a);
+    _ = try render.run(testing.io, a, .{ .common = .{ .root = root }, .out = try a.print("{s}/site", .{root}), .format = .html });
+    const front = try read(a, dir, "site/index.html");
+    const one = std.mem.find(u8, front, ">SRS-004<").?;
+    const nine = std.mem.find(u8, front, ">SRS-002<").?;
+    const ten = std.mem.find(u8, front, ">SRS-001<").?;
+    const none = std.mem.find(u8, front, ">SRS-003<").?;
+    try testing.expect(one < nine and nine < ten and ten < none);
+}

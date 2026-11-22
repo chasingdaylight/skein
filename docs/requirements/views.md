@@ -139,3 +139,6 @@ A fenced code block of the language `skein` in a document shall be a request for
 
 %req[render.profiles]
 With `--profile NAME`, `skein render` shall render only the items of that profile, in every format. An item outside it is left out with its lines and its parts; a part is in a profile only when the item it belongs to is. A reference to an item left out is shown as its words, without a link; an item file outside it is not written; generated pages and the page of all items list only the items of the profile. A profile that does not exist is refused.
+
+%req[render.order]
+A source of item files with `order_by = "ATTRIBUTE"` shall have its files rendered in the order of that attribute's values, compared as dotted numbers part by part (`2.9` before `2.10`), and its files whose item has no value after them, by path. Without it, files are rendered by path.
