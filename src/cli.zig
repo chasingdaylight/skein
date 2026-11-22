@@ -46,6 +46,8 @@ pub const usage =
     \\  --working         the same, with their files as they are, committed or not
     \\  --offline         the same commands, and pin: fetch nothing; a repository
     \\                    by url is read from what its cache holds
+    \\  --results FILE    trace, coverage: test results besides the project's own
+    \\                    (TOML, JSON or YAML); may be given more than once
     \\  --alias, --no-alias
     \\                    move: keep the old ID as an alias, or not (default: kept
     \\                    when the project declares an id, so others can cite it)
@@ -120,6 +122,8 @@ pub const Trace = struct {
     common: Common = .{},
     id: []const u8,
     json: bool = false,
+    /// results files besides the project's own
+    results: []const []const u8 = &.{},
 };
 
 pub const Coverage = struct {
@@ -128,6 +132,8 @@ pub const Coverage = struct {
     json: bool = false,
     /// as Markdown, for a job summary or a pull request
     markdown: bool = false,
+    /// results files besides the project's own
+    results: []const []const u8 = &.{},
 };
 
 pub const Diff = struct {
@@ -276,6 +282,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--offline", .takes_value = false },
     .{ .name = "--alias", .takes_value = false },
     .{ .name = "--no-alias", .takes_value = false },
+    .{ .name = "--results", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -321,15 +328,15 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .pin = .{ .common = common, .name = if (words.len > 0) words[0] else null, .revision = if (words.len == 2) words[1] else null } };
     }
     if (eql(name, "trace")) {
-        if (try p.allow(&.{ "--root", "--json", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--current", "--working", "--offline", "--results" })) |problem| return .{ .misuse = problem };
         if (words.len != 1) return .{ .misuse = "trace takes one item" };
-        return .{ .trace = .{ .common = common, .id = words[0], .json = p.flag("--json") } };
+        return .{ .trace = .{ .common = common, .id = words[0], .json = p.flag("--json"), .results = try p.values("--results") } };
     }
     if (eql(name, "coverage")) {
-        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working", "--offline", "--results" })) |problem| return .{ .misuse = problem };
         if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
-        return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown") } };
+        return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.values("--results") } };
     }
     if (eql(name, "diff") or eql(name, "impact")) {
         const impact = eql(name, "impact");
@@ -468,6 +475,15 @@ const Parsed = struct {
 
     fn flag(self: *const Parsed, name: []const u8) bool {
         return self.value(name) != null;
+    }
+
+    /// Every value of an option that may be given more than once
+    fn values(self: *const Parsed, name: []const u8) ![]const []const u8 {
+        var out: std.ArrayList([]const u8) = .empty;
+        for (self.given.items) |g| {
+            if (eql(g.name, name)) try out.append(self.arena, g.value);
+        }
+        return out.items;
     }
 
     /// What is wrong when an option other than `allowed` was given

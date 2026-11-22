@@ -60,6 +60,8 @@ A link points up, from an item to what it rests on: a test to the rule it verifi
 
 ## `skein coverage`
 
+With test results, kept in the project or given with `--results FILE`, it also says per implementation which items passed, failed or are untested: see [test results](results.md). `skein trace ID` takes `--results` too.
+
 Counts, of the items that should be linked to or cited, how many are, and lists the ones that are not. An item with [parts](writing-items.md#parts-items-inside-an-item) also counts when every one of its parts does:
 
 ```text

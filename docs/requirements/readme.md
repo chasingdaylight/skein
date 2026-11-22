@@ -22,6 +22,7 @@ A requirement that names no status is implemented. One marked `planned` describe
 | [views](views.md) | `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `baseline`. |
 | [editing](editing.md) | `move`, `new`, `link`, and the language server `lsp`. |
 | [repositories](repositories.md) | Other repositories, `pin`, and the state of the network. |
+| [results](results.md) | Test results, and what they say of the items. |
 | [importing](importing.md) | `import doorstop`, `import csv`. |
 | [planned](planned.md) | What is to come. |
 

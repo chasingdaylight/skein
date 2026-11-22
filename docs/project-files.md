@@ -25,6 +25,7 @@ type = "srs"
 | --- | --- |
 | `project.name` | The project's name, for reports. |
 | `project.id` | What other projects know this one by, whatever short name they give it: `"cesiumlang/cesium"`. |
+| `results.paths` | The test results files the project keeps, or directories of them: see [test results](results.md). |
 | `repositories` | The other repositories whose items this project's items refer to: see [other repositories](repositories.md). |
 | `repositories.name` | The short name targets use before the colon: `compiler` in `%[compiler:lex.token]`. |
 | `repositories.path` | A checkout on disk, from the project's root: `"../cesium-src"`. |

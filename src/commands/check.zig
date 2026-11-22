@@ -5,6 +5,7 @@ const Io = std.Io;
 
 const cli = @import("../cli.zig");
 const Graph = @import("../graph/Graph.zig");
+const Results = @import("../results/Results.zig");
 const Reviews = @import("../graph/Reviews.zig");
 const Workspace = @import("Workspace.zig");
 const network_checks = @import("../network/checks.zig");
@@ -39,4 +40,11 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
     try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
+    // the results the project keeps: a result that belongs to no item is to be looked at
+    const results = try Results.load(io, arena, ws.root, &ws.project, &.{}, &ws.report);
+    const idx = try results.index(arena, &ws.graph, &ws.citations);
+    for (idx.unmatched) |i| {
+        const r = results.all[i];
+        try ws.report.warn(r.source, 0, 0, "result {d} ({s}) belongs to no item: no item cites its file, and it names none that exists", .{ r.index, r.label() });
+    }
 }

@@ -6,9 +6,6 @@ What `docs/design.md` commits skein to and the code does not do yet, in the orde
 
 %req[render.site removed]
 
-%req[results.import planned]
-skein shall import test results (JUnit XML, TAP, and a format of its own), record which implementation and version produced them, and attach them to the items the tests cite. (Design, section 4.5.)
-
 %req[verification.records planned]
 An item whose verification method is not a test shall be verified by a record of that verification, with its evidence; coverage shall count an item as verified by whichever its method requires. (Design, section 4.5.)
 
