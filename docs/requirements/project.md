@@ -16,6 +16,9 @@ A path in the configuration shall be relative to the project root, written with 
 %req[standards.read-only]
 A source with `read_only = true` shall be read and checked as any other, and `skein move`, `skein link` and `skein new` shall refuse, changing nothing, to write to a file of it; a rename that would change such a file is refused whole. This is for an external standard, which is imported again, not edited.
 
+%req[standards.waivers]
+A link type may count as another (`counts_as`) or excuse from it (`excuses`), not both. For the coverage of the other link type, an item with a link of the first kind is covered (`counts_as`), or is waived (`excuses`): listed as waived and counted neither as covered nor as not, so that an item whose every requirement is met or waived is at 100%. Such a link counts only while the item it comes from is in force: not removed, and, when its type asks for approval, in one of the statuses that need it. A generated matrix of the other link type names the link (`tailors by ...`) or the waiver (`waived by ...`), and counts the waived apart.
+
 %req[project.files-by-name]
 Each item type, link type and profile shall be declared by one TOML file, in `.skein/types/`, `.skein/links/` and `.skein/profiles/`, and takes its name from the file name. A name is lowercase letters, digits, `-` and `_`, starting with a letter.
 

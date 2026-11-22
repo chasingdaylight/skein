@@ -6,8 +6,8 @@ What `docs/design.md` commits skein to and the code does not do yet, in the orde
 
 %req[render.site removed]
 
-%req[standards.external planned]
-A standard the project must comply with shall be an item set of its own, read-only, which the project's items link to, with applicability by profile and with waivers and deviations as item types. (Design, section 4.7.)
+%req[standards.external]
+A standard the project must comply with shall be an item set of its own, read-only, which the project's items link to, with applicability by profile and with waivers and deviations as item types. (Design, section 4.7.) Built: `standards.read-only`, `standards.waivers`, profiles, and generated matrices.
 
 %req[baselines planned]
 When a plan uses values the forge holds (dates, milestones), `skein baseline` shall first write them to a file under `.skein/baselines/`, commit it, and tag that commit. The tag itself is built. (Design, section 6.)

@@ -20,10 +20,16 @@ expected: bool = false,
 review: bool = false,
 /// an issue or pull request it points to must be open
 open: bool = false,
+/// a link of this kind counts as one of that type, for coverage: a waiver
+/// that is as good as compliance
+counts_as: ?[]const u8 = null,
+/// a link of this kind excuses its target from the expectation of that
+/// type: shown as waived, and counted neither as covered nor as not
+excuses: ?[]const u8 = null,
 
 /// The link type that the table of `r` declares; problems go to its report.
 pub fn read(r: Reader, name: []const u8) Reader.Error!LinkType {
-    try r.known(&.{ "description", "from", "to", "required", "expected", "review", "open" });
+    try r.known(&.{ "description", "from", "to", "required", "expected", "review", "open", "counts_as", "excuses" });
     return .{
         .name = name,
         .description = try r.string("description") orelse "",
@@ -33,5 +39,7 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!LinkType {
         .expected = try r.boolean("expected", false),
         .review = try r.boolean("review", false),
         .open = try r.boolean("open", false),
+        .counts_as = try r.string("counts_as"),
+        .excuses = try r.string("excuses"),
     };
 }
