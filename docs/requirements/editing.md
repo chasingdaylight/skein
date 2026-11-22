@@ -19,6 +19,23 @@ A rename is not a change to the content of anything. The review and approval rec
 %req[move.refusals]
 `skein move` shall refuse, and change nothing, when there is no item with the old ID, when the new ID is not spelled as the IDs of the item's type are, when the new ID or the new ID of a part is taken by another item, and when the old and the new ID are the same.
 
+## Starting an item
+
+%req[new.numbered]
+`skein new TYPE` shall give a new item of a numbered type the next free number: one more than the highest number of an item of that type, removed items included, with at least the type's number of digits. A name in the number's place is no number.
+
+%req[new.named]
+`skein new TYPE ID` shall start an item with the ID given, for a type of any ID scheme; a type whose IDs are joined by dots needs it.
+
+%req[new.file]
+Where the type has one source of item files, or `--to DIR` names one, the new item shall be written there as `ID.md`, with front matter that gives its ID, and its type when the source does not give it, and no text yet. A file that is there already is never written over. The path of the file is printed.
+
+%req[new.marker]
+Where the type has no source of item files, the marker to start a paragraph or list entry with shall be printed, and nothing written.
+
+%req[new.refusals]
+`skein new` shall refuse, and write nothing, when the type does not exist, when the ID is taken (also by a removed item) or is not spelled as the type's IDs are, when `--to` names no source of item files, and when the type has more than one source of item files and `--to` names none of them.
+
 ## The language server
 
 %req[lsp.lifecycle]

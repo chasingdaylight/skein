@@ -14,6 +14,7 @@ pub const usage =
     \\  export [WHAT]     Write the graph as JSON, or items, links or citations as CSV
     \\  render --out DIR  Write the documents as Markdown for a site generator
     \\  move OLD NEW      Give an item another ID, everywhere the old one is used
+    \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  import doorstop DIR...
     \\                    Turn Doorstop documents into skein items, in place
     \\  import csv FILE --type TYPE --to DIR
@@ -56,6 +57,7 @@ pub const Command = union(enum) {
     exporting: Export,
     render: Render,
     move: Move,
+    new: New,
     /// the language server
     lsp,
     import: Import,
@@ -112,6 +114,15 @@ pub const Export = struct {
         links,
         citations,
     };
+};
+
+pub const New = struct {
+    common: Common = .{},
+    type_name: []const u8,
+    /// the ID; for a numbered type, the next free one when null
+    id: ?[]const u8 = null,
+    /// the source of item files the item goes to
+    to: ?[]const u8 = null,
 };
 
 pub const Move = struct {
@@ -227,6 +238,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
             return .{ .misuse = "export: json, items, links or citations" };
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
+    }
+    if (eql(name, "new")) {
+        if (try p.allow(&.{ "--root", "--to" })) |problem| return .{ .misuse = problem };
+        if (words.len == 0 or words.len > 2) return .{ .misuse = "new takes an item type, and the ID where the type's IDs are not numbered" };
+        return .{ .new = .{ .common = common, .type_name = words[0], .id = if (words.len == 2) words[1] else null, .to = p.value("--to") } };
     }
     if (eql(name, "move")) {
         if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
@@ -473,6 +489,17 @@ test "lsp takes nothing but the transport" {
     try testing.expectEqual(.lsp, try f.run(&.{"lsp"}));
     try testing.expectEqual(.lsp, try f.run(&.{ "lsp", "--stdio" }));
     try testing.expectEqualStrings("lsp takes no arguments", (try f.run(&.{ "lsp", "--port", "1" })).misuse);
+}
+
+test "new takes a type, and maybe an ID" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    const n = (try f.run(&.{ "new", "srs", "--to", "requirements" })).new;
+    try testing.expectEqualStrings("srs", n.type_name);
+    try testing.expectEqual(null, n.id);
+    try testing.expectEqualStrings("requirements", n.to.?);
+    try testing.expectEqualStrings("lex.a", (try f.run(&.{ "new", "rule", "lex.a" })).new.id.?);
+    try testing.expectEqualStrings("new takes an item type, and the ID where the type's IDs are not numbered", (try f.run(&.{"new"})).misuse);
 }
 
 test "move takes two IDs" {
