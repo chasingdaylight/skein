@@ -6,6 +6,7 @@ const std = @import("std");
 const testing = std.testing;
 
 const check_command = @import("../../commands/check.zig");
+const coverage_command = @import("../../commands/coverage.zig");
 const init_command = @import("../../commands/init.zig");
 const template_command = @import("../../commands/template.zig");
 
@@ -64,6 +65,44 @@ test "init without a template, and with one skein does not have" {
     try expectContains(plain.text, "with 0 documents");
     const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
     try testing.expect(std.mem.find(u8, config, "template") == null);
+}
+
+// req: templates.npr
+test "a project under NPR 7150.2D: its class chooses the requirements and the traces" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    const started = try init_command.run(testing.io, a, .{ .root = root, .template = "npr7150.2d" });
+    try testing.expectEqual(.ok, started.status);
+    // the standard, read-only, where the template's configuration says
+    _ = try tmp.dir.readFileAlloc(testing.io, "standards/npr7150.2d/chapter-3.md", a, .limited(1 << 20));
+    _ = try tmp.dir.readFileAlloc(testing.io, "standards/npr7150.2d/guidance.md", a, .limited(1 << 20));
+    // the class is the project's to give
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "needs the option 'class'");
+
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    const given = try std.mem.replaceOwned(u8, a, config, "# \"class\" = \"\"", "\"class\" = \"C\"");
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = given });
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    const plain = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text;
+    try expectContains(plain, "complies links to swe items: 0 of 88");
+    // class C traces requirements to design; the example procedure verifies the example requirement
+    try expectContains(plain, "satisfies links to requirement items: 0 of 1");
+    try expectContains(plain, "verifies links to requirement items: 1 of 1");
+
+    const safety = try std.mem.replaceOwned(u8, a, given, "\"safety-critical\" = \"false\"", "\"safety-critical\" = \"true\"");
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = safety });
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies links to swe items: 0 of 92");
+
+    // class D does not trace to design
+    const d = try std.mem.replaceOwned(u8, a, given, "\"class\" = \"C\"", "\"class\" = \"D\"");
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = d });
+    const class_d = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text;
+    try testing.expect(std.mem.find(u8, class_d, "satisfies links") == null);
 }
 
 test "eject writes the template's files into .skein/ and keeps the project's own" {

@@ -1,6 +1,7 @@
 //! skein: plain-text requirements, specifications and traceability.
 
 pub const cli = @import("cli.zig");
+pub const csv = @import("import/csv.zig");
 pub const Graph = @import("graph/Graph.zig");
 pub const Json = @import("output/Json.zig");
 pub const markdown = @import("markdown.zig");

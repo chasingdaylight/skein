@@ -9,7 +9,10 @@
     ".site/**",
     "zig-pkg/**",
     ".zig-cache*/**",
-    "zig-out/**"
+    "zig-out/**",
+    // NASA's text, and what tools/npr7150 writes from it
+    "templates/npr7150.2d/project/standards/**",
+    "tools/npr7150/*.csv"
   ],
   "dictionaryDefinitions": [
     {

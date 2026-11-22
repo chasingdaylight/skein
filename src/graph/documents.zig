@@ -125,8 +125,9 @@ const Reader = struct {
                 return at + 1;
             };
             const whole_type = self.schema.itemType(w.item.type_name).?;
-            if (item_type.id != .hierarchical or whole_type.id != .hierarchical) {
-                try self.report.add(self.file, line, column, "{s}: an ID that starts with a dot needs hierarchical IDs for this item and for '{s}'", .{ id, w.item.id });
+            // `lex.keywords.as`, or `SWE-134.a` for a part of a numbered item
+            if (std.meta.activeTag(item_type.id) != std.meta.activeTag(whole_type.id)) {
+                try self.report.add(self.file, line, column, "{s}: an ID that starts with a dot needs IDs of one kind, hierarchical or numbered, for this item and for '{s}'", .{ id, w.item.id });
                 return at + 1;
             }
             id = try self.arena.print("{s}{s}", .{ w.item.id, id });

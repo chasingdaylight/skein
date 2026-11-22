@@ -26,7 +26,7 @@ pub fn run(io: std.Io, arena: std.mem.Allocator, options: cli.TemplateCommand) !
                 if (o.default) |d| try out.print(arena, ", default {s}", .{d});
                 try out.print(arena, ": {s}\n", .{o.description});
             }
-            for ([_][]const u8{ "types", "links", "profiles", "documents" }) |kind| {
+            for ([_][]const u8{ "types", "links", "profiles", "documents", "project" }) |kind| {
                 const files = try Template.filesOf(arena, name, try arena.print("{s}/", .{kind}));
                 if (files.len == 0) continue;
                 try out.print(arena, "\n{c}{s}:\n", .{ std.ascii.toUpper(kind[0]), kind[1..] });

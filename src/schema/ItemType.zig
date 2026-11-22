@@ -167,7 +167,16 @@ pub fn idMatches(self: *const ItemType, id: []const u8) bool {
             if (!std.mem.startsWith(u8, id, n.prefix)) return false;
             const after = id[n.prefix.len..];
             if (!std.mem.startsWith(u8, after, n.separator)) return false;
-            const rest = after[n.separator.len..];
+            var rest = after[n.separator.len..];
+            // a part's name after the number: `SWE-134.a`
+            if (std.mem.findScalar(u8, rest, '.')) |dot| {
+                var parts = std.mem.splitScalar(u8, rest[dot + 1 ..], '.');
+                while (parts.next()) |part| {
+                    if (part.len == 0) return false;
+                    for (part) |c| if (!std.ascii.isLower(c) and !std.ascii.isDigit(c) and c != '_' and c != '-') return false;
+                }
+                rest = rest[0..dot];
+            }
             if (rest.len == 0) return false;
             var digits = true;
             for (rest) |c| {
@@ -198,6 +207,12 @@ test "IDs are matched against the type's scheme" {
     try std.testing.expect(!srs.idMatches("SRS012"));
     try std.testing.expect(!srs.idMatches("SYS-012"));
     try std.testing.expect(!srs.idMatches("SRS-01a"));
+    // a part of a numbered item extends its number
+    try std.testing.expect(srs.idMatches("SRS-012.a"));
+    try std.testing.expect(srs.idMatches("SRS-012.b.2"));
+    try std.testing.expect(!srs.idMatches("SRS-012."));
+    try std.testing.expect(!srs.idMatches("SRS-012.A"));
+    try std.testing.expect(!srs.idMatches("SRS-.a"));
 }
 
 test "numbered IDs with another separator, or none" {

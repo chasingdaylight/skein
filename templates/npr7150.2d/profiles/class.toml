@@ -1,0 +1,6 @@
+description = "The requirements of NPR 7150.2D the project's class ({{class}}) invokes (Appendix C), with those of safety-critical software when it has some"
+types = ["swe"]
+
+[where]
+classes = "{{class}}"
+applies = {{applies}}
