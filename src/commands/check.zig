@@ -71,6 +71,9 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
         try ws.report.warn(r.source, 0, 0, "result {d} ({s}) belongs to no item: no item cites its file, and it names none that exists", .{ r.index, r.label() });
     }
     for (results.all) |r| {
+        for (r.evidence) |file| {
+            ws.root.access(io, file, .{}) catch try ws.report.warn(r.source, 0, 0, "result {d} ({s}): its evidence '{s}' is not in the project", .{ r.index, r.label(), file });
+        }
         const changed = r.stale orelse continue;
         try ws.report.warn(r.source, 0, 0, "result {d} ({s}) is stale: '{s}' has changed since it was recorded; record it again ('skein result')", .{ r.index, r.label(), changed });
     }

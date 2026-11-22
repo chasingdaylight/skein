@@ -52,6 +52,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Result) !Workspace.Out
     if (commit.len > 0) try text.print(arena, "commit = {s}\n", .{try write.string(arena, commit)});
     if (options.implementation) |v| try text.print(arena, "implementation = {s}\n", .{try write.string(arena, v)});
     if (options.note) |n| try text.print(arena, "note = {s}\n", .{try write.string(arena, n)});
+    if (options.evidence.len > 0) try text.print(arena, "evidence = {s}\n", .{try write.strings(arena, options.evidence)});
     try text.print(arena, "fingerprints = {s}\n", .{try write.strings(arena, prints.items)});
 
     const old = ws.root.readFileAlloc(io, file, arena, .limited(1 << 26)) catch |e| switch (e) {

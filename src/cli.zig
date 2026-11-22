@@ -62,6 +62,7 @@ pub const usage =
     \\  --by NAME         approve, result: who (default: git's user.name)
     \\  --on DATE         approve, result: when, as 2027-03-01 (default: today)
     \\  --note TEXT       result: what to keep with it
+    \\  --evidence PATH   result: a file that shows it; may be given more than once
     \\  --implementation NAME
     \\                    result: what produced it
     \\  --type TYPE       import csv: the item type of the rows
@@ -296,6 +297,8 @@ pub const Result = struct {
     on: ?[]const u8 = null,
     note: ?[]const u8 = null,
     implementation: ?[]const u8 = null,
+    /// the files that show it
+    evidence: []const []const u8 = &.{},
 };
 
 /// Every option, and whether a value follows it
@@ -327,6 +330,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--note", .takes_value = true },
     .{ .name = "--implementation", .takes_value = true },
     .{ .name = "--from-pull-request", .takes_value = true },
+    .{ .name = "--evidence", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -470,10 +474,10 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return if (eql(name, "review")) .{ .review = review } else .{ .clear = review };
     }
     if (eql(name, "result")) {
-        if (try p.allow(&.{ "--root", "--by", "--on", "--note", "--implementation" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--by", "--on", "--note", "--implementation", "--evidence" })) |problem| return .{ .misuse = problem };
         if (words.len != 2) return .{ .misuse = "result takes the item and how it went: pass, fail or skip" };
         const outcome = std.meta.stringToEnum(Results.Outcome, words[1]) orelse return .{ .misuse = "result: pass, fail or skip" };
-        return .{ .result = .{ .common = common, .id = words[0], .outcome = outcome, .by = p.value("--by"), .on = p.value("--on"), .note = p.value("--note"), .implementation = p.value("--implementation") } };
+        return .{ .result = .{ .common = common, .id = words[0], .outcome = outcome, .by = p.value("--by"), .on = p.value("--on"), .note = p.value("--note"), .implementation = p.value("--implementation"), .evidence = try p.values("--evidence") } };
     }
     if (eql(name, "approve")) {
         if (try p.allow(&.{ "--root", "--by", "--on", "--from-pull-request" })) |problem| return .{ .misuse = problem };

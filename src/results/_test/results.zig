@@ -132,6 +132,37 @@ test "a generated coverage page shows the results" {
     try expectContains(page, "Failed in cesium0 0.3.1: [`lex.a`](lex.md#lex.a), [`lex.b`](lex.md#lex.b).");
 }
 
+// req: verification.records, verification.coverage
+test "items are verified as their method requires: by a test, or by a record" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    const a = f.arena.allocator();
+    try write(f.tmp.dir, ".skein/types/rule.toml", "verification = [\"test\", \"inspection\", \"analysis\"]\n");
+    try write(f.tmp.dir, "spec/lex.md",
+        \\%rule[lex.a verification=test] Tested, and one of its tests fails.
+        \\
+        \\%rule[lex.b verification=test] Tested.
+        \\
+        \\%rule[lex.c verification=inspection] Inspected by hand.
+        \\
+        \\%rule[lex.d verification=analysis] Not analyzed yet.
+        \\
+        \\%procedure[tp.inspect verifies=lex.c] Look at the listing.
+        \\
+    );
+    try write(f.tmp.dir, "tests/two.zig", "// spec: lex.b\ntest \"b\" {}\n");
+    try write(f.tmp.dir, "reports/listing.txt", "Looked at it.\n");
+    const recorded = try result_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .id = "tp.inspect", .outcome = .pass, .by = "A. Tester", .on = "2026-11-22", .evidence = &.{ "reports/listing.txt", "reports/missing.txt" } });
+    try testing.expectEqual(.ok, recorded.status);
+    try expectContains(try f.tmp.dir.readFileAlloc(testing.io, "verification/results/recorded.toml", a, .limited(1 << 16)), "evidence = [\"reports/listing.txt\", \"reports/missing.txt\"]\n");
+
+    const out = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = f.root } })).text;
+    // tests/one.zig cites lex.a and passes; tests/two.zig now cites lex.b alone, and fails
+    try expectContains(out, "verified as their method requires:\n  test: 1 of 2 (50%)\n    not verified:\n      lex.b\n  inspection: 1 of 1 (100%)\n  analysis: 0 of 1 (0%)\n    not verified:\n      lex.d\n");
+    try expectContains((try check_command.run(testing.io, a, .{ .root = f.root })).text, "verification/results/recorded.toml: warning: result 1 (tp.inspect): its evidence 'reports/missing.txt' is not in the project");
+}
+
 // req: results.recorded, results.stale
 test "a result a person records, which is stale once what it verified changes" {
     var f: Fixture = undefined;

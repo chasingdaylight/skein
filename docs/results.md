@@ -56,6 +56,27 @@ skein: recorded that tp.lex.inspect-comments passed, by A. Tester, in verificati
 
 It goes into the results the project keeps (the first of `[results] paths`), with who (`--by`, default git's `user.name`), when (`--on`, default today), the commit checked out, and the fingerprints of the procedure and of what it verifies. As an approval does, it then goes stale once one of them changes: the result says nothing of the item any more, and `check` warns that it is to be recorded again.
 
+## Verified as each item's method requires
+
+An item says how it is verified (`verification=inspection`, among the methods its type declares). `skein coverage` counts, per method, the items verified as that method requires: one verified by `test` by a passing result of a test; one verified by analysis, inspection or demonstration by a passing result a person recorded, of it or of a procedure that links to it, that is not stale.
+
+```text
+verified as their method requires:
+  test: 40 of 42 (95%)
+    not verified:
+      lex.comment
+      lex.keywords.as
+  inspection: 3 of 3 (100%)
+```
+
+A record can name the files that show it, a report or a log, kept in the repository:
+
+```text
+skein result tp.inspect pass --evidence reports/listing-review.pdf
+```
+
+`check` warns when such a file is not in the project.
+
 ## What skein says of them
 
 Per implementation, an item **passes** when every result that belongs to it passed, **fails** when one failed, and is **untested** when none belongs to it or all were skipped.

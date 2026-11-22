@@ -30,6 +30,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
     if (ws.report.problems.items.len > before) return ws.problems();
     const idx = try results.index(arena, &ws.graph, &ws.citations);
     const summaries = try summary.compute(arena, &results, &idx, &ws.project, &ws.graph, profile);
+    const methods = try summary.byMethod(arena, &results, &idx, &ws.project, &ws.graph, profile);
 
     if (options.json) {
         var j: Json = .{ .arena = arena };
@@ -89,6 +90,21 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
         try j.endArray();
         try j.key("unmatched");
         try j.integer(@intCast(idx.unmatched.len));
+        try j.key("verification");
+        try j.beginArray();
+        for (methods) |m| {
+            try j.beginObject();
+            try j.key("method");
+            try j.string(m.method);
+            try j.key("total");
+            try j.integer(@intCast(m.total));
+            try j.key("verified");
+            try j.integer(@intCast(m.verified));
+            try j.key("unverified");
+            try j.strings(m.unverified);
+            try j.endObject();
+        }
+        try j.endArray();
         try j.endObject();
         return .{ .text = try j.finish() };
     }
@@ -98,6 +114,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
         try md.appendSlice(arena, try markdown(arena, ws.name(), options.profile, expectations));
         if (summaries.len > 0) try md.appendSlice(arena, "\n| Results | Passed | Failed | Untested |\n| --- | ---: | ---: | ---: |\n");
         for (summaries) |s| try md.print(arena, "| {s} | {d} of {d} | {d} | {d} |\n", .{ s.label, s.passed, s.total, s.failed.len, s.untested.len });
+        if (methods.len > 0) try md.appendSlice(arena, "\n| Verified by | Verified |\n| --- | ---: |\n");
+        for (methods) |m| try md.print(arena, "| {s} | {d} of {d} |\n", .{ m.method, m.verified, m.total });
         for (summaries) |s| {
             if (s.failed.len == 0) continue;
             try md.print(arena, "\n<details>\n<summary>{d} failed in {s}</summary>\n\n", .{ s.failed.len, s.label });
@@ -137,6 +155,14 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
         for (s.failed) |id| try out.print(arena, "    {s}\n", .{id});
         if (s.untested.len > 0) try out.appendSlice(arena, "  untested:\n");
         for (s.untested) |id| try out.print(arena, "    {s}\n", .{id});
+    }
+    if (methods.len > 0) try out.appendSlice(arena, "\nverified as their method requires:\n");
+    for (methods) |m| {
+        try out.print(arena, "  {s}: ", .{m.method});
+        try ratio(arena, &out, m.verified, m.total);
+        try out.append(arena, '\n');
+        if (m.unverified.len > 0) try out.appendSlice(arena, "    not verified:\n");
+        for (m.unverified) |id| try out.print(arena, "      {s}\n", .{id});
     }
     if (idx.unmatched.len > 0) try out.print(arena, "\n{d} {s} to no item:\n", .{ idx.unmatched.len, if (idx.unmatched.len == 1) "result that belongs" else "results that belong" });
     for (idx.unmatched) |i| {
