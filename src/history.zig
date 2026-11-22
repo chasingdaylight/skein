@@ -43,12 +43,23 @@ pub const Snapshot = struct {
 /// an empty project. What is wrong with the old project is not reported:
 /// it is history.
 pub fn snapshot(io: Io, arena: std.mem.Allocator, root: Io.Dir, revision: []const u8) Error!Snapshot {
-    const git_dir = trimmed(try git.output(io, arena, root, &.{ "rev-parse", "--absolute-git-dir" }) orelse return error.NoGit);
+    // inside git's own directory: never tracked, and there whenever git is
+    return snapshotIn(io, arena, root, revision, try Io.Dir.path.join(arena, &.{ try gitDir(io, arena, root), "skein-snapshots" }));
+}
+
+/// The absolute path of the git directory of the repository `root` is in
+pub fn gitDir(io: Io, arena: std.mem.Allocator, root: Io.Dir) Error![]const u8 {
+    return trimmed(try git.output(io, arena, root, &.{ "rev-parse", "--absolute-git-dir" }) orelse return error.NoGit);
+}
+
+/// As `snapshot`, with the files unpacked under `scratch` (an absolute
+/// path), so that another repository's own directory is left alone
+pub fn snapshotIn(io: Io, arena: std.mem.Allocator, root: Io.Dir, revision: []const u8, scratch: []const u8) Error!Snapshot {
+    _ = try gitDir(io, arena, root);
     const spec = try arena.print("{s}^{{commit}}", .{revision});
     const commit = trimmed(try git.output(io, arena, root, &.{ "rev-parse", "--verify", "--quiet", spec }) orelse return error.UnknownRevision);
 
-    // inside git's own directory: never tracked, and there whenever git is
-    var parent = Io.Dir.cwd().createDirPathOpen(io, try Io.Dir.path.join(arena, &.{ git_dir, "skein-snapshots" }), .{}) catch return error.SnapshotFailed;
+    var parent = Io.Dir.cwd().createDirPathOpen(io, scratch, .{}) catch return error.SnapshotFailed;
     errdefer parent.close(io);
     parent.deleteTree(io, commit) catch {};
     var dir = parent.createDirPathOpen(io, commit, .{}) catch return error.SnapshotFailed;

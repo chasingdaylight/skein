@@ -24,6 +24,12 @@ type = "srs"
 | Key | Meaning |
 | --- | --- |
 | `project.name` | The project's name, for reports. |
+| `project.id` | What other projects know this one by, whatever short name they give it: `"cesiumlang/cesium"`. |
+| `repositories` | The other repositories whose items this project's items refer to: see [other repositories](repositories.md). |
+| `repositories.name` | The short name targets use before the colon: `compiler` in `%[compiler:lex.token]`. |
+| `repositories.path` | A checkout on disk, from the project's root: `"../cesium-src"`. |
+| `repositories.url` | An address git can fetch from, in place of a path. |
+| `repositories.ref` | For a `url`: the branch or tag `--current` follows. |
 | `sources` | The places that hold items. |
 | `sources.path` | A directory, from the project's root, with forward slashes. |
 | `sources.kind` | `"documents"` (the default) or `"items"`. |

@@ -7,6 +7,7 @@ const cli = @import("../cli.zig");
 const Graph = @import("../graph/Graph.zig");
 const Reviews = @import("../graph/Reviews.zig");
 const Workspace = @import("Workspace.zig");
+const network_checks = @import("../network/checks.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options)) {
@@ -19,8 +20,9 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Out
     if (!ws.report.ok()) return ws.problems();
     const schema = ws.project.schema;
     return .{
-        .text = try arena.print("skein: {s}: no problems ({d} items of {d} types, {d} link types, {d} profiles, {d} citations)\n", .{
-            ws.name(), ws.graph.items.len, schema.types.len, schema.links.len, schema.profiles.len, ws.citations.all.len,
+        .text = try arena.print("{s}skein: {s}: no problems{s} ({d} items of {d} types, {d} link types, {d} profiles, {d} citations)\n", .{
+            try ws.report.render(arena), ws.name(),            try ws.warningCount(), ws.graph.items.len, schema.types.len, schema.links.len,
+            schema.profiles.len,         ws.citations.all.len,
         }),
     };
 }
@@ -32,6 +34,7 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     if (!ws.report.ok()) return;
     try Graph.checks.run(&ws.graph, &ws.project.schema, &ws.report);
     try ws.citations.check(&ws.project, &ws.graph, &ws.report);
+    try network_checks.run(arena, &ws.project, &ws.graph, &ws.citations, &ws.network, &ws.report);
     const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
     const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
     try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);

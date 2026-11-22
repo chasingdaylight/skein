@@ -13,6 +13,7 @@ const move = @import("commands/move.zig");
 const new = @import("commands/new.zig");
 const link = @import("commands/link.zig");
 const baseline = @import("commands/baseline.zig");
+const pin = @import("commands/pin.zig");
 const render = @import("commands/render.zig");
 const review = @import("commands/review.zig");
 const trace = @import("commands/trace.zig");
@@ -40,6 +41,7 @@ pub fn main(init: std.process.Init) !void {
         .new => |options| try new.run(io, arena, options),
         .link => |options| try link.run(io, arena, options),
         .baseline => |options| try baseline.run(io, arena, options),
+        .pin => |options| try pin.run(io, arena, options),
         .lsp => std.process.exit(try lsp.serve(io, init.gpa, version)),
         .import => |options| switch (options.format) {
             .doorstop => try import_doorstop.run(io, arena, options),
