@@ -1,0 +1,11 @@
+description = "The entrance and success criteria of a life-cycle review (NPR 7123.1D, Appendix G; G-6 is Table G-6, the PDR's), each criterion a part (G-6.e1, G-6.s1); read-only, from skein's template"
+id = "numbered"
+prefix = "G"
+digits = 1
+
+# the review, as the NPR abbreviates it, and its name
+[attributes.review]
+normative = false
+
+[attributes.title]
+normative = false

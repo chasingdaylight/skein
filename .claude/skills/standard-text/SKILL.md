@@ -5,6 +5,8 @@ description: Take the text of a standard or procedural requirement (NASA NPRs fr
 
 # A standard's text in a template
 
+<!-- cspell:ignore gsfc swehb -->
+
 The text is taken once and kept by hand from then on, when the issuer revises it (emanspeaks, 2026-11-22). The program that takes it need not be kept; the scripts that read one document's layout belong in the scratchpad, in any language (Python is fine there), never in the repository. What is kept is reusable code: `tools/pdf` (a PDF reader) and `tools/npr7150` (the NODIS HTML of NPR 7150.2D).
 
 1. **The latest revision:** the trailing letter is the revision (NPR 7150.2D is revision D). Check NODIS (`nodis3.gsfc.nasa.gov`) for NPRs and `standards.nasa.gov` for standards; take the approved copy, not a draft (a draft says "official draft has not been approved").

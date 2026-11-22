@@ -1,0 +1,18 @@
+description = "A life-cycle or technical review the project holds (NPR 7123.1D, section 5.2 and Appendix G): its kind, date and board"
+id = "numbered"
+prefix = "REV"
+statuses = ["planned", "held", "closed", "cancelled"]
+tombstone = "cancelled"
+
+# the reviews as Appendix G names them
+# cspell:ignore PLAR CERR PFAR
+[attributes.kind]
+values = ["MCR", "SRR", "MDR", "SDR", "PDR", "CDR", "PRR", "SIR", "TRR", "SAR", "ORR", "MRR", "FRR", "PLAR", "CERR", "PFAR", "DR", "DRR", "PIR", "PSR", "DCR", "peer"]
+required = true
+
+# when it is held: a milestone of the project's schedule
+[attributes.date]
+type = "date"
+
+[attributes.board]
+normative = false
