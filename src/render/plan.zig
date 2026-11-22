@@ -1,15 +1,20 @@
 //! The schedule for rendering: computed from the items with the project's
-//! calendar, as `skein schedule` stores it, and the schedules stored at
-//! baselines, read from git.
+//! calendar, as `skein schedule` stores it; the schedules stored at
+//! baselines; and a milestone's history for burndown and burnup charts,
+//! read from git.
 
 const std = @import("std");
 const Io = std.Io;
 
 const Calendar = @import("../planning/Calendar.zig");
+const Graph = @import("../graph/Graph.zig");
+const Project = @import("../Project.zig");
 const Resources = @import("../planning/Resources.zig");
 const Report = @import("../Report.zig");
 const Work = @import("../planning/Work.zig");
 const Workspace = @import("../commands/Workspace.zig");
+const burn = @import("../planning/burn.zig");
+const day = @import("../planning/day.zig");
 const gantt = @import("gantt.zig");
 const git = @import("../git.zig");
 const schedule = @import("../planning/schedule.zig");
@@ -24,28 +29,39 @@ pub fn load(io: Io, arena: std.mem.Allocator, ws: *const Workspace) !?*const gan
     var ignored: Report = .{ .arena = arena };
     const calendar = try arena.create(Calendar);
     calendar.* = if (try Resources.load(io, arena, ws.root, &ignored)) |r| r.calendar else .every_day;
-    const at = try arena.create(Baselines);
-    at.* = .{ .io = io, .arena = arena, .root = ws.root };
+    const at = try arena.create(History);
+    at.* = .{ .io = io, .arena = arena, .root = ws.root, .project = &ws.project, .graph = &ws.graph };
     const plan = try arena.create(gantt.Plan);
     plan.* = .{
         .entries = try schedule.compute(arena, works, calendar),
         .calendar = calendar,
-        .baseline = Baselines.bars,
+        .baseline = History.bars,
+        .burn = History.points,
         .baseline_ctx = at,
+        .today = @intCast(@divFloor(Io.Clock.real.now(io).toSeconds(), 86400)),
     };
     return plan;
 }
 
-const Baselines = struct {
+/// What the plan reads from git, and the project as it is
+const History = struct {
     io: Io,
     arena: std.mem.Allocator,
     root: Io.Dir,
+    project: *const Project,
+    graph: *const Graph,
 
     fn bars(ctx: *const anyopaque, name: []const u8) gantt.Error!?[]const gantt.Bar {
-        const self: *const Baselines = @ptrCast(@alignCast(ctx));
+        const self: *const History = @ptrCast(@alignCast(ctx));
         // a name git could take for an option is no tag
         if (name.len == 0 or name[0] == '-') return null;
         const text = try git.output(self.io, self.arena, self.root, &.{ "show", try self.arena.print("refs/tags/{s}:{s}", .{ name, stored.toml_file }) }) orelse return null;
         return gantt.barsOf(self.arena, text);
+    }
+
+    fn points(ctx: *const anyopaque, milestone: []const u8, first: day.Day, last: day.Day, count: burn.Count) gantt.Error![]const burn.Point {
+        const self: *const History = @ptrCast(@alignCast(ctx));
+        const today: day.Day = @intCast(@divFloor(Io.Clock.real.now(self.io).toSeconds(), 86400));
+        return burn.compute(self.io, self.arena, self.root, .{ .project = self.project, .graph = self.graph }, milestone, first, last, today, count);
     }
 };

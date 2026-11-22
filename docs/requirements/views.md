@@ -145,6 +145,9 @@ A fenced code block of the language `skein` in a document shall be a request for
 %req[render.generated.coverage]
 `coverage [profile=P]` shall give what `skein coverage` counts, as a table, with links to the items that are not covered.
 
+%req[render.burn]
+`burndown MILESTONE [weight] [from=DATE] [to=DATE]` and `burnup ...` shall give a milestone's charts, as GitLab draws them, as `mermaid` blocks: over its days (from the first start of its work, else `from`, to its finish, else `to`) up to today, the burndown shows what remains beside a straight guideline from the starting total to none on the last day; the burnup shows the scope and what is done. Under each, a table of the days with the scope, what is done and what remains. A milestone whose days are not known is said so.
+
 %req[render.gantt]
 `gantt [TYPE...] [conditions] [by=parent|assignee] [baseline=NAME]` shall give the schedule of the work items that pass the conditions as a Gantt chart, a `mermaid` block drawn as `render.mermaid` says, as `skein schedule` computes it: a bar for each scheduled item, marked critical on the critical path, a milestone for work of no duration, the days that are not working days left out, in a section for each item with parts (with its parts) or, `by=assignee`, for each assignee; with `baseline=NAME`, each item's bar in the schedule stored at that baseline (a tag) drawn under its bar now, to show slippage. Under the chart, a table of each item with its start, finish, slack and predecessors, linked, and the items that cannot be scheduled. (Design, section 10.3.)
 
