@@ -21,6 +21,7 @@ pub const usage =
     \\  review ID...      Record the links of these items as reviewed
     \\  clear ID...       Record the links to these items as reviewed
     \\  approve ID...     Record an approval of these items as they are now
+    \\  lsp               Serve editors as a language server, on standard input and output
     \\  help              Show this text
     \\  version           Show skein's version
     \\
@@ -55,6 +56,8 @@ pub const Command = union(enum) {
     exporting: Export,
     render: Render,
     move: Move,
+    /// the language server
+    lsp,
     import: Import,
     review: Review,
     clear: Review,
@@ -181,6 +184,13 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
     const name = args[0];
     if (eql(name, "help") or eql(name, "--help") or eql(name, "-h")) return .help;
     if (eql(name, "version") or eql(name, "--version")) return .version;
+    if (eql(name, "lsp")) {
+        // `--stdio` is what editors pass to pick the only transport there is
+        for (args[1..]) |arg| {
+            if (!eql(arg, "--stdio")) return .{ .misuse = "lsp takes no arguments" };
+        }
+        return .lsp;
+    }
 
     var p: Parsed = .{ .arena = arena, .command = name };
     if (try p.read(args[1..])) |problem| return .{ .misuse = problem };
@@ -455,6 +465,14 @@ test "export takes what to export" {
     try testing.expectEqual(.links, e.what);
     try testing.expectEqualStrings("s0", e.profile.?);
     try testing.expectEqualStrings("export: json, items, links or citations", (try f.run(&.{ "export", "everything" })).misuse);
+}
+
+test "lsp takes nothing but the transport" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    try testing.expectEqual(.lsp, try f.run(&.{"lsp"}));
+    try testing.expectEqual(.lsp, try f.run(&.{ "lsp", "--stdio" }));
+    try testing.expectEqualStrings("lsp takes no arguments", (try f.run(&.{ "lsp", "--port", "1" })).misuse);
 }
 
 test "move takes two IDs" {

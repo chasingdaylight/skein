@@ -198,6 +198,36 @@ Record that links have been reviewed; see [reviewing](reviewing.md). `review` ta
 
 Records that someone approved these items as they are now; see [reviewing](reviewing.md). `--by NAME` says who (default: the name git has for the user), `--on DATE` when (default: today).
 
+## `skein lsp`
+
+A language server for editors, on standard input and output. It works in the Markdown documents of a project and in the code and tests that cite its items.
+
+- **Problems as you save:** what `skein check` reports is shown on the lines it concerns, in every file of the project, and updated whenever a file is saved.
+- **Go to definition:** from the ID of an item to where it is declared, whether the ID stands in a reference (`%[lex.token]`), a link (`verifies=lex.token`), a citation in a test (`// spec: lex.token`) or plain text.
+- **Find references:** every place that names an item: references, links and citations.
+- **Hover:** the item's type, category and status, its text and its parts.
+
+Any editor with a Language Server Protocol client can use it. Tell the editor to start `skein lsp` for Markdown files (and for the source files that hold citations) with the project's directory as the root. For example, in Neovim:
+
+```lua
+vim.lsp.config('skein', { cmd = { 'skein', 'lsp' }, filetypes = { 'markdown' }, root_markers = { '.skein' } })
+vim.lsp.enable('skein')
+```
+
+and in Helix's `languages.toml`:
+
+```toml
+[language-server.skein]
+command = "skein"
+args = ["lsp"]
+
+[[language]]
+name = "markdown"
+language-servers = ["skein"]
+```
+
+The VS Code extension does not start the server yet. Completion of IDs and renaming from the editor are planned; `skein move` renames from the command line.
+
 ## `skein help`, `skein version`
 
 The usage text, and skein's version.
