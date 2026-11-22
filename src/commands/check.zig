@@ -15,14 +15,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Out
     };
     defer ws.close();
 
-    if (ws.report.ok()) {
-        try Graph.checks.run(&ws.graph, &ws.project.schema, &ws.report);
-        try ws.citations.check(&ws.project, &ws.graph, &ws.report);
-        const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
-        const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
-        try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
-        try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
-    }
+    try all(io, arena, &ws);
     if (!ws.report.ok()) return ws.problems();
     const schema = ws.project.schema;
     return .{
@@ -30,4 +23,17 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Out
             ws.name(), ws.graph.items.len, schema.types.len, schema.links.len, schema.profiles.len, ws.citations.all.len,
         }),
     };
+}
+
+/// Adds to the report of `ws` everything that is wrong with the project.
+/// When the configuration or the schema has problems, the items were not
+/// read and only those problems are in it.
+pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
+    if (!ws.report.ok()) return;
+    try Graph.checks.run(&ws.graph, &ws.project.schema, &ws.report);
+    try ws.citations.check(&ws.project, &ws.graph, &ws.report);
+    const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
+    const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
+    try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
+    try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
 }

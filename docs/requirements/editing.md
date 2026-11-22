@@ -1,6 +1,6 @@
-# Editing
+# Editing and editors
 
-Commands that change a project's files. The user documentation is in `docs/commands.md`.
+Commands that change the files of a project, and the language server for editors. The user documentation is in `docs/commands.md`.
 
 ## Renaming an ID
 
@@ -18,3 +18,20 @@ A rename is not a change to the content of anything. The review and approval rec
 
 %req[move.refusals]
 `skein move` shall refuse, and change nothing, when there is no item with the old ID, when the new ID is not spelled as the IDs of the item's type are, when the new ID or the new ID of a part is taken by another item, and when the old and the new ID are the same.
+
+## The language server
+
+%req[lsp.lifecycle]
+`skein lsp` shall serve the Language Server Protocol on standard input and output: it answers `initialize` with what it can do, refuses requests before that, answers a request it does not know with an error and no more, and ends with status 0 after `shutdown` and `exit`. The project is the one in the directory the editor has open.
+
+%req[lsp.diagnostics]
+The server shall publish the problems that `skein check` reports as diagnostics, each on its file and line: when it starts, and whenever a document is opened or saved or the editor says files have changed. When a file that had problems has none, its diagnostics are published as empty. The project is read from the files, so a change counts once it is saved.
+
+%req[lsp.definition]
+On the ID of an item, wherever it is written (a reference, a link, a citation in code or tests, or plain text), "go to definition" shall lead to the marker or the file that declares the item. On a marker that names a part by a leading dot, it leads to that part.
+
+%req[lsp.references]
+"Find references" on an item shall list its declaration, when asked for, and every place that names it: references in the text of items and in narrative text, links, and citations.
+
+%req[lsp.hover]
+Hovering over the ID of an item shall show its ID, type, category and status, its text, and its parts. The position is taken in the text the editor shows, saved or not.

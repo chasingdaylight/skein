@@ -5,6 +5,7 @@ const check = @import("commands/check.zig");
 const diff = @import("commands/diff.zig");
 const exporter = @import("commands/export.zig");
 const import_csv = @import("commands/import_csv.zig");
+const lsp = @import("commands/lsp.zig");
 const import_doorstop = @import("commands/import_doorstop.zig");
 const coverage = @import("commands/coverage.zig");
 const cli = @import("cli.zig");
@@ -33,6 +34,7 @@ pub fn main(init: std.process.Init) !void {
         .exporting => |options| try exporter.run(io, arena, options),
         .render => |options| try render.run(io, arena, options),
         .move => |options| try move.run(io, arena, options),
+        .lsp => std.process.exit(try lsp.serve(io, init.gpa, version)),
         .import => |options| switch (options.format) {
             .doorstop => try import_doorstop.run(io, arena, options),
             .csv => try import_csv.run(io, arena, options),

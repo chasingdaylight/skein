@@ -28,6 +28,7 @@ test {
     _ = @import("commands/export.zig");
     _ = @import("commands/render.zig");
     _ = @import("commands/move.zig");
+    _ = @import("commands/lsp.zig");
     _ = @import("render/markdown.zig");
     _ = @import("import/doorstop/convert.zig");
     _ = @import("commands/import_doorstop.zig");
