@@ -130,7 +130,24 @@ assignees = "owner"
 | `mode` | `"fixed"` or `"float"` | Fixed work keeps the dates written for it; float work is scheduled from its predecessors and its parent. Without it, work with a start is fixed and work without is float. |
 | `assignees`, `priority`, `milestone` | any | Who does it, how urgent it is, and what it belongs to. |
 
-A day is a calendar day, until calendars come with resources. `skein check` reports a finish before the start, a start, duration and finish that do not agree (a start of 2027-03-01 and 5 days finish on 2027-03-05), fixed work without a start, a loop of predecessors or of parents, and work that others follow without a known length.
+Days are working days of the project's calendar (below); without one, every day is. `skein check` reports a finish before the start, a start, duration and finish that do not agree (from Monday 2027-03-01, 5 working days finish on Friday 2027-03-05), fixed work without a start, a loop of predecessors or of parents, and work that others follow without a known length.
+
+## `.skein/resources.toml`: people and the calendar
+
+```toml
+[calendar]
+workdays = ["mon", "tue", "wed", "thu", "fri"]   # the default
+hours = 8                                        # of a working day; the default
+holidays = [2027-12-24, 2027-12-31]
+
+[people.ann]
+name = "Ann Example"
+share = 0.8                                      # of full-time work; or hours = 32, a week
+absent = [2027-04-02, [2027-03-08, 2027-03-12]]  # days, and first and last days
+workdays = ["mon", "tue", "wed", "thu"]          # her own week, when not the project's
+```
+
+A person is named by a handle the project chooses (here `ann`), which work items give as their assignees. `skein load` shows each person's work week by week beside the hours they can work, and `skein check` warns of a week with more work than hours, and reports an assignee who is not listed.
 
 ## `.skein/links/<name>.toml`: a link type
 

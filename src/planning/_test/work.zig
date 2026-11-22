@@ -89,7 +89,7 @@ test "check: dates against the duration, modes, loops, and what has no length" {
         \\%req[r.one] A requirement.
         \\
     );
-    try expectContains(out, "t.a: a start of 2027-03-01 and a duration of 5 days finish on 2027-03-05, not 2027-03-09");
+    try expectContains(out, "t.a: a start of 2027-03-01 and a duration of 5 working days finish on 2027-03-05, not 2027-03-09");
     try expectContains(out, "t.b: it finishes (2027-03-01) before it starts (2027-03-10)");
     try expectContains(out, "t.c: a fixed work item needs a start");
     try expectContains(out, "t.d: 't.e' follows it, and it has no duration");

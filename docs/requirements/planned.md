@@ -26,9 +26,6 @@ Work shall be items with planning attributes (dates or durations, effort, assign
 %req[planning.views planned]
 skein shall draw Gantt charts, burndown and burnup charts, boards and a roadmap, as static pages. (Design, section 10.3.)
 
-%req[planning.resources planned]
-skein shall hold people's capacities and calendars, compute their load, and report overallocation. (Design, section 10.2.)
-
 %req[planning.forge planned]
 What a forge holds about an issue shall stay there and be read through the adapter; `.skein/` holds only what the forge lacks. A what-if plan is a branch whose deviations from the forge are kept as an overlay, and a full mirror is an option. (Design, section 10.4.)
 

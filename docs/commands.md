@@ -359,6 +359,18 @@ Writes each tested example (see [writing items](writing-items.md#tested-examples
 
 skein runs none of them: the project's test driver reads the index, compiles or runs each file, and fails when an example is not accepted or rejected as it must be.
 
+## `skein load`
+
+Each person of `.skein/resources.toml` with their work week by week (ISO weeks) and the hours they can work that week:
+
+```text
+ann (Ann Example)
+  2027-W09  2027-03-01    64.0 h of  32.0 h  over by 32.0 h
+  2027-W10  2027-03-08    24.0 h of  40.0 h
+```
+
+The work of an item is its estimate (else its duration) in days of the calendar's hours, spread evenly over its working days and shared evenly among its assignees. What a person can work is their share of the calendar's hours (or their hours a week) on their working days, less holidays and absences. Work without dates counts once it is scheduled. `--json` gives the same as JSON.
+
 ## `skein lsp`
 
 A language server for editors, on standard input and output. It works in the Markdown documents of a project and in the code and tests that cite its items.

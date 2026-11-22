@@ -8,6 +8,7 @@ const import_csv = @import("commands/import_csv.zig");
 const lsp = @import("commands/lsp.zig");
 const import_doorstop = @import("commands/import_doorstop.zig");
 const coverage = @import("commands/coverage.zig");
+const load = @import("commands/load.zig");
 const cli = @import("cli.zig");
 const move = @import("commands/move.zig");
 const new = @import("commands/new.zig");
@@ -59,6 +60,7 @@ pub fn main(init: std.process.Init) !void {
         },
         .trace => |options| try trace.run(io, arena, options),
         .coverage => |options| try coverage.run(io, arena, options),
+        .load => |options| try load.run(io, arena, options),
         .unknown => |name| .{
             .text = try arena.print("skein: unknown command '{s}'\n\n{s}", .{ name, cli.usage }),
             .status = .misuse,

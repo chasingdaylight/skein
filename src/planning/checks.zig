@@ -5,6 +5,7 @@
 
 const std = @import("std");
 
+const Calendar = @import("Calendar.zig");
 const Graph = @import("../graph/Graph.zig");
 const Report = @import("../Report.zig");
 const Schema = @import("../schema/Schema.zig");
@@ -13,9 +14,9 @@ const day = @import("day.zig");
 
 const Error = std.mem.Allocator.Error;
 
-pub fn run(arena: std.mem.Allocator, schema: *const Schema, graph: *const Graph, report: *Report) Error!void {
+pub fn run(arena: std.mem.Allocator, schema: *const Schema, graph: *const Graph, calendar: *const Calendar, report: *Report) Error!void {
     const works = try Work.collect(arena, schema, graph);
-    for (works) |*w| try own(w, report);
+    for (works) |*w| try own(w, calendar, report);
     // a predecessor's finish is what the items after it are scheduled from
     var without_length: std.StringHashMapUnmanaged(void) = .empty;
     for (works) |*w| for (w.after) |id| {
@@ -38,7 +39,7 @@ pub fn run(arena: std.mem.Allocator, schema: *const Schema, graph: *const Graph,
 }
 
 /// The item's own values
-fn own(w: *const Work, report: *Report) Error!void {
+fn own(w: *const Work, calendar: *const Calendar, report: *Report) Error!void {
     const item = w.item;
     if (w.written_mode != null and w.mode() == null) {
         try report.add(item.file, item.line, 1, "{s}: '{s}' is no scheduling mode: \"fixed\" or \"float\"", .{ item.id, w.written_mode.? });
@@ -53,9 +54,9 @@ fn own(w: *const Work, report: *Report) Error!void {
         return;
     }
     const duration = w.duration orelse return;
-    const expected = day.finishOf(start, duration);
+    const expected = calendar.finishOf(start, duration);
     if (expected != finish) {
-        try report.add(item.file, item.line, 1, "{s}: a start of {s} and a duration of {d} days finish on {s}, not {s}", .{ item.id, &day.format(start), duration, &day.format(expected), &day.format(finish) });
+        try report.add(item.file, item.line, 1, "{s}: a start of {s} and a duration of {d} working days finish on {s}, not {s}", .{ item.id, &day.format(start), duration, &day.format(expected), &day.format(finish) });
     }
 }
 

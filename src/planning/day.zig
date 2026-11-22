@@ -27,8 +27,10 @@ pub fn fromCivil(year: i32, month: u32, day: u32) Day {
     return era * 146097 + doe - 719468;
 }
 
-/// `YYYY-MM-DD` of a day
-pub fn format(d: Day) [10]u8 {
+pub const Civil = struct { year: i32, month: u32, day: u32 };
+
+/// The year, month and day of a day (Howard Hinnant's civil_from_days)
+pub fn civil(d: Day) Civil {
     const z = d + 719468;
     const era = @divFloor(z, 146097);
     const doe = z - era * 146097;
@@ -37,16 +39,35 @@ pub fn format(d: Day) [10]u8 {
     const mp = @divFloor(5 * doy + 2, 153);
     const dd = doy - @divFloor(153 * mp + 2, 5) + 1;
     const mm = if (mp < 10) mp + 3 else mp - 9;
-    const yy = yoe + era * 400 + @as(i32, if (mm <= 2) 1 else 0);
+    return .{ .year = yoe + era * 400 + @as(i32, if (mm <= 2) 1 else 0), .month = @intCast(mm), .day = @intCast(dd) };
+}
+
+/// `YYYY-MM-DD` of a day
+pub fn format(d: Day) [10]u8 {
+    const c = civil(d);
     var out: [10]u8 = undefined;
-    _ = std.mem.print(&out, "{d:0>4}-{d:0>2}-{d:0>2}", .{ @as(u32, @intCast(yy)), @as(u32, @intCast(mm)), @as(u32, @intCast(dd)) }) catch unreachable;
+    _ = std.mem.print(&out, "{d:0>4}-{d:0>2}-{d:0>2}", .{ @as(u32, @intCast(c.year)), c.month, c.day }) catch unreachable;
     return out;
 }
 
-/// The last day of work that starts on `start` and takes `duration` days;
-/// a duration of 0 (a milestone) ends on its start
-pub fn finishOf(start: Day, duration: u32) Day {
-    return start + @as(Day, @intCast(@max(duration, 1))) - 1;
+/// 0 for Monday to 6 for Sunday (1970-01-01 was a Thursday)
+pub fn weekday(d: Day) u3 {
+    return @intCast(@mod(d + 3, 7));
+}
+
+/// The Monday of the week `d` is in
+pub fn monday(d: Day) Day {
+    return d - weekday(d);
+}
+
+/// The ISO 8601 week of a day, `YYYY-Www`: the year of its week's Thursday
+pub fn isoWeek(d: Day) [8]u8 {
+    const thursday = monday(d) + 3;
+    const year = civil(thursday).year;
+    const week: u32 = @intCast(@divFloor(thursday - fromCivil(year, 1, 1), 7) + 1);
+    var out: [8]u8 = undefined;
+    _ = std.mem.print(&out, "{d:0>4}-W{d:0>2}", .{ @as(u32, @intCast(year)), week }) catch unreachable;
+    return out;
 }
 
 const testing = std.testing;
@@ -59,6 +80,15 @@ test "days and dates" {
     try testing.expectEqualStrings("1999-12-31", &format(parse("2000-01-01").? - 1));
     try testing.expectEqual(null, parse("2027-02-30"));
     try testing.expectEqual(null, parse("2027-03-01T10:00:00"));
-    try testing.expectEqualStrings("2027-03-05", &format(finishOf(parse("2027-03-01").?, 5)));
-    try testing.expectEqualStrings("2027-03-01", &format(finishOf(parse("2027-03-01").?, 0)));
+}
+
+test "weekdays and ISO weeks" {
+    // 2027-03-01 is a Monday
+    try testing.expectEqual(0, weekday(parse("2027-03-01").?));
+    try testing.expectEqual(6, weekday(parse("2027-03-07").?));
+    try testing.expectEqualStrings("2027-03-01", &format(monday(parse("2027-03-04").?)));
+    try testing.expectEqualStrings("2027-W09", &isoWeek(parse("2027-03-01").?));
+    // 2027-01-01 is a Friday, in the last week of 2026
+    try testing.expectEqualStrings("2026-W53", &isoWeek(parse("2027-01-01").?));
+    try testing.expectEqualStrings("2026-W01", &isoWeek(parse("2025-12-29").?));
 }
