@@ -174,6 +174,9 @@ const Reader = struct {
                 });
             }
         }
+        // the item ends where the last block it took ends
+        const last = if (next > at + 1) blocks[next - 1].last_line else blocks[at].last_line;
+        b.item.last_line = r.line + last - 1;
         const done = try b.finish();
         self.out.items[slot] = done;
         if (whole) |w| try w.addPart(done.id);

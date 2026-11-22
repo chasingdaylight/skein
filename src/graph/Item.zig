@@ -27,6 +27,9 @@ parts: []const []const u8 = &.{},
 file: []const u8,
 /// where the item is declared: its marker, or 1 for an item file
 line: u32,
+/// the last line of the item in its file, its parts included: the line
+/// of its marker for a removed item
+last_line: u32 = 0,
 /// whether the item is a paragraph of a document, not a file of its own
 in_document: bool = true,
 

@@ -9,6 +9,7 @@ const Item = @import("../graph/Item.zig");
 const Marker = @import("../markdown/Marker.zig");
 const Project = @import("../Project.zig");
 const Schema = @import("../schema/Schema.zig");
+const coverage = @import("../graph/coverage.zig");
 const generated = @import("generated.zig");
 const markdown = @import("../markdown.zig");
 
@@ -24,6 +25,9 @@ pub const Context = struct {
     /// such a request is left as it is
     project: ?*const Project = null,
     citations: ?*const Graph.Citations = null,
+    /// only the items of this profile are rendered; the others are left
+    /// out, with their parts, and references to them are plain words
+    profile: ?*const Schema.Profile = null,
 };
 
 /// The document `file`, whose text is `source`, rendered.
@@ -31,12 +35,35 @@ pub fn document(ctx: Context, file: []const u8, source: []const u8) Error![]cons
     var page: Page = .{ .ctx = ctx, .file = file };
     for (ctx.graph.items) |*item| {
         if (!std.mem.eql(u8, item.file, file)) continue;
+        if (!included(ctx, item)) {
+            try page.left_out.append(ctx.arena, .{ .first = item.line, .last = @max(item.line, item.last_line) });
+            continue;
+        }
         try page.markers.put(ctx.arena, item.line, item);
         try page.addReferences(item);
     }
     try page.addMentions();
     try page.addGenerated(source);
     return page.render(source, 1);
+}
+
+/// Whether `item` is rendered: it is in the profile, when there is one,
+/// and so is the item it is a part of
+pub fn included(ctx: Context, item: *const Item) bool {
+    const profile = ctx.profile orelse return true;
+    const item_type = ctx.schema.itemType(item.type_name) orelse return false;
+    if (!coverage.inProfile(profile, item, item_type)) return false;
+    const whole = ctx.graph.find(item.parent orelse return true) orelse return true;
+    return included(ctx, whole);
+}
+
+/// Whether the file `file` of a source of item files is rendered: it is
+/// no item, or its item is rendered
+pub fn fileIncluded(ctx: Context, file: []const u8) bool {
+    for (ctx.graph.items) |*item| {
+        if (std.mem.eql(u8, item.file, file)) return included(ctx, item);
+    }
+    return true;
 }
 
 /// The item file `file` rendered: its TOML front matter becomes the YAML
@@ -81,8 +108,16 @@ const Page = struct {
     /// by the first line of the code block that asks for it: the
     /// generated page, and the block's last line
     generated: std.AutoHashMapUnmanaged(u32, Generated) = .empty,
+    /// the lines of the items that are left out, and of their parts
+    left_out: std.ArrayList(Lines) = .empty,
 
     const Generated = struct { last_line: u32, text: []const u8 };
+    const Lines = struct { first: u32, last: u32 };
+
+    fn isLeftOut(self: *const Page, line: u32) bool {
+        for (self.left_out.items) |r| if (line >= r.first and line <= r.last) return true;
+        return false;
+    }
 
     const Place = struct { line: u32, column: u32 };
 
@@ -108,6 +143,7 @@ const Page = struct {
                 .graph = self.ctx.graph,
                 .citations = citations,
                 .href = hrefOf,
+                .default_profile = self.ctx.profile,
                 .href_ctx = self,
             }, request);
             try self.generated.put(self.ctx.arena, b.first_line, .{ .last_line = b.last_line, .text = std.mem.trimEnd(u8, text, "\n") });
@@ -134,7 +170,7 @@ const Page = struct {
         var number = first_line;
         var skip_to: u32 = 0;
         while (lines.next()) |line| : (number += 1) {
-            if (number <= skip_to) continue;
+            if (number <= skip_to or self.isLeftOut(number)) continue;
             if (number > first_line) try out.append(a, '\n');
             if (self.generated.get(number)) |g| {
                 try out.appendSlice(a, g.text);
@@ -181,6 +217,8 @@ const Page = struct {
     fn href(self: *const Page, id: []const u8) Error!?[]const u8 {
         const a = self.ctx.arena;
         const target = self.ctx.graph.find(id) orelse return null;
+        // an item that is left out has no page to link to
+        if (!included(self.ctx, target)) return null;
         const in_document = !isItemFile(self.ctx, target.file);
         // an item file that names itself has nowhere else to lead
         if (std.mem.eql(u8, target.file, self.file)) return if (in_document) try a.print("#{s}", .{id}) else null;
