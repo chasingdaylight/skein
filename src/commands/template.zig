@@ -32,6 +32,7 @@ pub fn run(io: std.Io, arena: std.mem.Allocator, options: cli.TemplateCommand) !
                 try out.print(arena, "\n{c}{s}:\n", .{ std.ascii.toUpper(kind[0]), kind[1..] });
                 for (files) |f| try out.print(arena, "  {s}\n", .{f.path[kind.len + 1 ..]});
             }
+            if ((try Template.filesOf(arena, name, "config.toml")).len > 0) try out.appendSlice(arena, "\nConfiguration: config.toml, which 'skein init' adds to the project's\n");
         },
     }
     return .{ .text = out.items };

@@ -44,13 +44,13 @@ safety-critical = false
 
 | Template | For |
 | --- | --- |
-| `langspec` | The specification of a programming language: rules (syntax, legality, static and dynamic semantics), terms, and examples that show the rules (tested examples). |
+| `langspec` | The specification of a programming language: rules (syntax, legality, static and dynamic semantics), terms, examples that show the rules (tested examples, expected of every rule), and conformance tests, kept as items (`test`, linked by `verifies`) or cited from the test code. `skein init` writes a charter, a first chapter, a glossary and a coverage page, and a citation set for the tests to fill in. Profiles for the stages or editions of the language are the project's own. |
 
 More are planned: NASA NPR 7150.2D, and requirements as ISO/IEC/IEEE 29148 describes them.
 
 ## Writing one
 
-A template is a directory of `templates/` in skein's repository, laid out as `.skein/` is (`types/`, `links/`, `profiles/`), with `documents/` for the skeletons `skein init` writes under `docs/`, and a `template.toml`:
+A template is a directory of `templates/` in skein's repository, laid out as `.skein/` is (`types/`, `links/`, `profiles/`), with `documents/` for the skeletons `skein init` writes under `docs/`, an optional `config.toml` that `skein init` adds to the project's configuration (citation sets, say, which a template cannot declare), and a `template.toml`:
 
 ```toml
 description = "What it is for, in one line"
