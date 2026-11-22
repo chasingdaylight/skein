@@ -33,6 +33,9 @@ pub const Context = struct {
     /// where an item is linked to from the file the page is in
     href: *const fn (ctx: *const anyopaque, item: *const Item) Error![]const u8,
     href_ctx: *const anyopaque,
+    /// the profile a request without `profile=` is limited to: that of
+    /// the rendering
+    default_profile: ?*const Schema.Profile = null,
 };
 
 /// Whether the first line of a code block asks for a generated page
@@ -71,13 +74,13 @@ const Filter = struct {
     profile: ?*const Schema.Profile = null,
     attributes: std.ArrayList(Item.Attribute) = .empty,
 
-    fn passes(self: *const Filter, schema: *const Schema, item: *const Item) bool {
+    fn passes(self: *const Filter, schema: *const Schema, graph: *const Graph, item: *const Item) bool {
         const item_type = schema.itemType(item.type_name) orelse return false;
         if (item.isTombstone(item_type)) return false;
         if (self.types.items.len > 0 and !Schema.names.contains(self.types.items, item.type_name)) return false;
         if (self.category) |c| if (!std.mem.eql(u8, item.category orelse "", c)) return false;
         if (self.status) |s| if (!std.mem.eql(u8, item.effectiveStatus(item_type), s)) return false;
-        if (self.profile) |p| if (!coverage.inProfile(p, item, item_type)) return false;
+        if (self.profile) |p| if (!inProfile(p, schema, graph, item)) return false;
         for (self.attributes.items) |want| {
             if (!std.mem.eql(u8, item.attribute(want.name) orelse "", want.value)) return false;
         }
@@ -134,13 +137,13 @@ fn link(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void {
 
 fn list(ctx: Context, args: []const []const u8) Error![]const u8 {
     const a = ctx.arena;
-    var filter: Filter = .{};
+    var filter: Filter = .{ .profile = ctx.default_profile };
     if (try readFilter(ctx, args, &filter, true)) |message| return message;
     var out: std.ArrayList(u8) = .empty;
     try out.appendSlice(a, "| Item | Category | Status | Text |\n| --- | --- | --- | --- |\n");
     var n: usize = 0;
     for (ctx.graph.items) |*item| {
-        if (!filter.passes(&ctx.project.schema, item)) continue;
+        if (!filter.passes(&ctx.project.schema, ctx.graph, item)) continue;
         n += 1;
         try out.appendSlice(a, "| ");
         try link(ctx, &out, item);
@@ -161,7 +164,7 @@ fn matrix(ctx: Context, args: []const []const u8) Error![]const u8 {
     const schema = &ctx.project.schema;
     if (args.len == 0) return problem(a, "matrix needs a link type: matrix LINKTYPE", .{});
     const link_type = schema.linkType(args[0]) orelse return problem(a, "there is no link type '{s}'", .{args[0]});
-    var filter: Filter = .{};
+    var filter: Filter = .{ .profile = ctx.default_profile };
     if (try readFilter(ctx, args[1..], &filter, false)) |message| return message;
     for (link_type.to) |t| try filter.types.append(a, t);
 
@@ -170,7 +173,7 @@ fn matrix(ctx: Context, args: []const []const u8) Error![]const u8 {
     var rows: usize = 0;
     var covered: usize = 0;
     for (ctx.graph.items) |*item| {
-        if (!filter.passes(schema, item)) continue;
+        if (!filter.passes(schema, ctx.graph, item)) continue;
         rows += 1;
         try out.appendSlice(a, "| ");
         try link(ctx, &out, item);
@@ -194,7 +197,7 @@ fn matrix(ctx: Context, args: []const []const u8) Error![]const u8 {
 
 fn coverageTable(ctx: Context, args: []const []const u8) Error![]const u8 {
     const a = ctx.arena;
-    var profile: ?*const Schema.Profile = null;
+    var profile: ?*const Schema.Profile = ctx.default_profile;
     for (args) |word| {
         if (!std.mem.startsWith(u8, word, "profile=")) return problem(a, "coverage takes only profile=NAME", .{});
         profile = ctx.project.schema.profile(word["profile=".len..]) orelse return problem(a, "there is no profile '{s}'", .{word["profile=".len..]});
@@ -231,4 +234,12 @@ fn percent(a: std.mem.Allocator, covered: usize, total: usize) Error![]const u8 
 
 test {
     _ = @import("_test/generated.zig");
+}
+
+/// Whether `item` is in `profile`, and so is the item it is a part of
+fn inProfile(profile: *const Schema.Profile, schema: *const Schema, graph: *const Graph, item: *const Item) bool {
+    const item_type = schema.itemType(item.type_name) orelse return false;
+    if (!coverage.inProfile(profile, item, item_type)) return false;
+    const whole = graph.find(item.parent orelse return true) orelse return true;
+    return inProfile(profile, schema, graph, whole);
 }

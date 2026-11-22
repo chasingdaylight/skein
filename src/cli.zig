@@ -31,7 +31,7 @@ pub const usage =
     \\  --root DIR        The project, or a directory inside it (default: here)
     \\  --json            trace, coverage, diff, impact: as JSON
     \\  --markdown        coverage, diff, impact: as Markdown, for a pull request
-    \\  --profile NAME    coverage, export: only the items of this profile
+    \\  --profile NAME    coverage, export, render: only the items of this profile
     \\  --all             review, clear: every link, not those of the items named
     \\  --by NAME         approve: who approves (default: git's user.name)
     \\  --on DATE         approve: when, as 2027-03-01 (default: today)
@@ -43,7 +43,7 @@ pub const usage =
     \\  --replace         import csv: write over item files that are there
     \\  --out DIR         render: where the rendered files go
     \\  --format NAME     render: markdown for a site generator (the default),
-    \\                    or html: the site itself
+    \\                    html: the site itself, or document: one file per document
     \\
 ;
 
@@ -148,12 +148,16 @@ pub const Render = struct {
     /// the directory the rendered files go to, from where skein is run
     out: []const u8,
     format: Format = .markdown,
+    /// only the items of this profile
+    profile: ?[]const u8 = null,
 
     pub const Format = enum {
         /// Markdown for a site generator
         markdown,
         /// the site itself: HTML pages
         html,
+        /// each document as one HTML file of its own, for delivery
+        document,
     };
 };
 
@@ -273,12 +277,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .move = .{ .common = common, .old = words[0], .new = words[1] } };
     }
     if (eql(name, "render")) {
-        if (try p.allow(&.{ "--root", "--out", "--format" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--out", "--format", "--profile" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "render takes no items" };
         const format: Render.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Render.Format, f) orelse
-            return .{ .misuse = "render: the formats are markdown and html" } else .markdown;
+            return .{ .misuse = "render: the formats are markdown, html and document" } else .markdown;
         const out = p.value("--out") orelse return .{ .misuse = "render: say where the files go, with --out DIR" };
-        return .{ .render = .{ .common = common, .out = out, .format = format } };
+        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile") } };
     }
     if (eql(name, "import")) {
         const forms = "import: doorstop DIR..., or csv FILE --type TYPE --to DIR";
@@ -549,7 +553,7 @@ test "render needs a place to write to" {
     try testing.expectEqualStrings("site", (try f.run(&.{ "render", "--out", "site", "--format", "markdown" })).render.out);
     try testing.expectEqualStrings("render: say where the files go, with --out DIR", (try f.run(&.{"render"})).misuse);
     try testing.expectEqual(.html, (try f.run(&.{ "render", "--out", "x", "--format", "html" })).render.format);
-    try testing.expectEqualStrings("render: the formats are markdown and html", (try f.run(&.{ "render", "--out", "x", "--format", "pdf" })).misuse);
+    try testing.expectEqualStrings("render: the formats are markdown, html and document", (try f.run(&.{ "render", "--out", "x", "--format", "pdf" })).misuse);
 }
 
 test "import takes a format and what to import" {

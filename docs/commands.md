@@ -189,6 +189,14 @@ list term
 
 A request skein cannot read becomes a note in its place, saying what is wrong.
 
+### `--format document`: one file per document
+
+`skein render --format document --out DIR` writes each document as one HTML file that stands alone, for delivery: no navigation, its images inside it, and a style sheet for printing (or saving as PDF from a browser).
+
+### `--profile NAME`: for one profile
+
+With `--profile NAME`, in any format, only the items of that profile (`.skein/profiles/`) are rendered: for example one stage of a language, or one software class. An item outside it is left out with its parts, references to it become plain words, and generated pages list only the profile's items.
+
 ## `skein move OLD NEW`
 
 Gives an item another ID, everywhere the old one is used, in one step:

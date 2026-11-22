@@ -24,6 +24,10 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
     for (ws.project.sources) |source| {
         if (source.kind == .items) try item_sources.append(arena, source.path);
     }
+    const profile = if (options.profile) |name| ws.project.schema.profile(name) orelse return .{
+        .text = try arena.print("skein: there is no profile '{s}'\n", .{name}),
+        .status = .misuse,
+    } else null;
     const ctx: markdown.Context = .{
         .arena = arena,
         .graph = &ws.graph,
@@ -31,6 +35,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
         .item_sources = item_sources.items,
         .project = &ws.project,
         .citations = &ws.citations,
+        .profile = profile,
     };
 
     var out = Io.Dir.cwd().createDirPathOpen(io, options.out, .{}) catch |e| return .{
@@ -39,6 +44,10 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
     };
     defer out.close(io);
 
+    if (options.format == .document) {
+        const written = try site.documents(io, arena, &ws, ctx, out);
+        return .{ .text = try arena.print("skein: {d} document{s} rendered to {s}\n", .{ written, if (written == 1) "" else "s", options.out }) };
+    }
     if (options.format == .html) {
         const pages = try site.build(io, arena, &ws, ctx, out);
         return .{ .text = try arena.print("skein: {d} page{s} rendered to {s}\n", .{ pages, if (pages == 1) "" else "s", options.out }) };
@@ -49,6 +58,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
         // a source that cannot be read was reported when the items were
         const paths = files.list(io, arena, ws.root, source.path, &.{".md"}) catch continue;
         for (paths) |file| {
+            if (source.kind == .items and !markdown.fileIncluded(ctx, file)) continue;
             const text = ws.root.readFileAlloc(io, file, arena, .limited(1 << 26)) catch continue;
             const rendered = switch (source.kind) {
                 .documents => try markdown.document(ctx, file, text),

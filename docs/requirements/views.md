@@ -122,3 +122,9 @@ A fenced code block of the language `skein` in a document shall be a request for
 
 %req[render.generated.coverage]
 `coverage [profile=P]` shall give what `skein coverage` counts, as a table, with links to the items that are not covered.
+
+%req[render.documents]
+`skein render --format document --out DIR` shall write each document and item file as one HTML file of its own, under its own path: the same page as in the site, without the navigation, with its images put in it as `data:` addresses, and with a style sheet for printing. Nothing else is written.
+
+%req[render.profiles]
+With `--profile NAME`, `skein render` shall render only the items of that profile, in every format. An item outside it is left out with its lines and its parts; a part is in a profile only when the item it belongs to is. A reference to an item left out is shown as its words, without a link; an item file outside it is not written; generated pages and the page of all items list only the items of the profile. A profile that does not exist is refused.
