@@ -117,7 +117,7 @@ expected = true
 | `from` | The item types a link of this kind may start at; leave out for any. |
 | `to` | The item types it may point to; leave out for any. |
 | `required` | Every item of a `from` type must have one. |
-| `expected` | Every item of a `to` type should be pointed to by one; coverage counts the ones that are not. |
+| `expected` | Every item of a `to` type should be pointed to by one; coverage counts the ones that are not. `expected = { where = { verification = "test" } }` expects it only of the items whose attribute (or `verification`, `category`, `status`) has that value, and `expected = { profile = "P" }` of the items of a profile. The same goes for `citations.expected`. |
 | `review` | Links of this type are reviewed: see [reviewing](reviewing.md). |
 | `open` | An issue or pull request a link of this type points to must be open: see [the forge](forge.md). |
 | `counts_as` | A link of this type counts as one of that type, for coverage: a tailoring as good as compliance. |

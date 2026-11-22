@@ -29,6 +29,9 @@ For each link type and citation set marked as expected, and each item type it ap
 %req[coverage.parts]
 An item with parts shall also count as covered when every part that the expectation applies to is covered. A part is covered either directly or, in turn, through its own parts. Removed parts are not counted. An item with no part that the expectation applies to is covered only by a link or citation of its own.
 
+%req[coverage.expected-of]
+An expectation may apply to some of the items of its `to` types only: `expected = { where = { ATTRIBUTE = VALUE } }` to the items whose attribute has the value (one of several, given as an array; `verification`, `category` and `status` may be named too), and `expected = { profile = "P" }` to the items of a profile, which must exist. Coverage counts only the items it applies to; `expected = true` applies to all.
+
 %req[coverage.profile]
 With `--profile`, only the items of that profile shall be counted.
 

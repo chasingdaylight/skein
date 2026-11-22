@@ -60,6 +60,7 @@ pub fn validate(self: *const Schema, report: *Report, dir: []const u8) std.mem.A
     for (self.links) |l| {
         const file = std.mem.print(&buf, "{s}/links/{s}.toml", .{ dir, l.name }) catch dir;
         if (l.counts_as != null and l.excuses != null) try report.add(file, 0, 0, "a link type counts as another or excuses from it, not both", .{});
+        if (l.expected_of.profile) |p| if (self.profile(p) == null) try report.add(file, 0, 0, "expected: there is no profile '{s}'", .{p});
         for ([_]?[]const u8{ l.counts_as, l.excuses }) |other| {
             const name = other orelse continue;
             if (self.linkType(name) == null) try report.add(file, 0, 0, "there is no link type '{s}'", .{name});

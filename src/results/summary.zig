@@ -78,7 +78,7 @@ pub fn compute(arena: std.mem.Allocator, results: *const Results, idx: *const Re
         if (item.isTombstone(item_type)) continue;
         if (profile) |p| if (!coverage.inProfile(p, item, item_type)) continue;
         const expected = for (project.citations) |set| {
-            if (set.expected and (set.to.len == 0 or Schema.names.contains(set.to, item.type_name))) break true;
+            if (set.expected and (set.to.len == 0 or Schema.names.contains(set.to, item.type_name)) and coverage.expectedOf(set.expected_of, &project.schema, item, item_type)) break true;
         } else false;
         if (expected or idx.by_item.contains(item.id)) try counted.append(arena, item);
     }
