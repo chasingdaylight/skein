@@ -14,6 +14,7 @@ export function register(context: vscode.ExtensionContext, server: Server, tree:
   command("skein.restartServer", () => server.restart());
   command("skein.refreshItems", () => refresh());
   command("skein.showCoverage", () => views.showCoverage());
+  command("skein.showPlan", () => views.showPlan());
   command("skein.openItem", async (id?: string) => {
     const chosen = id ?? (await pickItem(tree, "Go to an item"));
     if (chosen) await openItem(tree, chosen);

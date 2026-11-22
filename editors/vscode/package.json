@@ -99,6 +99,12 @@
         "icon": "$(checklist)"
       },
       {
+        "command": "skein.showPlan",
+        "title": "Show Plan",
+        "category": "skein",
+        "icon": "$(calendar)"
+      },
+      {
         "command": "skein.copyId",
         "title": "Copy ID",
         "category": "skein"
@@ -117,6 +123,10 @@
         },
         {
           "command": "skein.showCoverage",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.showPlan",
           "when": "skein.project"
         },
         {
@@ -153,6 +163,11 @@
           "command": "skein.showCoverage",
           "when": "view == skein.items",
           "group": "navigation@2"
+        },
+        {
+          "command": "skein.showPlan",
+          "when": "view == skein.items",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
@@ -207,7 +222,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
-    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node24 --minify --sourcemap",
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node24 --minify --sourcemap && esbuild src/webview/plan.ts --bundle --outfile=dist/plan.js --format=iife --platform=browser --target=es2022 --minify",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p test",
     "unit": "esbuild test/unit/*.test.ts --bundle --outdir=out/unit --platform=node --target=node24 --format=cjs && node --test out/unit/*.test.js"
   },

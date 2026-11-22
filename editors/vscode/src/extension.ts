@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const output = vscode.window.createOutputChannel("skein Language Server", { log: true });
   const server = new Server(context, output);
   const tree = new ItemTree(server);
-  const views = new Views(server, (id) => commands.openItem(tree, id));
+  const views = new Views(server, (id) => commands.openItem(tree, id), context.extensionUri);
   const status = new Status(server);
   context.subscriptions.push(output, status, vscode.window.registerTreeDataProvider("skein.items", tree));
 

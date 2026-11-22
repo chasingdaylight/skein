@@ -42,7 +42,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Schedule) !Workspace.O
         const key = t.planning.?.attribute(.mode) orelse continue;
         if (ws.project.readOnlySource(item.file) != null) continue;
         const text = try ws.root.readFileAlloc(io, item.file, arena, .limited(1 << 26));
-        const edited = (if (item.in_document) try attribute.marker(arena, text, item.line, key, "float") else try attribute.frontMatter(arena, text, key, "float")) orelse {
+        const edited = (if (item.in_document) try attribute.marker(arena, text, item.line, key, "float") else try attribute.frontMatter(arena, text, key, "\"float\"")) orelse {
             try by_hand.append(arena, item.id);
             continue;
         };

@@ -7,7 +7,8 @@
 - The extension has an icon: the skein logo.
 - The extension starts skein's language server (`skein lsp`) in a skein project: the problems of `skein check` in the Problems panel, with quick fixes; go to definition, references, hover, completion and rename of IDs; and code lenses above items with their links and **Trace**.
 - **skein Items**, a tree in the Explorer of the items by source and file; the **Trace** and **Coverage** views, in the colors of the theme; the coverage in the status bar.
-- Commands **Trace**, **Show Coverage**, **Go to Item...**, **Refresh Items** and **Restart the Language Server**; settings `skein.codeLens.enabled`, `skein.statusBar.coverage` and `skein.trace.server`.
+- **Plan**: a Gantt chart and a board of the work items, whose bars and cards are dragged to change an item's dates or status, written into its file.
+- Commands **Trace**, **Show Coverage**, **Show Plan**, **Go to Item...**, **Refresh Items** and **Restart the Language Server**; settings `skein.codeLens.enabled`, `skein.statusBar.coverage` and `skein.trace.server`.
 
 ## 0.1.0
 
