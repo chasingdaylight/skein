@@ -10,13 +10,19 @@ const yaml = @import("../import/doorstop/yaml.zig");
 
 pub const Error = error{ BadResults, UnknownFormat } || std.mem.Allocator.Error;
 
-/// One result as written: its fields as text, and `items` as a list
+/// One result as written: its fields as text, and its lists (`items`,
+/// `fingerprints`) as lists
 pub const Record = struct {
     fields: std.array_hash_map.String([]const u8) = .empty,
-    items: []const []const u8 = &.{},
+    lists: std.array_hash_map.String([]const []const u8) = .empty,
 
     pub fn get(self: *const Record, key: []const u8) ?[]const u8 {
         return self.fields.get(key);
+    }
+
+    /// The list `key`; empty when there is none
+    pub fn list(self: *const Record, key: []const u8) []const []const u8 {
+        return self.lists.get(key) orelse &.{};
     }
 };
 
@@ -57,8 +63,8 @@ fn fromToml(arena: std.mem.Allocator, text: []const u8, why: *[]const u8) Error!
         var r: Record = .{};
         for (v.table.keys()) |k| {
             const value = v.table.get(k).?;
-            if (std.mem.eql(u8, k, "items")) {
-                r.items = try tomlStrings(arena, value) orelse return bad(why, "'items' is not an array of strings");
+            if (value == .array) {
+                try r.lists.put(arena, k, try tomlStrings(arena, value) orelse return bad(why, "a list of a result is not an array of strings"));
                 continue;
             }
             try r.fields.put(arena, k, try tomlText(arena, value) orelse return bad(why, "a field of a result is not a string, a number, a boolean or a date"));
@@ -105,14 +111,13 @@ fn fromJson(arena: std.mem.Allocator, text: []const u8, why: *[]const u8) Error!
         var it = v.object.iterator();
         while (it.next()) |e| {
             const k = e.key_ptr.*;
-            if (std.mem.eql(u8, k, "items")) {
-                if (e.value_ptr.* != .array) return bad(why, "'items' is not an array of strings");
+            if (e.value_ptr.* == .array) {
                 var items: std.ArrayList([]const u8) = .empty;
                 for (e.value_ptr.array.items) |s| {
-                    if (s != .string) return bad(why, "'items' is not an array of strings");
+                    if (s != .string) return bad(why, "a list of a result is not an array of strings");
                     try items.append(arena, s.string);
                 }
-                r.items = items.items;
+                try r.lists.put(arena, k, items.items);
                 continue;
             }
             const value: []const u8 = switch (e.value_ptr.*) {
@@ -148,14 +153,13 @@ fn fromYaml(arena: std.mem.Allocator, text: []const u8, why: *[]const u8) Error!
         if (v != .map) return bad(why, "a result is not a mapping");
         var r: Record = .{};
         for (v.map) |e| {
-            if (std.mem.eql(u8, e.key, "items")) {
-                if (e.value != .list) return bad(why, "'items' is not a list");
+            if (e.value == .list) {
                 var items: std.ArrayList([]const u8) = .empty;
                 for (e.value.list) |s| {
-                    if (s != .scalar) return bad(why, "'items' is not a list of IDs");
+                    if (s != .scalar) return bad(why, "a list of a result is not a list of single values");
                     try items.append(arena, s.scalar);
                 }
-                r.items = items.items;
+                try r.lists.put(arena, e.key, items.items);
                 continue;
             }
             if (e.value != .scalar) return bad(why, "a field of a result is not a single value");
@@ -189,7 +193,7 @@ test "the same results in TOML, JSON and YAML" {
         try std.testing.expectEqualStrings("tests/lex.zig", rs[0].get("file").?);
         try std.testing.expectEqualStrings("fail", rs[1].get("result").?);
         try std.testing.expectEqualStrings("2026-11-21", rs[1].get("date").?);
-        try std.testing.expectEqualStrings("b", rs[1].items[1]);
+        try std.testing.expectEqualStrings("b", rs[1].list("items")[1]);
     }
     try std.testing.expectError(error.BadResults, records(a, .json, "{\"result\": 3}", &why));
     try std.testing.expectEqual(.yaml, formatOf("run.yml").?);

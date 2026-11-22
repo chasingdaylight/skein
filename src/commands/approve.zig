@@ -58,14 +58,14 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Approve) !Workspace.Ou
     };
 }
 
-fn parseDate(text: []const u8) ?toml.Date {
+pub fn parseDate(text: []const u8) ?toml.Date {
     if (text.len != 10) return null;
     const dt = datetime.parse(text) orelse return null;
     return dt.date;
 }
 
 /// Today's date, in UTC
-fn today(io: Io) toml.Date {
+pub fn today(io: Io) toml.Date {
     const seconds: u64 = @intCast(@max(0, Io.Clock.real.now(io).toSeconds()));
     const day = (std.time.epoch.EpochSeconds{ .secs = seconds }).getEpochDay().calculateYearDay();
     const month = day.calculateMonthDay();

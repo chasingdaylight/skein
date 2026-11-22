@@ -21,6 +21,8 @@ const Item = @import("../graph/Item.zig");
 const Project = @import("../Project.zig");
 const Schema = @import("../schema/Schema.zig");
 const coverage = @import("../graph/coverage.zig");
+const Results = @import("../results/Results.zig");
+const summary = @import("../results/summary.zig");
 const walk = @import("../graph/walk.zig");
 
 pub const Error = std.mem.Allocator.Error;
@@ -36,6 +38,14 @@ pub const Context = struct {
     /// the profile a request without `profile=` is limited to: that of
     /// the rendering
     default_profile: ?*const Schema.Profile = null,
+    /// test results, which a coverage page also shows
+    results: ?ResultsOf = null,
+};
+
+/// Test results, and which items they belong to
+pub const ResultsOf = struct {
+    results: *const Results,
+    index: *const Results.Index,
 };
 
 /// Whether the first line of a code block asks for a generated page
@@ -203,8 +213,13 @@ fn coverageTable(ctx: Context, args: []const []const u8) Error![]const u8 {
         profile = ctx.project.schema.profile(word["profile=".len..]) orelse return problem(a, "there is no profile '{s}'", .{word["profile=".len..]});
     }
     const expectations = try coverage.compute(a, ctx.project, ctx.graph, ctx.citations, profile);
-    if (expectations.len == 0) return a.print("*Nothing is expected: no link type and no citation set has `expected = true`.*\n", .{});
     var out: std.ArrayList(u8) = .empty;
+    try resultsTable(ctx, &out, profile);
+    if (expectations.len == 0) {
+        try out.appendSlice(a, "*Nothing is expected: no link type and no citation set has `expected = true`.*\n");
+        return out.items;
+    }
+    if (out.items.len > 0) try out.append(a, '\n');
     try out.appendSlice(a, "| Expected | Of | Covered | |\n| --- | --- | ---: | ---: |\n");
     for (expectations) |e| {
         const kind = switch (e.kind) {
@@ -226,6 +241,26 @@ fn coverageTable(ctx: Context, args: []const []const u8) Error![]const u8 {
         try out.appendSlice(a, ".\n");
     }
     return out.items;
+}
+
+/// What the test results say, per implementation, with links to the
+/// items that failed; nothing without results
+fn resultsTable(ctx: Context, out: *std.ArrayList(u8), profile: ?*const Schema.Profile) Error!void {
+    const a = ctx.arena;
+    const r = ctx.results orelse return;
+    const summaries = try summary.compute(a, r.results, r.index, ctx.project, ctx.graph, profile);
+    if (summaries.len == 0) return;
+    try out.appendSlice(a, "| Results | Passed | Failed | Untested |\n| --- | ---: | ---: | ---: |\n");
+    for (summaries) |s| try out.print(a, "| {s} | {d} of {d} | {d} | {d} |\n", .{ s.label, s.passed, s.total, s.failed.len, s.untested.len });
+    for (summaries) |s| {
+        if (s.failed.len == 0) continue;
+        try out.print(a, "\nFailed in {s}: ", .{s.label});
+        for (s.failed, 0..) |id, i| {
+            if (i > 0) try out.appendSlice(a, ", ");
+            if (ctx.graph.find(id)) |item| try link(ctx, out, item) else try out.print(a, "`{s}`", .{id});
+        }
+        try out.appendSlice(a, ".\n");
+    }
 }
 
 fn percent(a: std.mem.Allocator, covered: usize, total: usize) Error![]const u8 {

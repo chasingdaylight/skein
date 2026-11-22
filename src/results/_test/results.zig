@@ -8,6 +8,8 @@ const testing = std.testing;
 
 const check_command = @import("../../commands/check.zig");
 const coverage_command = @import("../../commands/coverage.zig");
+const result_command = @import("../../commands/result.zig");
+const render_command = @import("../../commands/render.zig");
 const trace_command = @import("../../commands/trace.zig");
 
 fn write(dir: std.Io.Dir, path: []const u8, data: []const u8) !void {
@@ -113,6 +115,43 @@ test "results kept in the project: verdicts per item, and what belongs to none" 
 
     const traced = (try trace_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .id = "lex.c" })).text;
     try expectContains(traced, "\nResults:\n  cesium0 0.3.1: passed\n    pass  tp.inspect  (verification/results/run.toml, result 3)\n");
+}
+
+// req: results.rendered
+test "a generated coverage page shows the results" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    const a = f.arena.allocator();
+    try write(f.tmp.dir, "spec/status.md", "# Status\n\n```skein\ncoverage\n```\n");
+    const out_dir = try std.Io.Dir.path.join(a, &.{ f.root, "out" });
+    const rendered = try render_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .out = out_dir });
+    try testing.expectEqual(.ok, rendered.status);
+    const page = try f.tmp.dir.readFileAlloc(testing.io, "out/spec/status.md", a, .limited(1 << 16));
+    try expectContains(page, "| Results | Passed | Failed | Untested |\n| --- | ---: | ---: | ---: |\n| cesium0 0.3.1 | 2 of 5 | 2 | 1 |\n");
+    try expectContains(page, "Failed in cesium0 0.3.1: [`lex.a`](lex.md#lex.a), [`lex.b`](lex.md#lex.b).");
+}
+
+// req: results.recorded, results.stale
+test "a result a person records, which is stale once what it verified changes" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    const a = f.arena.allocator();
+    try write(f.tmp.dir, "spec/more.md", "%procedure[tp.two verifies=lex.d] Read it out loud.\n");
+    const recorded = try result_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .id = "tp.two", .outcome = .pass, .by = "A. Tester", .on = "2026-11-22", .note = "Fine.", .implementation = "cesium0" });
+    try testing.expectEqualStrings("skein: recorded that tp.two passed, by A. Tester, in verification/results/recorded.toml\n", recorded.text);
+    const text = try f.tmp.dir.readFileAlloc(testing.io, "verification/results/recorded.toml", a, .limited(1 << 16));
+    try expectContains(text, "[[result]]\nitem = \"tp.two\"\nresult = \"pass\"\nby = \"A. Tester\"\ndate = 2026-11-22\n");
+    // the commit, when the project is in a git repository, comes between
+    try expectContains(text, "implementation = \"cesium0\"\nnote = \"Fine.\"\nfingerprints = [\"tp.two=");
+    try expectContains(text, "\", \"lex.d=");
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = f.root } })).text, "results (cesium0 0.3.1): 4 of 6 passed, 2 failed, 0 untested\n");
+
+    // lex.d changes: the result no longer says anything of it
+    try write(f.tmp.dir, "spec/lex.md", try std.mem.replaceOwned(u8, a, try f.tmp.dir.readFileAlloc(testing.io, "spec/lex.md", a, .limited(1 << 16)), "Fourth, with no test.", "Fourth, changed."));
+    try expectContains((try check_command.run(testing.io, a, .{ .root = f.root })).text, "verification/results/recorded.toml: warning: result 1 (tp.two) is stale: 'lex.d' has changed since it was recorded");
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = f.root } })).text, "untested:\n    lex.d\n");
 }
 
 test "results given on the command line, of another implementation, in JSON and YAML" {

@@ -17,6 +17,8 @@ const Io = std.Io;
 const Graph = @import("../graph/Graph.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
+const Reviews = @import("../graph/Reviews.zig");
+const Schema = @import("../schema/Schema.zig");
 const files = @import("../files.zig");
 const read = @import("read.zig");
 
@@ -40,6 +42,15 @@ pub const Result = struct {
     implementation: []const u8 = "",
     version: ?[]const u8 = null,
     note: ?[]const u8 = null,
+    /// for a result a person recorded: who, when, at which commit
+    by: ?[]const u8 = null,
+    date: ?[]const u8 = null,
+    commit: ?[]const u8 = null,
+    /// "ID=fingerprint" of what it verified, when it was recorded
+    fingerprints: []const []const u8 = &.{},
+    /// the item that has changed since, which makes it stale; a stale
+    /// result belongs to no item
+    stale: ?[]const u8 = null,
     /// the results file it is in, and its place there (1-based)
     source: []const u8,
     index: usize,
@@ -55,7 +66,13 @@ pub const extensions = [_][]const u8{ ".toml", ".json", ".yaml", ".yml" };
 /// The results of the project's results paths, and of the files `extra`
 /// (paths from the current directory). Files that cannot be read, and
 /// results that are not well formed, are reported.
-pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, extra: []const []const u8, report: *Report) !Results {
+pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, extra: []const []const u8, report: *Report) !Results {
+    var out = try loadFiles(io, arena, root, project, extra, report);
+    try out.markStale(arena, graph, &project.schema);
+    return out;
+}
+
+fn loadFiles(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, extra: []const []const u8, report: *Report) !Results {
     var out: std.ArrayList(Result) = .empty;
     for (project.results) |path| {
         const found = if (read.formatOf(path) != null) &.{path} else files.list(io, arena, root, path, &extensions) catch |e| switch (e) {
@@ -95,7 +112,11 @@ fn readFile(io: Io, arena: std.mem.Allocator, dir: Io.Dir, file: []const u8, out
             .name = r.get("test"),
             .file = r.get("file"),
             .item = r.get("item"),
-            .items = r.items,
+            .items = r.list("items"),
+            .fingerprints = r.list("fingerprints"),
+            .by = r.get("by"),
+            .date = r.get("date"),
+            .commit = r.get("commit"),
             .outcome = outcome,
             .implementation = r.get("implementation") orelse "",
             .version = r.get("version"),
@@ -114,10 +135,33 @@ pub const Index = struct {
     unmatched: []const usize = &.{},
 };
 
+/// Marks the results whose recorded fingerprints no longer match what
+/// they verified: what was checked has changed since
+pub fn markStale(self: *Results, arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema) !void {
+    const all = try arena.dupe(Result, self.all);
+    for (all) |*r| {
+        for (r.fingerprints) |pair| {
+            const eq = std.mem.findScalar(u8, pair, '=') orelse continue;
+            const id = pair[0..eq];
+            const now = try Reviews.targetFingerprint(arena, schema, graph, id) orelse {
+                r.stale = id;
+                break;
+            };
+            if (!std.mem.eql(u8, &now, pair[eq + 1 ..])) {
+                r.stale = id;
+                break;
+            }
+        }
+    }
+    self.all = all;
+}
+
 pub fn index(self: *const Results, arena: std.mem.Allocator, graph: *const Graph, citations: *const Graph.Citations) !Index {
     var out: Index = .{};
     var unmatched: std.ArrayList(usize) = .empty;
     for (self.all, 0..) |r, i| {
+        // what it verified has changed: it says nothing of the item now
+        if (r.stale != null) continue;
         var targets: std.ArrayList([]const u8) = .empty;
         try targets.appendSlice(arena, r.items);
         if (r.item) |id| if (graph.find(id) orelse graph.formerly(id)) |item| {

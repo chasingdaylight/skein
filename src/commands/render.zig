@@ -6,6 +6,7 @@ const std = @import("std");
 const Io = std.Io;
 
 const cli = @import("../cli.zig");
+const Results = @import("../results/Results.zig");
 const Workspace = @import("Workspace.zig");
 const files = @import("../files.zig");
 const markdown = @import("../render/markdown.zig");
@@ -29,6 +30,11 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
         .text = try arena.print("skein: there is no profile '{s}'\n", .{name}),
         .status = .misuse,
     } else null;
+    // results that cannot be read are the command's to report
+    const before = ws.report.problems.items.len;
+    const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, options.results, &ws.report);
+    if (ws.report.problems.items.len > before) return ws.problems();
+    const idx = try results.index(arena, &ws.graph, &ws.citations);
     const ctx: markdown.Context = .{
         .arena = arena,
         .graph = &ws.graph,
@@ -37,6 +43,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
         .project = &ws.project,
         .citations = &ws.citations,
         .profile = profile,
+        .results = if (results.all.len > 0) .{ .results = &results, .index = &idx } else null,
     };
 
     var out = Io.Dir.cwd().createDirPathOpen(io, options.out, .{}) catch |e| return .{
