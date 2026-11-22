@@ -108,3 +108,7 @@ test "CRLF line ends give the same HTML" {
     try crlf.render(try std.mem.replaceOwned(u8, arena.allocator(), source, "\n", "\r\n"));
     try testing.expectEqualStrings(lf.out.items, crlf.out.items);
 }
+
+test "a paragraph that starts with an inline tag is a paragraph" {
+    try expectHtml("<p><a id=\"x\"></a><strong>x</strong> text</p>\n<!-- a comment -->\n", "<a id=\"x\"></a>**x** text\n\n<!-- a comment -->\n");
+}

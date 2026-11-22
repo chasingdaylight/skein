@@ -147,7 +147,7 @@ fn describe(ctx: Context, item: *const Item) Error!?[]const u8 {
     return try ctx.arena.print("{s}, {s}", .{ category, status });
 }
 
-fn isItemFile(ctx: Context, file: []const u8) bool {
+pub fn isItemFile(ctx: Context, file: []const u8) bool {
     for (ctx.item_sources) |dir| {
         if (std.mem.eql(u8, dir, ".")) return true;
         if (file.len > dir.len and std.mem.startsWith(u8, file, dir) and file[dir.len] == '/') return true;
@@ -157,7 +157,7 @@ fn isItemFile(ctx: Context, file: []const u8) bool {
 
 /// The path of the file `to` as written in the file `from`; both are
 /// paths from the project's root, with forward slashes
-fn relative(arena: std.mem.Allocator, from: []const u8, to: []const u8) Error![]const u8 {
+pub fn relative(arena: std.mem.Allocator, from: []const u8, to: []const u8) Error![]const u8 {
     var here = std.mem.splitScalar(u8, std.Io.Dir.path.dirnamePosix(from) orelse "", '/');
     var there = std.mem.splitScalar(u8, to, '/');
     var rest = to;

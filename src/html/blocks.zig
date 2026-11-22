@@ -54,9 +54,15 @@ pub const Document = struct {
                 try self.out.appendSlice(a, "</blockquote>\n");
             },
             .table => try self.table(b.text),
-            .html => {
+            // HTML of block elements is kept as it is; a paragraph that starts
+            // with an inline tag (the anchor of an item) is a paragraph
+            .html => if (isBlockHtml(b.text)) {
                 try self.out.appendSlice(a, b.text);
                 try self.out.append(a, '\n');
+            } else {
+                try self.out.appendSlice(a, "<p>");
+                try inline_html.render(a, &self.out, std.mem.trim(u8, b.text, " \t\r\n"), self.options);
+                try self.out.appendSlice(a, "</p>\n");
             },
             .thematic_break => try self.out.appendSlice(a, "<hr>\n"),
         }
@@ -264,6 +270,26 @@ fn isDelimiterRow(values: []const []const u8) bool {
         for (t) |c| if (c != '-') return false;
     }
     return values.len > 0;
+}
+
+/// The elements whose HTML is a block of its own (CommonMark's list)
+const block_tags = [_][]const u8{
+    "address", "article", "aside", "blockquote", "body", "caption", "center", "col", "colgroup", "dd", "details", "dialog", "dir", "div", "dl", "dt", "fieldset", "figcaption", "figure", "footer", "form", "frame", "frameset", "h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hr", "html", "iframe", "legend", "li", "link", "main", "menu", "menuitem", "nav", "noframes", "ol", "optgroup", "option", "p", "param", "pre", "script", "section", "source", "style", "summary", "table", "tbody", "td", "textarea", "tfoot", "th", "thead", "title", "tr", "track", "ul",
+};
+
+/// Whether `text`, a block that starts with `<`, starts with a comment or
+/// a tag of a block element
+fn isBlockHtml(text: []const u8) bool {
+    const s = std.mem.trimStart(u8, text, " ");
+    if (std.mem.startsWith(u8, s, "<!")) return true;
+    var name = s[1..];
+    if (name.len > 0 and name[0] == '/') name = name[1..];
+    var n: usize = 0;
+    while (n < name.len and std.ascii.isAlphanumeric(name[n])) n += 1;
+    for (block_tags) |tag| {
+        if (std.ascii.eqlIgnoreCase(name[0..n], tag)) return true;
+    }
+    return false;
 }
 
 /// The text of a block quote without its `>` marks

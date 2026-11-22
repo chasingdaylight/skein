@@ -42,7 +42,8 @@ pub const usage =
     \\                    (default: id, text)
     \\  --replace         import csv: write over item files that are there
     \\  --out DIR         render: where the rendered files go
-    \\  --format NAME     render: markdown (the default, and the only one yet)
+    \\  --format NAME     render: markdown for a site generator (the default),
+    \\                    or html: the site itself
     \\
 ;
 
@@ -146,6 +147,14 @@ pub const Render = struct {
     common: Common = .{},
     /// the directory the rendered files go to, from where skein is run
     out: []const u8,
+    format: Format = .markdown,
+
+    pub const Format = enum {
+        /// Markdown for a site generator
+        markdown,
+        /// the site itself: HTML pages
+        html,
+    };
 };
 
 pub const Import = struct {
@@ -266,11 +275,10 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
     if (eql(name, "render")) {
         if (try p.allow(&.{ "--root", "--out", "--format" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "render takes no items" };
-        if (p.value("--format")) |format| {
-            if (!eql(format, "markdown")) return .{ .misuse = "render: the only format yet is markdown" };
-        }
+        const format: Render.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Render.Format, f) orelse
+            return .{ .misuse = "render: the formats are markdown and html" } else .markdown;
         const out = p.value("--out") orelse return .{ .misuse = "render: say where the files go, with --out DIR" };
-        return .{ .render = .{ .common = common, .out = out } };
+        return .{ .render = .{ .common = common, .out = out, .format = format } };
     }
     if (eql(name, "import")) {
         const forms = "import: doorstop DIR..., or csv FILE --type TYPE --to DIR";
@@ -540,7 +548,8 @@ test "render needs a place to write to" {
     defer f.deinit();
     try testing.expectEqualStrings("site", (try f.run(&.{ "render", "--out", "site", "--format", "markdown" })).render.out);
     try testing.expectEqualStrings("render: say where the files go, with --out DIR", (try f.run(&.{"render"})).misuse);
-    try testing.expectEqualStrings("render: the only format yet is markdown", (try f.run(&.{ "render", "--out", "x", "--format", "html" })).misuse);
+    try testing.expectEqual(.html, (try f.run(&.{ "render", "--out", "x", "--format", "html" })).render.format);
+    try testing.expectEqualStrings("render: the formats are markdown and html", (try f.run(&.{ "render", "--out", "x", "--format", "pdf" })).misuse);
 }
 
 test "import takes a format and what to import" {
