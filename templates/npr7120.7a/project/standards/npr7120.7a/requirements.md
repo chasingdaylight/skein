@@ -121,7 +121,14 @@ The statements of NPR 7120.7A that say "shall": each an item named by its paragr
 
 %it[IT-4.5.1.f scope=service-line] The KDP DA shall make a decision on the readiness to proceed to KDP-1.
 
-%it[IT-4.5.1.g scope=service-line] The IA evaluates the proposed baseline presented in the Service Line Plan. The IA Chair shall evaluate the service line's relevancy to the NASA Information Technology Strategic Plan goals/objectives, schedule, cost estimates, and risk assessment and mitigation plans, and shall present the findings in a final IA presentation at KDP-1.
+%it[IT-4.5.1.g.1 scope=service-line] The IA Chair shall evaluate:
+
+- (a) The service line's relevancy to the NASA Information Technology Strategic Plan goals/objectives.
+- (b) Schedule.
+- (c) Cost estimates.
+- (d) Risk assessment and mitigation plans.
+
+%it[IT-4.5.1.g.2 scope=service-line] The IA Chair shall present the findings in a final IA presentation at KDP-1.
 
 %it[IT-4.5.1.h.1 scope=service-line] At the end of the Formulation Phase, the Service Line Deputy Director shall meet the following KDP-1 success criteria by filing the following documentation in the records repository accessible by the Agency OCIO:
 
@@ -168,11 +175,13 @@ The statements of NPR 7120.7A that say "shall": each an item named by its paragr
 
 %it[IT-5.2.d scope=project] For all projects in which software, hardware, or other IT products and services are being developed, the Project Manager shall ensure that planned and actual delivery of new or modified technical functionality to users occurs at least every six months in accordance with OMB-15-14.
 
-%it[IT-5.2.e scope=project] Certification of incremental development applies to any project that is developing software, hardware, or other IT products and services. Incremental development and the certification thereof is not applicable for investments and projects where software, hardware, or other IT product and service development is not occurring, such as an investment related to infrastructure or technology refreshment of equipment. Project Managers shall provide a justification when incremental development is not appropriate.
+%it[IT-5.2.e scope=project] NOTE: Incremental development and the certification thereof is not applicable for investments and projects where software, hardware, or other IT product and service development is not occurring, such as an investment related to infrastructure or technology refreshment of equipment. Project Managers shall provide a justification when incremental development is not appropriate.
 
 %it[IT-5.2.f scope=project] The KDP DA shall certify that incremental development has been addressed and documented in the project FAD.
 
-%it[IT-5.2.g scope=project] Projects shall use Minimally Viable Products (MVP) and/or Minimally Marketable Products (MMP) in their incremental development efforts. The Project Manager shall identify the use of an MVP and/or MMP in the project plan, along with the incremental development methodology.
+%it[IT-5.2.g scope=project] Projects shall use Minimally Viable Products (MVP) and/or Minimally Marketable Products (MMP) in their incremental development efforts.
+
+%it[IT-5.2.g.3 scope=project] The Project Manager shall identify the use of an MVP and/or MMP in the project plan, along with the incremental development methodology.
 
 %it[IT-5.3.b scope=project] The KDP DA shall determine if the initial project baseline at KDP-Implementation is approved.
 
