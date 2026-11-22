@@ -162,15 +162,24 @@ function board(s: Schedule): HTMLElement {
     col.append(text("h3", column.status));
     col.addEventListener("dragover", (e) => {
       e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
       col.classList.add("over");
     });
-    col.addEventListener("dragleave", () => col.classList.remove("over"));
+    // leaving the column, not one of its cards
+    col.addEventListener("dragleave", (e) => {
+      if (!col.contains(e.relatedTarget as Node | null)) col.classList.remove("over");
+    });
     col.addEventListener("drop", (e) => {
       e.preventDefault();
       col.classList.remove("over");
       const id = e.dataTransfer?.getData("text/plain");
       const item = s.items.find((i) => i.id === id);
-      if (item && item.status !== column.status) vscode.postMessage({ kind: "plan", id, status: column.status });
+      if (!item || item.status === column.status) return;
+      // moved at once; the schedule the server sends back confirms it, or
+      // puts the card back where the change is refused
+      item.status = column.status;
+      draw();
+      vscode.postMessage({ kind: "plan", id, status: column.status });
     });
     for (const item of column.items) {
       const card = el("div", item.critical ? "card critical" : "card");
@@ -178,7 +187,11 @@ function board(s: Schedule): HTMLElement {
       card.append(text("div", item.id, "card-id"), text("div", item.title, "card-title"));
       const when = item.start && item.finish ? `${item.start} to ${item.finish}` : "not scheduled";
       card.append(text("div", [when, ...item.assignees].join(" · "), "card-meta"));
-      card.addEventListener("dragstart", (e) => e.dataTransfer?.setData("text/plain", item.id));
+      card.addEventListener("dragstart", (e) => {
+        if (!e.dataTransfer) return;
+        e.dataTransfer.setData("text/plain", item.id);
+        e.dataTransfer.effectAllowed = "move";
+      });
       card.addEventListener("dblclick", () => vscode.postMessage({ kind: "open", id: item.id }));
       col.append(card);
     }
