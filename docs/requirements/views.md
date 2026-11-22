@@ -139,6 +139,9 @@ A fenced code block of the language `skein` in a document shall be a request for
 %req[render.generated.matrix]
 `matrix LINKTYPE [conditions]` shall give a table of the items that the link type may point to, each with the items that link to it by that type, the ones without any shown as such, and a count of how many have one.
 
+%req[render.generated.matrix-columns]
+`matrix LINKTYPE [conditions] columns=C,... from.columns=C,...` shall give, after the item, the columns `columns` of the item pointed to and, after the items that link to it, the columns `from.columns` of each, one row per item that links to it when those are asked for. A column is `id`, `type`, `category`, `status`, `text` (the first paragraph) or an attribute; each value that is the ID of an item is a link to it, and the values of an attribute with several are joined by commas.
+
 %req[render.generated.coverage]
 `coverage [profile=P]` shall give what `skein coverage` counts, as a table, with links to the items that are not covered.
 
