@@ -133,7 +133,8 @@ test "an item as JSON" {
         \\    "lex.comment",
         \\    "lex.token"
         \\  ],
-        \\  "below": []
+        \\  "below": [],
+        \\  "results": []
         \\}
         \\
     , shown);

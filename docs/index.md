@@ -27,6 +27,7 @@ Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as
 | [Commands](commands.md) | `check`, `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `baseline`, `pin`, `examples`, `move`, `new`, `link`, `import`, `review`, `approve`, `lsp`. |
 | [Reviewing](reviewing.md) | Fingerprints, suspect links, reviews and approvals. |
 | [Other repositories](repositories.md) | Items of other repositories, `pin`, and the state of the network. |
+| [Test results](results.md) | Reading test results, and what they say of each item. |
 | [Importing](importing.md) | Bringing in Doorstop documents and CSV files. |
 | [Design](design.md) | What skein is for, how it is built, and what is planned. |
 | [Requirements](requirements/readme.md) | What skein is required to do, written in skein and checked by skein. |
@@ -35,4 +36,4 @@ The requirements pages are produced by `skein render` from the same files that `
 
 ## Status
 
-skein is early and its version is 0.x: the file formats can still change. The core and the command line work and are tested on every platform. Rendering HTML by itself, test results, planning and the language server are planned; the [design](design.md) describes all of it.
+skein is early and its version is 0.x: the file formats can still change. The core, the command line, rendering, links across repositories, tested examples, test results and the language server work and are tested on every platform. Planning and the forge adapters are next; the [design](design.md) describes all of it.

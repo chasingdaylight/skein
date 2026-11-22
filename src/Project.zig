@@ -26,6 +26,8 @@ sources: []const Source = &.{},
 citations: []const CitationSet = &.{},
 /// the other repositories its items refer to (`name:id`)
 repositories: []const Repository = &.{},
+/// the results files it keeps, or directories of them, from its root
+results: []const []const u8 = &.{},
 schema: Schema = .{},
 
 pub const Repository = @import("network/Repository.zig");
@@ -102,7 +104,17 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources", "citations", "repositories" });
+    try r.known(&.{ "project", "sources", "citations", "repositories", "results" });
+    if (try r.child("results")) |results| {
+        try results.known(&.{"paths"});
+        for (try results.strings("paths")) |p| {
+            if (!try pathOk(results, p)) continue;
+            const kept = try r.arena.alloc([]const u8, self.results.len + 1);
+            @memcpy(kept[0..self.results.len], self.results);
+            kept[self.results.len] = std.mem.trimEnd(u8, p, "/");
+            self.results = kept;
+        }
+    }
     if (try r.child("project")) |project| {
         try project.known(&.{ "name", "id" });
         self.name = try project.string("name") orelse "";
