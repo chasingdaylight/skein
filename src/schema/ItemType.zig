@@ -23,11 +23,18 @@ approval: []const []const u8 = &.{},
 /// the roles that must each approve it, for those statuses; none when any
 /// one approval will do
 approval_roles: []const []const u8 = &.{},
+/// who may approve it, by the name an approval records (`--by`, a reviewer's
+/// login); none when anyone may
+approvers: []const []const u8 = &.{},
+/// who may approve it in a role; a role with no entry is open to those of `approvers`, or anyone
+role_approvers: []const RoleApprovers = &.{},
 attributes: []const Attribute = &.{},
 /// when the type's items are tested examples: how
 example: ?Example = null,
 /// which attribute holds each planning role; null for a type that is not work
 planning: ?Planning = null,
+
+pub const RoleApprovers = struct { role: []const u8, people: []const []const u8 };
 
 pub const Example = @import("Example.zig");
 pub const Planning = @import("Planning.zig");
@@ -74,9 +81,23 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
     // `approval = [statuses]`, or `[approval]` with `statuses` and the `roles` that approve
     if (r.table.get("approval")) |v| if (v == .table) {
         const t = (try r.child("approval")).?;
-        try t.known(&.{ "statuses", "roles" });
+        try t.known(&.{ "statuses", "roles", "approvers" });
         out.approval = try t.strings("statuses");
         out.approval_roles = try t.strings("roles");
+        // `approvers = [people]`, or `[approval.approvers]` with the people of each role
+        if (t.table.get("approvers")) |a| switch (a) {
+            .array => out.approvers = try t.strings("approvers"),
+            .table => {
+                const by_role = (try t.child("approvers")).?;
+                var list: std.ArrayList(RoleApprovers) = .empty;
+                for (by_role.table.keys()) |role| {
+                    if (!names.contains(out.approval_roles, role)) try by_role.complain(role, "'{s}' is not one of the roles", .{role});
+                    try list.append(by_role.arena, .{ .role = role, .people = try by_role.strings(role) });
+                }
+                out.role_approvers = list.items;
+            },
+            else => try t.complain("approvers", "expected a list of people, or a table of lists by role", .{}),
+        };
     } else {
         out.approval = try r.strings("approval");
     };

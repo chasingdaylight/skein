@@ -44,17 +44,35 @@ pub fn run(io: Io, arena: std.mem.Allocator, ws: *Workspace, number: u64) !Works
     if (ws.report.problems.items.len > count) return ws.problems();
     var files: std.ArrayList([]const u8) = .empty;
     var approved: usize = 0;
+    // reviewers whose approval some item's type does not accept
+    var left_out: std.ArrayList([]const u8) = .empty;
     for (changed) |c| {
         if (!(c.kind == .added or (c.kind == .changed and c.content))) continue;
         const item = after.graph.find(c.id) orelse continue;
-        if (after.project.schema.itemType(item.type_name) == null) continue;
-        for (pull.approvers) |by| try approvals.put(arena, &after.graph, &after.project.schema, item, by, on, null);
+        const item_type = after.project.schema.itemType(item.type_name) orelse continue;
+        // a type that says who approves takes only those reviewers, in the role they act in
+        var recorded = false;
+        for (pull.approvers) |by| {
+            switch (Approvals.basisOf(item_type, by)) {
+                .plain => try approvals.put(arena, &after.graph, &after.project.schema, item, by, on, null),
+                .role => |role| try approvals.put(arena, &after.graph, &after.project.schema, item, by, on, role),
+                .none => {
+                    if (!Schema.names.contains(left_out.items, by)) try left_out.append(arena, by);
+                    continue;
+                },
+            }
+            recorded = true;
+        }
+        if (!recorded) continue;
         const file = try Approvals.fileOf(arena, item);
         if (!Schema.names.contains(files.items, file)) try files.append(arena, file);
         approved += 1;
     }
     try approvals.write(io, arena, ws.root, &ws.graph, files.items);
-    return .{ .text = try arena.print("skein: pull request {d}, merged {s}: {d} item{s} approved by {s}\n", .{ number, merged_on, approved, if (approved == 1) "" else "s", try std.mem.join(arena, ", ", pull.approvers) }) };
+    var text: std.ArrayList(u8) = .empty;
+    try text.print(arena, "skein: pull request {d}, merged {s}: {d} item{s} approved by {s}\n", .{ number, merged_on, approved, if (approved == 1) "" else "s", try std.mem.join(arena, ", ", pull.approvers) });
+    if (left_out.items.len > 0) try text.print(arena, "skein: not recorded for items whose type does not let them approve: {s}\n", .{try std.mem.join(arena, ", ", left_out.items)});
+    return .{ .text = text.items };
 }
 
 fn gone(arena: std.mem.Allocator, commit: []const u8, e: history.Error) !Workspace.Outcome {
