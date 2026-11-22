@@ -20,6 +20,14 @@ The recorded state shall be in `.skein/network.toml`, a file skein writes and th
 %req[pin.refusals]
 `skein pin` shall refuse, and write nothing, when the project declares no repository or none of that name, when the project is not in a git repository, when a checkout is not there or has no such commit, and, when no commit is named, when the checkout has changes that are not committed: a state of the network is one of commits.
 
+## Repositories by url
+
+%req[network.fetched]
+A repository declared by a `url` shall be fetched with git into a cache of its own, a bare repository under this repository's git directory that is never committed: the recorded commit, or, for `--current` and `--working`, the tip of its `ref` or of its default branch. A fetch that shows no progress for 30 seconds is stopped, and git is never let wait for a password typed at a terminal. `skein pin` fetches what it pins the same way: the commit named, a branch or tag named, or the tip.
+
+%req[network.offline]
+With `--offline`, nothing shall be fetched: a repository by url is read from what its cache holds. A repository whose commit is not in its cache, offline, or that could not be fetched, is not read, and the targets in it are not checked: a warning, as for a checkout that is not there.
+
 ## Reading the network
 
 %req[network.states]

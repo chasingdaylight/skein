@@ -444,18 +444,18 @@ fn hover(s: *Server, a: Allocator, id: json.Value, params: json.Value) Error!voi
 }
 
 fn notify(s: *Server, a: Allocator, method: []const u8, params: anytype) Error!void {
-    const body = try std.fmt.allocPrint(a, "{{\"jsonrpc\":\"2.0\",\"method\":{f},\"params\":{f}}}", .{ fmtJson(method), fmtJson(params) });
+    const body = try a.print("{{\"jsonrpc\":\"2.0\",\"method\":{f},\"params\":{f}}}", .{ fmtJson(method), fmtJson(params) });
     try jsonrpc.writeMessage(s.out, body);
 }
 
 fn respond(s: *Server, a: Allocator, id: json.Value, result: anytype) Error!void {
-    const body = try std.fmt.allocPrint(a, "{{\"jsonrpc\":\"2.0\",\"id\":{f},\"result\":{f}}}", .{ fmtJson(id), fmtJson(result) });
+    const body = try a.print("{{\"jsonrpc\":\"2.0\",\"id\":{f},\"result\":{f}}}", .{ fmtJson(id), fmtJson(result) });
     try jsonrpc.writeMessage(s.out, body);
 }
 
 fn respondError(s: *Server, a: Allocator, id: json.Value, code: i64, message: []const u8) Error!void {
     const e: protocol.ResponseError = .{ .code = code, .message = message };
-    const body = try std.fmt.allocPrint(a, "{{\"jsonrpc\":\"2.0\",\"id\":{f},\"error\":{f}}}", .{ fmtJson(id), fmtJson(e) });
+    const body = try a.print("{{\"jsonrpc\":\"2.0\",\"id\":{f},\"error\":{f}}}", .{ fmtJson(id), fmtJson(e) });
     try jsonrpc.writeMessage(s.out, body);
 }
 

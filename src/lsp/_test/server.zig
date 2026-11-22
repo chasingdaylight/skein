@@ -72,7 +72,7 @@ const Session = struct {
     fn send(self: *Session, comptime fmt: []const u8, args: anytype) ![]const json.Value {
         const a = self.arena.allocator();
         self.out.clearRetainingCapacity();
-        try self.server.handle(a, try std.fmt.allocPrint(a, fmt, args));
+        try self.server.handle(a, try a.print(fmt, args));
         var reader: Io.Reader = .fixed(self.out.written());
         var messages: std.ArrayList(json.Value) = .empty;
         while (try jsonrpc.readMessage(a, &reader)) |body| {

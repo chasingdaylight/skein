@@ -74,7 +74,7 @@ pub fn open(io: Io, arena: std.mem.Allocator, common: cli.Common) !Opened {
         self.items_read = true;
         self.graph = try Graph.load(io, arena, self.root, &self.project, &self.report);
         self.citations = try Graph.Citations.load(io, arena, self.root, &self.project, &self.report);
-        self.network = try Network.load(io, arena, self.root, root_path, &self.project, common.state, &self.report);
+        self.network = try Network.load(io, arena, self.root, root_path, &self.project, .{ .state = common.state, .offline = common.offline }, &self.report);
     }
     return .{ .ok = self };
 }
