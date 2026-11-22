@@ -130,4 +130,6 @@ test {
     _ = Forge;
     _ = github;
     _ = @import("_test/checks.zig");
+    _ = @import("pulls.zig");
+    _ = @import("_test/pulls.zig");
 }

@@ -29,13 +29,32 @@ pub const Answer = union(enum) {
 
 /// What the forge says of `r`
 pub fn lookup(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Ref) !Answer {
-    if (try viaGh(io, arena, forge, r)) |answer| return answer;
-    return viaHttps(io, arena, forge, r);
+    return switch (try api(io, arena, forge, try arena.print("repos/{s}/issues/{d}", .{ r.repository, r.number }))) {
+        .body => |json| if (parse(arena, json)) |issue| .{ .found = issue } else .{ .unreachable_ = "the forge gave an answer skein cannot read" },
+        .missing => .missing,
+        .unreachable_ => |why| .{ .unreachable_ = why },
+    };
+}
+
+/// What a request of GitHub's REST API gives
+pub const Reply = union(enum) {
+    /// the JSON it answered with
+    body: []const u8,
+    /// there is no such thing
+    missing,
+    /// it could not be asked, or did not answer: why
+    unreachable_: []const u8,
+};
+
+/// GET `path` (`repos/owner/repo/...`) of the forge's REST API: through
+/// `gh api` when it is installed, else over HTTPS
+pub fn api(io: Io, arena: std.mem.Allocator, forge: *const Forge, path: []const u8) !Reply {
+    if (try viaGh(io, arena, forge, path)) |reply| return reply;
+    return viaHttps(io, arena, forge, path);
 }
 
 /// Through `gh api`; null when `gh` is not installed
-fn viaGh(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Ref) !?Answer {
-    const path = try arena.print("repos/{s}/issues/{d}", .{ r.repository, r.number });
+fn viaGh(io: Io, arena: std.mem.Allocator, forge: *const Forge, path: []const u8) !?Reply {
     var argv: std.ArrayList([]const u8) = .empty;
     try argv.appendSlice(arena, &.{ "gh", "api", path });
     if (forge.url != null) try argv.appendSlice(arena, &.{ "--hostname", forge.host() });
@@ -49,15 +68,15 @@ fn viaGh(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Ref) !?
         error.Timeout => return .{ .unreachable_ = "gh did not answer in time" },
         else => return .{ .unreachable_ = try arena.print("gh could not be run ({t})", .{e}) },
     };
-    if (result.term.success()) return if (parse(arena, result.stdout)) |issue| .{ .found = issue } else .{ .unreachable_ = "gh gave an answer skein cannot read" };
+    if (result.term.success()) return .{ .body = result.stdout };
     if (std.mem.find(u8, result.stderr, "Not Found") != null or std.mem.find(u8, result.stdout, "Not Found") != null) return .missing;
     return .{ .unreachable_ = try arena.print("gh: {s}", .{std.mem.trim(u8, result.stderr, " \r\n")}) };
 }
 
 /// Through GitHub's API, over HTTPS
-fn viaHttps(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Ref) !Answer {
+fn viaHttps(io: Io, arena: std.mem.Allocator, forge: *const Forge, path: []const u8) !Reply {
     const base = if (forge.url) |u| try arena.print("{s}/api/v3", .{u}) else "https://api.github.com";
-    const url = try arena.print("{s}/repos/{s}/issues/{d}", .{ base, r.repository, r.number });
+    const url = try arena.print("{s}/{s}", .{ base, path });
     var client: std.http.Client = .{ .allocator = arena, .io = io };
     defer client.deinit();
     var body: Io.Writer.Allocating = .init(arena);
@@ -73,7 +92,7 @@ fn viaHttps(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Ref)
         .privileged_headers = headers.items,
     }) catch |e| return .{ .unreachable_ = try arena.print("{s} could not be reached ({t})", .{ forge.host(), e }) };
     return switch (result.status) {
-        .ok => if (parse(arena, body.written())) |issue| .{ .found = issue } else .{ .unreachable_ = "GitHub gave an answer skein cannot read" },
+        .ok => .{ .body = body.written() },
         .not_found, .gone => .missing,
         else => .{ .unreachable_ = try arena.print("GitHub answered {d}", .{@backingInt(result.status)}) },
     };

@@ -5,6 +5,7 @@ const std = @import("std");
 const Io = std.Io;
 
 const Approvals = @import("../graph/Approvals.zig");
+const approve_pull = @import("approve_pull.zig");
 const cli = @import("../cli.zig");
 const Schema = @import("../schema/Schema.zig");
 const Workspace = @import("Workspace.zig");
@@ -19,6 +20,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Approve) !Workspace.Ou
     };
     defer ws.close();
     if (!ws.items_read) return ws.problems();
+    if (options.from_pull_request) |number| return approve_pull.run(io, arena, &ws, number);
 
     const by = options.by orelse try git.userName(io, arena, ws.root) orelse return .{
         .text = "skein: who approves? Give --by NAME (git has no user.name to take it from)\n",

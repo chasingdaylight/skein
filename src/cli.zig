@@ -56,6 +56,9 @@ pub const usage =
     \\                    move: keep the old ID as an alias, or not (default: kept
     \\                    when the project declares an id, so others can cite it)
     \\  --all             review, clear: every link, not those of the items named
+    \\  --from-pull-request N
+    \\                    approve: the approvals merged pull request N had in review,
+    \\                    of what it changed
     \\  --by NAME         approve, result: who (default: git's user.name)
     \\  --on DATE         approve, result: when, as 2027-03-01 (default: today)
     \\  --note TEXT       result: what to keep with it
@@ -281,6 +284,8 @@ pub const Approve = struct {
     ids: []const []const u8,
     by: ?[]const u8 = null,
     on: ?[]const u8 = null,
+    /// the approvals of this merged pull request, in place of `ids`
+    from_pull_request: ?u64 = null,
 };
 
 pub const Result = struct {
@@ -321,6 +326,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--results", .takes_value = true },
     .{ .name = "--note", .takes_value = true },
     .{ .name = "--implementation", .takes_value = true },
+    .{ .name = "--from-pull-request", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -470,7 +476,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .result = .{ .common = common, .id = words[0], .outcome = outcome, .by = p.value("--by"), .on = p.value("--on"), .note = p.value("--note"), .implementation = p.value("--implementation") } };
     }
     if (eql(name, "approve")) {
-        if (try p.allow(&.{ "--root", "--by", "--on" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--by", "--on", "--from-pull-request" })) |problem| return .{ .misuse = problem };
+        if (p.value("--from-pull-request")) |n| {
+            if (words.len > 0 or p.flag("--by") or p.flag("--on")) return .{ .misuse = "approve --from-pull-request takes the pull request's number alone" };
+            const number = std.fmt.parseInt(u64, std.mem.trimStart(u8, n, "#"), 10) catch return .{ .misuse = "approve --from-pull-request: the number of a pull request" };
+            return .{ .approve = .{ .common = common, .ids = &.{}, .from_pull_request = number } };
+        }
         if (words.len == 0) return .{ .misuse = "name the items to approve" };
         return .{ .approve = .{ .common = common, .ids = words, .by = p.value("--by"), .on = p.value("--on") } };
     }
