@@ -7,6 +7,7 @@ const Io = std.Io;
 
 const cli = @import("../cli.zig");
 const Results = @import("../results/Results.zig");
+const forge = @import("../forge/checks.zig");
 const Workspace = @import("Workspace.zig");
 const files = @import("../files.zig");
 const markdown = @import("../render/markdown.zig");
@@ -35,6 +36,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
     const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, options.results, &ws.report);
     if (ws.report.problems.items.len > before) return ws.problems();
     const idx = try results.index(arena, &ws.graph, &ws.citations);
+    const known = try forge.learn(io, arena, ws.root, &ws.project, &ws.graph, options.common.offline);
     const ctx: markdown.Context = .{
         .arena = arena,
         .graph = &ws.graph,
@@ -44,6 +46,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
         .citations = &ws.citations,
         .profile = profile,
         .results = if (results.all.len > 0) .{ .results = &results, .index = &idx } else null,
+        .issues = if (known) |*k| k else null,
     };
 
     var out = Io.Dir.cwd().createDirPathOpen(io, options.out, .{}) catch |e| return .{

@@ -30,6 +30,10 @@ open = true
 
 skein asks through `gh` when it is installed, so its sign-in is used, GitHub Enterprise included. Without `gh`, it calls GitHub's API itself, with the token in `GH_TOKEN` or `GITHUB_TOKEN` when one is set; public repositories need none. Nothing has to be installed for it.
 
+## Rendered
+
+`skein render` makes each reference a link to the issue or pull request on the forge. A reference that gives no words of its own is followed by its title and state, as the forge or the cache has them: `#97 (Proposal 0000, closed)`. One the forge says does not exist is marked unresolved, as a missing item is.
+
 ## Offline
 
 What the forge said is kept in a cache under `.git/skein/forge/`, never committed. With `--offline`, skein asks nothing and uses the cache; when the forge cannot be reached, it uses the cache too. What neither knows is not checked, and `check` says so with a warning:

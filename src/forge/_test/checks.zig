@@ -10,6 +10,7 @@ const check_command = @import("../../commands/check.zig");
 const checks = @import("../checks.zig");
 const git_program = @import("../../git.zig");
 const github = @import("../github.zig");
+const render_command = @import("../../commands/render.zig");
 
 fn write(dir: std.Io.Dir, path: []const u8, data: []const u8) !void {
     if (std.Io.Dir.path.dirname(path)) |parent| try dir.createDirPath(testing.io, parent);
@@ -86,6 +87,28 @@ test "issues and pull requests are checked against the forge, and cached" {
     const blind = (try check_command.run(testing.io, a, .{ .root = root })).text;
     try expectContains(blind, ".skein/config.toml: warning: forge: 6 references to issues and pull requests are not checked: no network");
     try expectContains(blind, "no problems, 1 warning");
+}
+
+// req: forge.render
+test "rendered, an issue is a link to its page, with its title and state" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    _ = try git_program.output(testing.io, a, tmp.dir, &.{ "init", "--quiet" });
+    try write(tmp.dir, ".skein/config.toml", "[[sources]]\npath = \"spec\"\n\n[forge]\nrepository = \"example/spec\"\n");
+    try write(tmp.dir, ".skein/types/rule.toml", "");
+    try write(tmp.dir, "spec/lex.md", "%rule[lex.a] See %[#2], %[#1 the open one] and %[#7].\n");
+    const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
+    const saved = checks.lookup;
+    defer checks.lookup = saved;
+    checks.lookup = fake;
+    reachable = true;
+    const out_dir = try std.Io.Dir.path.join(a, &.{ root, "out" });
+    _ = try render_command.run(testing.io, a, .{ .common = .{ .root = root }, .out = out_dir });
+    const page = try tmp.dir.readFileAlloc(testing.io, "out/spec/lex.md", a, .limited(1 << 16));
+    try expectContains(page, "See [#2](https://github.com/example/spec/issues/2) *(Done, closed)*, [the open one](https://github.com/example/spec/issues/1) and <span class=\"skein-unresolved\" title=\"unresolved: #7\">#7</span>.");
 }
 
 test "without a forge, references to issues are accepted unchecked" {

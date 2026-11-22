@@ -29,8 +29,8 @@ const Place = struct {
     must_be_open: bool = false,
 };
 
-pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, offline: bool, report: *Report) !void {
-    const forge = project.forge orelse return;
+/// Where the project names issues and pull requests
+fn placesOf(arena: std.mem.Allocator, project: *const Project, graph: *const Graph) ![]const Place {
     var places: std.ArrayList(Place) = .empty;
     for (graph.items) |*item| {
         for (item.links) |link| {
@@ -45,22 +45,58 @@ pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proje
     for (graph.mentions) |m| {
         if (Forge.isRef(m.target)) try places.append(arena, .{ .file = m.file, .line = m.line, .column = m.column, .what = "the text refers to", .target = m.target });
     }
-    if (places.items.len == 0) return;
+    return places.items;
+}
 
+/// What is known of the issues and pull requests a project names: what
+/// the forge said, else its cache, each asked about once
+pub const Known = struct {
+    forge: Forge,
+    /// by "owner/repo#N"; null when nothing is known
+    answers: std.array_hash_map.String(?github.Answer) = .empty,
+    /// why some are not known
+    why: []const u8 = "",
+
+    /// What is known of `target`, which names an issue or pull request
+    pub fn of(self: *const Known, arena: std.mem.Allocator, target: []const u8) !?github.Answer {
+        const r = self.forge.ref(target) orelse return null;
+        return self.answers.get(try key(arena, r)) orelse null;
+    }
+};
+
+fn key(arena: std.mem.Allocator, r: Forge.Ref) ![]const u8 {
+    return arena.print("{s}#{d}", .{ r.repository, r.number });
+}
+
+/// What can be learned of the issues and pull requests `graph` names; null
+/// when the project names no forge
+pub fn learn(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, offline: bool) !?Known {
+    return learnOf(io, arena, root, project, try placesOf(arena, project, graph), offline);
+}
+
+fn learnOf(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, places: []const Place, offline: bool) !?Known {
+    var known: Known = .{ .forge = project.forge orelse return null };
+    if (places.len == 0) return known;
     const git_dir: ?[]const u8 = history.gitDir(io, arena, root) catch |e| switch (e) {
         error.OutOfMemory => return error.OutOfMemory,
         else => null,
     };
-    // each issue is asked about once
-    var answers: std.array_hash_map.String(?github.Answer) = .empty;
+    for (places) |p| {
+        const r = known.forge.ref(p.target).?;
+        const entry = try known.answers.getOrPut(arena, try key(arena, r));
+        if (!entry.found_existing) entry.value_ptr.* = try answer(io, arena, git_dir, &known.forge, r, offline, &known.why);
+    }
+    return known;
+}
+
+pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, offline: bool, report: *Report) !void {
+    const places = try placesOf(arena, project, graph);
+    const known = try learnOf(io, arena, root, project, places, offline) orelse return;
     var unchecked: usize = 0;
-    var why: []const u8 = "";
-    for (places.items) |p| {
-        const r = forge.ref(p.target).?;
-        const key = try arena.print("{s}#{d}", .{ r.repository, r.number });
-        const entry = try answers.getOrPut(arena, key);
-        if (!entry.found_existing) entry.value_ptr.* = try answer(io, arena, git_dir, &forge, r, offline, &why);
-        const a = entry.value_ptr.* orelse {
+    const why = known.why;
+    for (places) |p| {
+        const r = known.forge.ref(p.target).?;
+        const a = try known.of(arena, p.target) orelse {
             unchecked += 1;
             continue;
         };
