@@ -41,7 +41,7 @@ A reviewed link to an item of another repository shall be held against that item
 %req[network.site]
 A repository may give the address of its site, as `skein render --format html` writes it (`site`). A reference to one of its items is then rendered as a link to the item's page there, with the item's anchor when it is in a document; without a site, as its words.
 
-## Repositories by url
+## Repositories by URL
 
 %req[network.fetched]
 A repository declared by a `url` shall be fetched with git into a cache of its own, a bare repository under this repository's git directory that is never committed: the recorded commit, or, for `--current` and `--working`, the tip of its `ref` or of its default branch. A fetch that shows no progress for 30 seconds is stopped, and git is never let wait for a password typed at a terminal. `skein pin` fetches what it pins the same way: the commit named, a branch or tag named, or the tip.

@@ -10,5 +10,8 @@ Items can name the issues and pull requests that introduced them, track them, or
 %req[forge.check]
 `skein check` shall report a target that the forge says does not exist, and one that a link of a type with `open = true` points to while it is closed. It asks the forge through the `gh` program when it is installed, so that its sign-in is used, and otherwise through the forge's HTTPS API with a token from `GH_TOKEN` or `GITHUB_TOKEN` when one is set; each issue or pull request is asked about once per run.
 
+%req[forge.render]
+`skein render` shall render a reference to an issue or pull request as a link to its page on the forge, followed, when the reference gives no words of its own, by its title and whether it is open or closed, as the forge or the cache gives them. One the forge says does not exist is marked unresolved; without `[forge]`, it is its words.
+
 %req[forge.offline]
 What the forge said of each issue and pull request shall be kept in a cache under this repository's git directory, never committed. With `--offline` nothing is asked and the cache is used; when the forge cannot be asked or does not answer, the cache is used too. What neither knows is not checked, and that is a warning.

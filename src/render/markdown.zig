@@ -8,6 +8,8 @@ const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Marker = @import("../markdown/Marker.zig");
 const Network = @import("../network/Network.zig");
+const Forge = @import("../forge/Forge.zig");
+const forge = @import("../forge/checks.zig");
 const Project = @import("../Project.zig");
 const Schema = @import("../schema/Schema.zig");
 const coverage = @import("../graph/coverage.zig");
@@ -32,6 +34,9 @@ pub const Context = struct {
     profile: ?*const Schema.Profile = null,
     /// test results, for the generated coverage pages
     results: ?generated.ResultsOf = null,
+    /// what the forge said of the issues and pull requests named; null
+    /// without a forge
+    issues: ?*const forge.Known = null,
 };
 
 /// The document `file`, whose text is `source`, rendered.
@@ -202,6 +207,11 @@ const Page = struct {
                 const words = if (std.mem.findScalar(u8, inner, ' ')) |s| std.mem.trim(u8, inner[s + 1 ..], " ") else target;
                 switch (try self.resolve(target)) {
                     .link => |link| try out.print(a, "[{s}]({s})", .{ words, link }),
+                    .issue => |issue| {
+                        try out.print(a, "[{s}]({s})", .{ words, issue.url });
+                        // beside the number, when the reference gives no words
+                        if (issue.note) |note| if (std.mem.eql(u8, words, target)) try out.print(a, " *({s})*", .{note});
+                    },
                     .plain => try out.appendSlice(a, words),
                     // marked, so a reader sees what skein could not resolve
                     .unresolved => {
@@ -233,10 +243,22 @@ const Page = struct {
         plain,
         /// no item that can be found
         unresolved,
+        /// an issue or pull request: its page, and its title and state when known
+        issue: struct { url: []const u8, note: ?[]const u8 = null },
     };
 
     /// What a reference to `id` becomes
     fn resolve(self: *const Page, id: []const u8) Error!Resolved {
+        if (Forge.isRef(id)) {
+            const known = self.ctx.issues orelse return .plain;
+            const r = known.forge.ref(id).?;
+            const url = try known.forge.page(self.ctx.arena, r);
+            const answer = try known.of(self.ctx.arena, id) orelse return .{ .issue = .{ .url = url } };
+            return switch (answer) {
+                .found => |issue| .{ .issue = .{ .url = url, .note = try self.ctx.arena.print("{s}, {s}", .{ issue.title, if (issue.open) "open" else "closed" }) } },
+                else => .unresolved,
+            };
+        }
         if (Network.split(id)) |parts| {
             const n = self.ctx.graph.others orelse return .unresolved;
             return switch (n.resolve(id)) {
