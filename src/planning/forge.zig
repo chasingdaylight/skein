@@ -29,7 +29,7 @@ pub const Collected = struct {
 };
 
 pub fn collect(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, offline: bool) !Collected {
-    const works = try Work.collect(arena, &project.schema, graph);
+    const works = try Work.collectAll(arena, project, graph);
     var out: Collected = .{ .works = works };
     var targets: std.ArrayList([]const u8) = .empty;
     for (works) |w| if (w.issue) |i| try targets.append(arena, i);

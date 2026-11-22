@@ -50,7 +50,7 @@ const Entry = struct {
 fn calendarOf(s: *Server, a: Allocator, ws: *const Workspace) Allocator.Error!*const Calendar {
     var ignored: Report = .{ .arena = a };
     const c = try a.create(Calendar);
-    c.* = if (try Resources.load(s.io, a, ws.root, &ignored)) |r| r.calendar else .every_day;
+    c.* = if (try Resources.of(s.io, a, ws, &ignored)) |r| r.calendar else .every_day;
     return c;
 }
 
@@ -64,6 +64,8 @@ pub fn scheduleOf(s: *Server, a: Allocator, id: json.Value) Server.Error!void {
     var out: std.ArrayList(Entry) = .empty;
     var statuses: std.ArrayList([]const u8) = .empty;
     for (try schedule.compute(a, works, calendar)) |*e| {
+        // the editor edits this repository's work; other repositories' places it
+        if (e.work.repo != null) continue;
         const item = e.work.item;
         const t = ws.project.schema.itemType(item.type_name).?;
         for (t.statuses) |st| {

@@ -30,6 +30,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proje
     };
     const entries = try schedule.compute(arena, works, calendar);
     for (entries) |*e| {
+        // what is wrong with another repository's work is for its own `check`
+        if (e.work.repo != null) continue;
         const item = e.work.item;
         if (e.source == .unscheduled) {
             try report.warn(item.file, item.line, 1, "{s}: it cannot be scheduled: it follows nothing with dates, and has no parent with a start", .{item.id});
@@ -68,7 +70,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proje
 }
 
 fn find(entries: []schedule.Entry, id: []const u8) ?*schedule.Entry {
-    for (entries) |*e| if (std.mem.eql(u8, e.work.item.id, id)) return e;
+    for (entries) |*e| if (std.mem.eql(u8, e.work.id, id)) return e;
     return null;
 }
 

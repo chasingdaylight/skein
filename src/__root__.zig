@@ -33,6 +33,7 @@ test {
     _ = @import("planning/_test/forge.zig");
     _ = @import("planning/_test/time.zig");
     _ = @import("planning/_test/overlay.zig");
+    _ = @import("planning/_test/network.zig");
     _ = @import("forge/Overlay.zig");
     _ = @import("planning/Time.zig");
     _ = @import("edit/attribute.zig");

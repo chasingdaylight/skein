@@ -45,7 +45,7 @@ pub fn render(ctx: generated.Context, kind: Kind, args: []const []const u8) Erro
     }
     // the milestone's days: from the first start of its work to its finish
     for (plan.entries) |e| {
-        if (to == null and std.mem.eql(u8, e.work.item.id, milestone)) to = e.finish;
+        if (to == null and std.mem.eql(u8, e.work.id, milestone)) to = e.finish;
         const m = e.work.milestone orelse continue;
         if (!std.mem.eql(u8, m, milestone)) continue;
         if (e.start) |s| if (from == null or s < from.?) {

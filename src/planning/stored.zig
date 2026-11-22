@@ -23,7 +23,7 @@ pub fn toml(arena: std.mem.Allocator, entries: []const schedule.Entry) Error![]c
     var out: std.ArrayList(u8) = .empty;
     try out.appendSlice(arena, "# The schedule of the work items, written by 'skein schedule'; not to be\n# edited. 'skein check' reports when it is not the one the items give.\n");
     for (entries) |e| {
-        try out.print(arena, "\n[items.\"{s}\"]\n", .{e.work.item.id});
+        try out.print(arena, "\n[items.\"{s}\"]\n", .{e.work.id});
         if (e.start) |s| try out.print(arena, "start = {s}\n", .{&day.format(s)});
         if (e.finish) |f| try out.print(arena, "finish = {s}\n", .{&day.format(f)});
         try out.print(arena, "mode = \"{t}\"\nsource = \"{t}\"\n", .{ e.mode, e.source });
@@ -40,7 +40,7 @@ pub fn json(arena: std.mem.Allocator, entries: []const schedule.Entry) Error![]c
     for (entries) |e| {
         try j.beginObject();
         try j.key("id");
-        try j.string(e.work.item.id);
+        try j.string(e.work.id);
         try j.key("start");
         try j.optional(if (e.start) |s| try arena.dupe(u8, &day.format(s)) else null);
         try j.key("finish");
@@ -67,7 +67,7 @@ pub fn csv(arena: std.mem.Allocator, entries: []const schedule.Entry) Error![]co
     try out.appendSlice(arena, "id,start,finish,mode,source,slack,critical\n");
     for (entries) |e| {
         // IDs have no commas or quotes
-        try out.print(arena, "{s},", .{e.work.item.id});
+        try out.print(arena, "{s},", .{e.work.id});
         if (e.start) |s| try out.appendSlice(arena, &day.format(s));
         try out.append(arena, ',');
         if (e.finish) |f| try out.appendSlice(arena, &day.format(f));

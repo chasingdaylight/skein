@@ -33,6 +33,14 @@ The schedule shall give each scheduled item its slack, the working days it can f
 %req[planning.schedule-checks]
 `skein check` shall report a fixed item that starts before its predecessors let it, an item that runs outside its parent's dates (a parent that spans its children excepted), an item that finishes after its milestone (the work item its milestone names), and a stored schedule, in any of its formats, that is missing or not the one the work items give now.
 
+## Projects of several repositories
+
+%req[planning.repository]
+A project may name its planning repository, `[planning] repository = "NAME"`, one of its `[[repositories]]`. When the project has no `.skein/resources.toml` of its own, the people and the calendar of that repository's file, as read at the commit of the network's state, are the project's, so that people and calendars are kept once. A name that is no declared repository is a problem of the configuration. (Design, section 10.5.)
+
+%req[planning.span]
+A planning repository, `[planning] span = true`, shall schedule and show the work of the repositories it declares (that can be read) with its own: each of theirs is known as `repository:ID`, and a link of its own work of a type whose planning role is `precedes` or `parent` to such an item (`precedes=compiler:t.parse`) orders work across repositories. `skein schedule` stores the whole schedule in its `.skein/schedule.toml` and writes nothing into the other repositories; Gantt charts, boards, the roadmap and time reports show their work, named but not linked; `check` reports the plan's own work, and what is wrong with another repository's is for its own `check`. Burndown and burnup history is read from this repository only. (Design, section 10.5.)
+
 ## Time spent
 
 %req[planning.time]

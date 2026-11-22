@@ -21,6 +21,7 @@ const Io = std.Io;
 const Calendar = @import("Calendar.zig");
 const Project = @import("../Project.zig");
 const Reader = @import("../schema/Reader.zig");
+const Workspace = @import("../commands/Workspace.zig");
 const Report = @import("../Report.zig");
 const toml = @import("../toml.zig");
 const day = @import("day.zig");
@@ -68,7 +69,30 @@ pub fn person(self: *const Resources, handle: []const u8) ?*const Person {
 pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std.mem.Allocator.Error!?Resources {
     root.access(io, file, .{}) catch return null;
     const table = try Project.readToml(io, arena, root, file, report) orelse return .{};
-    const r: Reader = .{ .report = report, .arena = arena, .file = file, .table = table };
+    return try fromTable(arena, table, file, report);
+}
+
+/// The resources of the project `ws`: its own file, else those of its
+/// planning repository (`[planning] repository`), which shares its people
+/// and calendar; null when neither has any
+pub fn of(io: Io, arena: std.mem.Allocator, ws: *const Workspace, report: *Report) std.mem.Allocator.Error!?Resources {
+    if (try load(io, arena, ws.root, report)) |own| return own;
+    const name = ws.project.planning_repository orelse return null;
+    const member = ws.network.member(name) orelse return null;
+    const text = member.resources orelse return null;
+    // what is wrong with the planning repository's file is for its own `check`
+    var diag: toml.Diagnostic = .{};
+    const table = toml.parse(arena, text, &diag) catch |e| switch (e) {
+        error.OutOfMemory => return error.OutOfMemory,
+        error.InvalidToml => return null,
+    };
+    var ignored: Report = .{ .arena = arena };
+    return try fromTable(arena, table, try arena.print("{s}:{s}", .{ name, file }), &ignored);
+}
+
+/// The resources a table of `path` says
+fn fromTable(arena: std.mem.Allocator, table: *const toml.Table, path: []const u8, report: *Report) std.mem.Allocator.Error!Resources {
+    const r: Reader = .{ .report = report, .arena = arena, .file = path, .table = table };
     try r.known(&.{ "calendar", "people" });
     var out: Resources = .{};
     if (try r.child("calendar")) |c| {

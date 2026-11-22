@@ -34,6 +34,13 @@ forge: ?Forge = null,
 templates: []const template_use.Use = &.{},
 /// how mature its documents are expected to be, at which milestone
 maturity: Maturity = .{},
+/// the planning repository of a project of several repositories (`[planning]
+/// repository`): one of `repositories`, whose resources and calendar are
+/// used when the project has none of its own
+planning_repository: ?[]const u8 = null,
+/// whether this project is a planning repository (`[planning] span`): its
+/// schedule and views span the work of the repositories it declares
+planning_span: bool = false,
 /// the formats the schedule is also written in (`[schedule] also`), besides
 /// `.skein/schedule.toml`
 schedule_also: []const []const u8 = &.{},
@@ -130,11 +137,22 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
             if (out.schema.itemType(t) == null) try report.add(config_file, 0, 0, "citations: there is no item type '{s}'", .{t});
         }
     }
+    if (out.planning_repository) |name| {
+        const declared = for (out.repositories) |repo| {
+            if (std.mem.eql(u8, repo.name, name)) break true;
+        } else false;
+        if (!declared) try report.add(config_file, 0, 0, "planning: '{s}' is no repository declared under [[repositories]]", .{name});
+    }
     return out;
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template", "maturity", "schedule" });
+    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template", "maturity", "schedule", "planning" });
+    if (try r.child("planning")) |p| {
+        try p.known(&.{ "repository", "span" });
+        self.planning_repository = try p.string("repository");
+        self.planning_span = try p.boolean("span", false);
+    }
     self.templates = try template_use.readAll(r);
     self.forge = try Forge.read(r);
     if (try r.child("maturity")) |m| {

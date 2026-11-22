@@ -82,7 +82,7 @@ pub fn compute(arena: std.mem.Allocator, works: []const Work, calendar: *const C
 }
 
 fn find(entries: []Entry, id: []const u8) ?*Entry {
-    for (entries) |*e| if (std.mem.eql(u8, e.work.item.id, id)) return e;
+    for (entries) |*e| if (std.mem.eql(u8, e.work.id, id)) return e;
     return null;
 }
 
@@ -114,7 +114,7 @@ fn span(entries: []Entry, e: *const Entry) ?Calendar.Range {
     var out: ?Calendar.Range = null;
     for (entries) |*child| {
         const is_child = for (child.work.parents) |p| {
-            if (std.mem.eql(u8, p, e.work.item.id)) break true;
+            if (std.mem.eql(u8, p, e.work.id)) break true;
         } else false;
         if (!is_child) continue;
         const first = child.start orelse return null;
@@ -154,7 +154,7 @@ fn latestFinish(entries: []Entry, latest: []?day.Day, visiting: []bool, i: usize
     visiting[i] = true;
     defer visiting[i] = false;
     var out = plan_end;
-    const id = entries[i].work.item.id;
+    const id = entries[i].work.id;
     for (entries, 0..) |*after, j| {
         const follows = for (after.work.after) |p| {
             if (std.mem.eql(u8, p, id)) break true;

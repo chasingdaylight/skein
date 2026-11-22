@@ -20,7 +20,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Load) !Workspace.Outco
     defer ws.close();
     if (!ws.items_read) return ws.problems();
     const before = ws.report.problems.items.len;
-    const resources = try Resources.load(io, arena, ws.root, &ws.report) orelse return .{
+    const resources = try Resources.of(io, arena, &ws, &ws.report) orelse return .{
         .text = try arena.print("skein: the project has no {s}, which lists the people who do the work\n", .{Resources.file}),
         .status = .misuse,
     };
