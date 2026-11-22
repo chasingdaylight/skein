@@ -13,5 +13,8 @@ Items can name the issues and pull requests that introduced them, track them, or
 %req[forge.render]
 `skein render` shall render a reference to an issue or pull request as a link to its page on the forge, followed, when the reference gives no words of its own, by its title and whether it is open or closed, as the forge or the cache gives them. One the forge says does not exist is marked unresolved; without `[forge]`, it is its words.
 
+%req[forge.approvals]
+`skein approve --from-pull-request N` shall record the approvals that merged pull request N had in review: each item it added or changed in content, between its base and its merge commit, approved as it was at the merge by each reviewer whose last review approved it (comments count for neither), on the day of the merge. It refuses a pull request that does not exist or is not merged, and a project that names no forge. It is run by hand or by a workflow after a merge, never by `check`.
+
 %req[forge.offline]
 What the forge said of each issue and pull request shall be kept in a cache under this repository's git directory, never committed. With `--offline` nothing is asked and the cache is used; when the forge cannot be asked or does not answer, the cache is used too. What neither knows is not checked, and that is a warning.

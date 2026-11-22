@@ -16,7 +16,7 @@ A standard the project must comply with shall be an item set of its own, read-on
 When a plan uses values the forge holds (dates, milestones), `skein baseline` shall first write them to a file under `.skein/baselines/`, commit it, and tag that commit. The tag itself is built. (Design, section 6.)
 
 %req[forge.adapter planned]
-An adapter per forge shall resolve references to issues and pull requests, report `check` and `coverage` in the forge's CI, and record the approvals of a merged change. (Design, section 7.)
+An adapter per forge shall resolve references to issues and pull requests, report `check` and `coverage` in the forge's CI, and record the approvals of a merged change. (Design, section 7.) GitHub's is built (`docs/requirements/forge.md`); GitLab's and Forgejo's are to come.
 
 %req[links.repositories]
 Items, code and tests of another repository shall be citable by a qualified reference, checked against a recorded commit of that repository. (Design, section 10.5.)

@@ -34,6 +34,15 @@ skein asks through `gh` when it is installed, so its sign-in is used, GitHub Ent
 
 `skein render` makes each reference a link to the issue or pull request on the forge. A reference that gives no words of its own is followed by its title and state, as the forge or the cache has them: `#97 (Proposal 0000, closed)`. One the forge says does not exist is marked unresolved, as a missing item is.
 
+## Approvals from a merged pull request
+
+A review that approved a pull request is an approval of what it changed. After the merge, `skein approve --from-pull-request 97` records it: every item the pull request added or changed in content is approved, as it was at the merge, by each reviewer whose last review approved, on the day of the merge. A workflow can run it when a pull request is merged; `check` never does.
+
+```text
+$ skein approve --from-pull-request 97
+skein: pull request 97, merged 2026-11-21: 3 items approved by ann, carol
+```
+
 ## Offline
 
 What the forge said is kept in a cache under `.git/skein/forge/`, never committed. With `--offline`, skein asks nothing and uses the cache; when the forge cannot be reached, it uses the cache too. What neither knows is not checked, and `check` says so with a warning:
