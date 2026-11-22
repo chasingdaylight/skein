@@ -1,6 +1,7 @@
 //! `skein init [--template NAME]`: starts a project here: `.skein/` with
-//! its configuration, and, from a template, the template's document
-//! skeletons (`documents/` of the template) under `docs/`.
+//! its configuration, and, from a template, what the template's
+//! `config.toml` adds to it and its document skeletons (`documents/`)
+//! under `docs/`.
 
 const std = @import("std");
 const Io = std.Io;
@@ -31,6 +32,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
             try values.append(arena, .{ .name = o.name, .value = d });
             try config.print(arena, "# {s}\n\"{s}\" = \"{s}\"\n", .{ o.description, o.name, d });
         } else try config.print(arena, "# {s} (needed)\n# \"{s}\" = \"\"\n", .{ o.description, o.name });
+        // what the template adds to a project's configuration, such as citations
+        for (try Template.filesOf(arena, name, "config.toml")) |f| try config.appendSlice(arena, try Template.substitute(arena, f.data, values.items));
     } else try config.appendSlice(arena, sources);
     root.createDirPath(io, Project.dir_name) catch |e| return misuse(arena, "cannot make {s}/ ({s})", .{ Project.dir_name, @errorName(e) });
     try root.writeFile(io, .{ .sub_path = Project.config_file, .data = config.items });

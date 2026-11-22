@@ -1,0 +1,13 @@
+
+# Conformance tests cite the rules they check in a comment: `// spec: lex.comment`.
+# Give the place and the file names of the tests, and remove the #s:
+# [[citations]]
+# name = "test"
+# path = "tests"
+# files = [".test"]
+# marker = "// spec:"
+# to = ["rule"]
+# expected = true
+
+# Profiles for the stages or editions of the language are the project's own,
+# in .skein/profiles/ (see docs/project-files.md of skein).

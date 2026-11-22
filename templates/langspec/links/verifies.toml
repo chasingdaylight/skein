@@ -1,0 +1,3 @@
+description = "A conformance test verifies a rule"
+from = ["test"]
+to = ["rule"]

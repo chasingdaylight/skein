@@ -30,10 +30,14 @@ test "init with a template starts a project that checks clean" {
 
     const started = try init_command.run(testing.io, a, .{ .root = root, .template = "langspec" });
     try testing.expectEqual(.ok, started.status);
-    try expectContains(started.text, "from the template langspec, with 1 document");
+    try expectContains(started.text, "from the template langspec, with 4 documents");
     const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
     try expectContains(config, "template = \"langspec\"");
-    _ = try tmp.dir.readFileAlloc(testing.io, "docs/introduction.md", a, .limited(1 << 16));
+    // the template's own config.toml, after the configuration init writes
+    try expectContains(config, "path = \"docs\"\n\n# Conformance tests cite the rules");
+    for ([_][]const u8{ "charter", "introduction", "glossary", "coverage" }) |doc| {
+        _ = try tmp.dir.readFileAlloc(testing.io, try a.print("docs/{s}.md", .{doc}), a, .limited(1 << 16));
+    }
 
     const checked = try check_command.run(testing.io, a, .{ .root = root });
     try testing.expectEqual(.ok, checked.status);
@@ -75,7 +79,7 @@ test "eject writes the template's files into .skein/ and keeps the project's own
 
     const ejected = try template_command.run(testing.io, a, .{ .common = .{ .root = root }, .what = .eject, .name = "langspec" });
     try testing.expectEqual(.ok, ejected.status);
-    try expectContains(ejected.text, "4 files of 'langspec' written");
+    try expectContains(ejected.text, "6 files of 'langspec' written");
     try expectContains(ejected.text, "1 the project has already, left as it is");
     const rule = try tmp.dir.readFileAlloc(testing.io, ".skein/types/rule.toml", a, .limited(1 << 16));
     try expectContains(rule, "Ours");

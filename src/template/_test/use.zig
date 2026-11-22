@@ -39,7 +39,7 @@ test "a project that declares nothing of its own but its template" {
         \\
     );
     const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
-    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems (3 items of 3 types, 2 link types");
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems (3 items of 4 types, 3 link types");
     try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "shows links to rule items: 1 of 1 (100%)");
 
     // the project's own file of a name replaces the template's
