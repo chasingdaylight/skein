@@ -17,6 +17,7 @@ This extension brings the `skein` program and its language server into VS Code: 
 - **skein Items:** a tree in the Explorer of every item, by source and file, with its type, category and status, and its parts under it. Choosing one opens it at its marker; **Trace** and **Copy ID** are on its context menu.
 - **Trace:** an item's trace in a view beside the editor: its links both ways, what it refers to and what refers to it, citations, approvals, test results, and all above and below it. Its links open the items and places in the editor. Open it from a code lens, the tree, the editor's context menu, or **skein: Trace** in the Command Palette (the item under the cursor, or one you choose).
 - **Plan:** for a project with work items (item types with `[planning]`), **skein: Show Plan** opens a Gantt chart of the schedule and a board by status. Drag a bar to move an item, its right end to change its length, or a card to another status: the change is written into the item's marker or front matter, and the stored schedule (`.skein/schedule.toml`) follows. A float item moved by hand becomes fixed.
+- **AI agents:** VS Code's agents (Copilot's agent mode and others) get skein's tools through `skein mcp`, which the extension offers to VS Code's MCP support: finding and tracing items, `check`, `coverage`, `impact`, and the editing commands. In chat, `#skeinItem` brings in the item under the cursor with everything linked to it. **skein: Write Agent Instructions** writes what agents should know of the project's skein documents into `AGENTS.md` (or `CLAUDE.md`).
 - **Coverage:** the coverage page, in a view, and the share of what is expected that is covered in the status bar, which opens the view.
 - **The `skein` program:** the extension carries it for Windows, Linux, Alpine and macOS (x86_64 and arm64) and puts it on the `PATH` of new terminals in VS Code, so `skein check` works there with nothing else installed. Open a new terminal after installing.
 - **Highlighting:** in Markdown, markers (`%type[id words key=value]`) and references (`%[id]`, `%[id words]`) stand out from the prose; nothing inside a code span or a code block is highlighted, as skein reads nothing there.
@@ -25,13 +26,15 @@ The colors and fonts of the views come from your color theme. To change those of
 
 ## Commands
 
-In the Command Palette, under **skein**: **Trace**, **Show Coverage**, **Show Plan**, **Go to Item...**, **Refresh Items**, **Restart the Language Server** and **Show Version**.
+In the Command Palette, under **skein**: **Trace**, **Show Coverage**, **Show Plan**, **Write Agent Instructions**, **Go to Item...**, **Refresh Items**, **Restart the Language Server** and **Show Version**.
 
 ## Settings
 
 - `skein.path`: the full path of another `skein` to use in place of the one the extension carries, for a project that pins a version of its own. A change restarts the language server.
 - `skein.codeLens.enabled`: the code lenses above items (on by default).
 - `skein.statusBar.coverage`: the coverage in the status bar (on by default).
+- `skein.mcp.enabled`: offer `skein mcp` to VS Code's agents (on by default).
+- `skein.agents.file`, `skein.agents.skill`: where **Write Agent Instructions** writes, and whether as a skill file.
 - `skein.trace.server`: log the messages to and from the language server in the output channel **skein Language Server**.
 
 ## Requirements

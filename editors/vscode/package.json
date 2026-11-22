@@ -55,6 +55,32 @@
         ]
       }
     ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "skein.mcp",
+        "label": "skein"
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "skein_item",
+        "displayName": "skein Item",
+        "toolReferenceName": "skeinItem",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(symbol-key)",
+        "userDescription": "The skein item under the cursor, or the one named, with its links, references, citations, results and all above and below it.",
+        "modelDescription": "Gives the trace of a skein item (a requirement, rule, test or other item kept in the repository's Markdown with a %type[ID ...] marker): its type, status, text, attributes, links to and from other items, references, citations in code and tests, approvals, test results, and every item above and below it. Without an ID, the item under the cursor in the active editor. Use it before changing an item or what traces to it.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The ID of the item; leave out for the item under the cursor."
+            }
+          }
+        }
+      }
+    ],
     "views": {
       "explorer": [
         {
@@ -105,6 +131,11 @@
         "icon": "$(calendar)"
       },
       {
+        "command": "skein.writeAgentInstructions",
+        "title": "Write Agent Instructions",
+        "category": "skein"
+      },
+      {
         "command": "skein.copyId",
         "title": "Copy ID",
         "category": "skein"
@@ -127,6 +158,10 @@
         },
         {
           "command": "skein.showPlan",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.writeAgentInstructions",
           "when": "skein.project"
         },
         {
@@ -206,6 +241,23 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Show in the status bar how much of what is expected is covered (`skein coverage`); clicking it opens the coverage view."
+        },
+        "skein.mcp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Offer `skein mcp`, skein's tools over the Model Context Protocol, to VS Code's AI agents in a trusted workspace: finding and tracing items, `check`, `coverage`, `impact`, and the editing commands."
+        },
+        "skein.agents.file": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "markdownDescription": "The file **skein: Write Agent Instructions** writes the section on skein into, from the project's root. Empty: `AGENTS.md`, or `CLAUDE.md` where there is one and no `AGENTS.md`."
+        },
+        "skein.agents.skill": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "markdownDescription": "Have **skein: Write Agent Instructions** write a skill file (`.claude/skills/skein/SKILL.md`, or `skein.agents.file`) instead of a section of the agent instructions."
         },
         "skein.trace.server": {
           "type": "string",

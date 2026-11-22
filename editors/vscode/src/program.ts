@@ -17,6 +17,14 @@ export function findProgram(configured: string, extensionPath: string, platform:
   return fs.existsSync(bundled) ? bundled : undefined;
 }
 
+/** The arguments of `skein agents` for the settings skein.agents.file and skein.agents.skill */
+export function agentsArgs(file: string, skill: boolean): string[] {
+  const args = ["agents"];
+  if (skill) args.push("--skill");
+  if (file.trim()) args.push("--file", file.trim());
+  return args;
+}
+
 /** Makes a program the package carries executable: a VSIX keeps no file modes */
 export function ensureExecutable(program: string): void {
   if (process.platform === "win32") return;
