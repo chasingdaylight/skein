@@ -114,7 +114,40 @@ Nothing inside a code span or a code block is a reference, nor is a percent sign
 
 An item renamed with `skein move` can keep its former IDs, as `aliases=lex.token` in its marker or `aliases = ["SRS-001"]` in its front matter. A reference, link or citation that uses a former ID still finds the item, and `skein check` warns that its ID has changed. A former ID stays taken, as a removed item's does.
 
-To write a marker or a reference as plain text, as this page does in its examples, put a backslash before the percent sign: `\%rule[x]` and `\%[x]` are neither. Markdown itself reads `\%` as an escaped percent sign, so GitHub, site generators and skein's own rendering all show `%rule[x]` and `%[x]`.
+Inside code spans and code blocks nothing is a marker or a reference, so the examples on this page need nothing. To write one as plain text in running text, put a backslash before the percent sign: `\%rule[x]` and `\%[x]` are neither. Markdown itself reads `\%` as an escaped percent sign, so GitHub, site generators and skein's own rendering all show `%rule[x]` and `%[x]`.
+
+## Tested examples
+
+A specification's code examples can be items, which the project's own tests compile or run. An item type with an `[example]` table is a type of examples:
+
+```toml
+# .skein/types/example.toml
+categories = ["accepts", "rejects"]
+
+[example]
+link = "shows"
+extensions = { cesium = ".csm" }
+```
+
+An example is a fenced code block with the marker on its opening line, after the language, which renderers ignore:
+
+````markdown
+%rule[lex.comment syntax] A comment runs to the end of the line.
+
+```cesium %example
+// a comment
+```
+
+```cesium %example[.open rejects]
+/* not closed
+```
+````
+
+- **Inside an item,** an example is a part of it and shows it: the first above is `lex.comment.example-1`, the second `lex.comment.open`, and both have a `shows` link to `lex.comment`. So `skein coverage` counts the rules that have an example, when `shows` is expected.
+- **Elsewhere,** an example needs an ID, and says what it shows: ```` ```cesium %example[ex.both shows=lex.comment shows=lex.token] ````. A key that takes several values may be given more than once.
+- **Accepted or rejected:** an example with the category `rejects` (or the one `example.rejects` names) must be rejected; one without a category must be accepted.
+
+`skein examples --out DIR` writes each example to a file and lists them in `examples.json`, for the project's test driver: see [commands](commands.md).
 
 ## Citations in code and tests
 

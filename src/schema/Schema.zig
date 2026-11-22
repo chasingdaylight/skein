@@ -53,6 +53,9 @@ pub fn validate(self: *const Schema, report: *Report, dir: []const u8) std.mem.A
         for (t.attributes) |a| {
             if (self.linkType(a.name) != null) try report.add(file, 0, 0, "attributes.{s}: a link type has this name, so no attribute can", .{a.name});
         }
+        if (t.example) |e| if (e.link) |l| {
+            if (self.linkType(l) == null) try report.add(file, 0, 0, "example.link: there is no link type '{s}'", .{l});
+        };
     }
     for (self.links) |l| {
         const file = std.mem.print(&buf, "{s}/links/{s}.toml", .{ dir, l.name }) catch dir;

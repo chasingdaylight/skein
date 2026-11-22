@@ -31,4 +31,4 @@ test valid {
 
 /// The keys of a marker or of front matter that skein reads itself, so
 /// that no attribute or link type may be named so
-pub const reserved = [_][]const u8{ "id", "type", "status", "category", "verification" };
+pub const reserved = [_][]const u8{ "id", "type", "status", "category", "verification", "aliases" };

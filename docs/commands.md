@@ -286,6 +286,26 @@ skein: c.one verifies lex.comment
 - **In an item file**, it goes in the front matter: added to the key's list (`refines = ["SRS-001", "SRS-003"]`), or as a new key after the ID.
 - **Refused**, with nothing written, is anything `skein check` would report: a link type the item cannot have, a target the link cannot point to, a removed target, a link to the item itself, or one that is there already.
 
+## `skein examples --out DIR`
+
+Writes each tested example (see [writing items](writing-items.md#tested-examples)) to a file of its own in `DIR`, named after its ID with its language's extension, and `examples.json`, which lists for each its ID, file, language, whether it must be accepted or rejected, the items it shows, and where it is written:
+
+```json
+[
+  {
+    "id": "lex.comment.open",
+    "file": "lex.comment.open.csm",
+    "language": "cesium",
+    "expect": "reject",
+    "shows": ["lex.comment"],
+    "source": "spec/lex.md",
+    "line": 9
+  }
+]
+```
+
+skein runs none of them: the project's test driver reads the index, compiles or runs each file, and fails when an example is not accepted or rejected as it must be.
+
 ## `skein lsp`
 
 A language server for editors, on standard input and output. It works in the Markdown documents of a project and in the code and tests that cite its items.

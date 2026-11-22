@@ -88,6 +88,10 @@ normative = false
 | `tombstone` | The status of a removed item, whose ID stays taken. Default `"removed"`, when the statuses have it. |
 | `verification` | The verification methods an item of the type may name. |
 | `approval` | The statuses an item may have only while it is approved as it is: see [reviewing](reviewing.md). |
+| `example` | A table that makes the type one of tested examples: see [writing items](writing-items.md#tested-examples). |
+| `example.link` | The link type an example inside an item counts as, to that item: `"shows"`. |
+| `example.rejects` | The category of an example that must be rejected. Default `"rejects"`. |
+| `example.extensions` | The file name extension of each language's examples: `{ cesium = ".csm" }`. Default: the language. |
 | `attributes.<name>.type` | `"string"` (the default), `"integer"`, `"boolean"` or `"date"`. |
 | `attributes.<name>.values` | The values a string attribute may take. |
 | `attributes.<name>.required` | Whether every item of the type must have it. |

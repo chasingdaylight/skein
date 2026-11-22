@@ -20,7 +20,7 @@ path = "../compiler"
 Then links, references and citations can point into it:
 
 ```markdown
-\%page[syntax explains=compiler:lex.comment] A comment is %[compiler:lex.comment.line text from // to the end of the line].
+%page[syntax explains=compiler:lex.comment] A comment is %[compiler:lex.comment.line text from // to the end of the line].
 ```
 
 A repository that is not checked out beside this one can be given by its address instead, which git fetches:

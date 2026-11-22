@@ -8,10 +8,12 @@ pub const Marker = @import("markdown/Marker.zig");
 pub const list = @import("markdown/list.zig");
 pub const scan = blocks.scan;
 pub const references = @import("markdown/references.zig");
+pub const fence = @import("markdown/fence.zig");
 
 test {
     _ = blocks;
     _ = Marker;
     _ = list;
     _ = references;
+    _ = fence;
 }
