@@ -10,6 +10,7 @@ const Io = std.Io;
 
 const Forge = @import("Forge.zig");
 const Graph = @import("../graph/Graph.zig");
+const Mirror = @import("Mirror.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 const adapter = @import("adapter.zig");
@@ -99,7 +100,7 @@ fn learnOf(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proje
     for (places) |p| {
         const r = known.forge.ref(p.target).?;
         const entry = try known.answers.getOrPut(arena, try key(arena, r));
-        if (!entry.found_existing) entry.value_ptr.* = try answer(io, arena, git_dir, &known.forge, r, offline, &known.why);
+        if (!entry.found_existing) entry.value_ptr.* = try answer(io, arena, root, git_dir, &known.forge, r, offline, &known.why);
     }
     return known;
 }
@@ -124,9 +125,9 @@ pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proje
     if (unchecked > 0) try report.warn(Project.config_file, 0, 0, "forge: {d} reference{s} to issues and pull requests {s} not checked: {s}", .{ unchecked, if (unchecked == 1) "" else "s", if (unchecked == 1) "is" else "are", why });
 }
 
-/// What is known of `r`: the forge's answer, else the cache's; null, with
-/// the reason in `why`, when neither knows
-fn answer(io: Io, arena: std.mem.Allocator, git_dir: ?[]const u8, forge: *const Forge, r: Forge.Ref, offline: bool, why: *[]const u8) !?github.Answer {
+/// What is known of `r`: the forge's answer, else the cache's, else the
+/// mirror's; null, with the reason in `why`, when none knows
+fn answer(io: Io, arena: std.mem.Allocator, root: Io.Dir, git_dir: ?[]const u8, forge: *const Forge, r: Forge.Ref, offline: bool, why: *[]const u8) !?github.Answer {
     if (!offline) {
         const a = lookup(io, arena, forge, r) catch |e| github.Answer{ .unreachable_ = try arena.print("the forge could not be asked ({t})", .{e}) };
         switch (a) {
@@ -136,8 +137,9 @@ fn answer(io: Io, arena: std.mem.Allocator, git_dir: ?[]const u8, forge: *const 
                 return a;
             },
         }
-    } else why.* = "offline, and the cache does not have them";
+    } else why.* = "offline, and neither the cache nor a mirror has them";
     if (git_dir) |d| if (try cache.get(io, arena, d, forge, r)) |cached| return cached;
+    if (try Mirror.answer(io, arena, root, r)) |mirrored| return mirrored;
     return null;
 }
 
@@ -147,4 +149,5 @@ test {
     _ = @import("_test/checks.zig");
     _ = @import("pulls.zig");
     _ = @import("_test/pulls.zig");
+    _ = @import("_test/mirror.zig");
 }

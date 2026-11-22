@@ -63,3 +63,25 @@ What the forge said is kept in a cache under `.git/skein/forge/`, never committe
 ```
 
 Without `[forge]`, references to issues and pull requests are accepted without being checked.
+
+## A full mirror: working offline for long, and moving between forges
+
+For longer than the cache serves, `skein mirror` copies everything the forge holds of the project's repository (every issue and pull or merge request with its comments, every milestone and the labels) into `.skein/mirror/`, in plain text, one file each: `issues/12.toml`, `pulls/7.toml`, `milestones/4.toml`, `labels.toml`. The mirror is per checkout: git ignores it, and `skein mirror` rebuilds it. To commit it instead, for a team that works offline together or to keep an archive that outlives the forge:
+
+```toml
+[forge]
+repository = "example/spec"
+mirror = "committed"
+```
+
+Offline, `check` and the views take what the mirror says of an issue when neither the forge nor the cache can answer. Changes to what the forge holds are made as an overlay (`skein overlay`), each with the value it was based on. Back online, `skein sync` writes the overlay to the forge, as `skein apply` does (a field changed on both sides is reported and left), and refreshes the mirror.
+
+To move the project to another forge, mirror the old one, then create its issues on the new:
+
+```text
+skein mirror
+skein publish --to gitlab:group/project --dry-run
+skein publish --to gitlab:group/project
+```
+
+`skein publish` creates the labels, milestones and issues with their comments, and closes the ones that were closed. Each issue says where it came from and who opened it. Pull and merge requests are not re-created, since a forge cannot make one without its branches, and nobody is assigned, as the new forge may not know the people. `.skein/forge-map.toml`, which the project commits, records where each issue went (`"github:example/spec#24" = "gitlab:group/project#7"`). Reading references through that map, so that `#24` in older items and commits finds the new issue, is not done yet.

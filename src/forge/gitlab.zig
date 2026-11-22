@@ -118,6 +118,11 @@ pub fn update(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Re
     };
 }
 
+/// Sends `json` to `path` of the forge's REST API, through `glab`
+pub fn send(io: Io, arena: std.mem.Allocator, forge: *const Forge, method: []const u8, path: []const u8, json: []const u8, body_path: []const u8) !github.Reply {
+    return tool.send(io, arena, "glab", if (forge.url != null) forge.host() else null, &.{"Content-Type: application/json"}, method, path, json, body_path);
+}
+
 /// The id of the user `username`
 fn userId(io: Io, arena: std.mem.Allocator, forge: *const Forge, username: []const u8) !?u64 {
     return firstId(try api(io, arena, forge, try arena.print("users?username={s}", .{username})));

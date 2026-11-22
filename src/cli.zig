@@ -47,8 +47,12 @@ pub const usage =
     \\  overlay [ISSUE FIELD VALUE]
     \\                    A what-if plan's deviations from the forge: list, record or --remove
     \\  apply             Write the overlay to the forge, and take it out (--dry-run, --force)
+    \\  mirror            Copy the forge's issues, milestones and labels into .skein/mirror/
+    \\  sync              Write the overlay to the forge, then refresh the mirror
+    \\  publish --to KIND:OWNER/REPO
+    \\                    Re-create the mirror on another forge (--url, --dry-run)
     \\  load              Each person's work, week by week, beside the time they have
-    \\  lsp               Serve editors as a language server, on standard input and output
+    \\  lsp              Serve editors as a language server, on standard input and output
     \\  mcp               Serve AI agents skein's tools (Model Context Protocol), on
     \\                    standard input and output
     \\  agents [--skill]  Write what coding agents should know of skein into AGENTS.md
@@ -114,6 +118,9 @@ pub const Command = union(enum) {
     time: TimeSpent,
     overlay: OverlayCommand,
     apply: Apply,
+    mirror: Mirror,
+    sync: Sync,
+    publish: Publish,
     /// `diff`, and `impact`
     diff: Diff,
     /// `export`
@@ -232,6 +239,25 @@ pub const Apply = struct {
     dry_run: bool = false,
     /// write also what changed on both sides
     force: bool = false,
+};
+
+pub const Mirror = struct {
+    common: Common = .{},
+};
+
+pub const Sync = struct {
+    common: Common = .{},
+    dry_run: bool = false,
+    force: bool = false,
+};
+
+pub const Publish = struct {
+    common: Common = .{},
+    /// the forge to create it on, `kind:owner/repo`
+    to: ?[]const u8 = null,
+    /// the address of a server other than the public one
+    url: ?[]const u8 = null,
+    dry_run: bool = false,
 };
 
 pub const TimeSpent = struct {
@@ -526,6 +552,21 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (try p.allow(&.{ "--root", "--offline", "--dry-run", "--force" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "apply takes no items" };
         return .{ .apply = .{ .common = common, .dry_run = p.flag("--dry-run"), .force = p.flag("--force") } };
+    }
+    if (eql(name, "mirror")) {
+        if (try p.allow(&.{ "--root", "--offline" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "mirror takes no items" };
+        return .{ .mirror = .{ .common = common } };
+    }
+    if (eql(name, "sync")) {
+        if (try p.allow(&.{ "--root", "--offline", "--dry-run", "--force" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "sync takes no items" };
+        return .{ .sync = .{ .common = common, .dry_run = p.flag("--dry-run"), .force = p.flag("--force") } };
+    }
+    if (eql(name, "publish")) {
+        if (try p.allow(&.{ "--root", "--offline", "--to", "--url", "--dry-run" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "publish takes no items" };
+        return .{ .publish = .{ .common = common, .to = p.value("--to"), .url = p.value("--url"), .dry_run = p.flag("--dry-run") } };
     }
     if (eql(name, "time")) {
         if (try p.allow(&.{ "--root", "--by", "--on", "--note", "--json", "--offline" })) |problem| return .{ .misuse = problem };

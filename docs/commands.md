@@ -382,6 +382,10 @@ skein overlay '#12' state --remove        # the forge's again
 
 The plan's schedule, charts and `skein load` see the issue with the overlay applied; everything else still comes from the forge. `skein check` reports a deviation whose upstream value has changed since. When the plan is adopted, `skein apply` writes the overlay to the forge (`gh`, signed in) and takes it out; a field that changed on both sides is left for a decision unless `--force`, and `--dry-run` writes nothing.
 
+## `skein mirror`, `skein sync` and `skein publish`
+
+`skein mirror` copies everything the forge holds of the project's repository (issues, pull and merge requests with their comments, milestones, labels) into plain text under `.skein/mirror/`, per checkout unless the configuration says `mirror = "committed"`. Offline, what the mirror says of an issue is what `check` and the views use. `skein sync` is the way back: it writes the overlay to the forge as `skein apply` does (`--dry-run`, `--force`) and refreshes the mirror. `skein publish --to KIND:OWNER/REPO [--url ADDRESS] [--dry-run]` re-creates the mirror on another forge, GitHub or GitLab, and records where each issue went in `.skein/forge-map.toml`. See [the forge](forge.md#a-full-mirror-working-offline-for-long-and-moving-between-forges).
+
 ## `skein time`
 
 `skein time ITEM HOURS [--by NAME] [--on DATE] [--note TEXT]` logs time spent on a work item: by a person (default git's `user.name`) on a day (default today). It is kept in git under `.skein/time/`, one line per item, person and day, in the file of the item's document; logging the same day again adds to it. Without arguments, `skein time` sets what was spent against each work item's estimate (its estimate in days in the hours of the calendar's working day), with who spent it and the totals; `--json` gives the same as JSON. In a document, a `time [TYPE...] [conditions]` request gives it as a table.

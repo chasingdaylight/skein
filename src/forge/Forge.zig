@@ -13,13 +13,15 @@ kind: Kind = .github,
 repository: []const u8,
 /// the address of another server (GitHub Enterprise); null for the public one
 url: ?[]const u8 = null,
+/// whether the full mirror (`skein mirror`) is committed; by default it is per checkout
+mirror_committed: bool = false,
 
 pub const Kind = enum { github, gitlab, forgejo };
 
 /// The `[forge]` table of the configuration `r`; null when it has none
 pub fn read(r: Schema.Reader) Schema.Reader.Error!?Forge {
     const f = try r.child("forge") orelse return null;
-    try f.known(&.{ "kind", "repository", "url" });
+    try f.known(&.{ "kind", "repository", "url", "mirror" });
     const kind_name = try f.string("kind") orelse "github";
     const kind = std.meta.stringToEnum(Kind, kind_name) orelse {
         try f.complain("kind", "expected \"github\", \"gitlab\" or \"forgejo\"", .{});
@@ -33,7 +35,17 @@ pub fn read(r: Schema.Reader) Schema.Reader.Error!?Forge {
         try f.complain("repository", "a repository is written owner/repo", .{});
         return null;
     }
-    return .{ .kind = kind, .repository = repository, .url = if (try f.string("url")) |u| std.mem.trimEnd(u8, u, "/") else null };
+    const mirror = try f.string("mirror") orelse "local";
+    if (!std.mem.eql(u8, mirror, "local") and !std.mem.eql(u8, mirror, "committed")) {
+        try f.complain("mirror", "expected \"local\" or \"committed\"", .{});
+        return null;
+    }
+    return .{
+        .kind = kind,
+        .repository = repository,
+        .url = if (try f.string("url")) |u| std.mem.trimEnd(u8, u, "/") else null,
+        .mirror_committed = std.mem.eql(u8, mirror, "committed"),
+    };
 }
 
 /// An issue or a pull request

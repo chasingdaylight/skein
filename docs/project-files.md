@@ -26,7 +26,8 @@ type = "srs"
 | `project.name` | The project's name, for reports. |
 | `template` | The templates the project uses: `"langspec"`, a list of names, or `[template.KEY]` tables with a `name` and options. See [templates](templates.md). |
 | `project.id` | What other projects know this one by, whatever short name they give it: `"cesiumlang/cesium"`. |
-| `forge.kind`, `forge.repository`, `forge.url` | Where the project's issues and pull requests are: `"github"`, `"owner/repo"`, and a server other than the public one. See [the forge](forge.md). |
+| `forge.kind`, `forge.repository`, `forge.url` | Where the project's issues and pull requests are: `"github"` or `"gitlab"`, `"owner/repo"`, and a server other than the public one. See [the forge](forge.md). |
+| `forge.mirror` | `"local"` (the default) for a full mirror that is per checkout and ignored by git, or `"committed"`. See [the forge](forge.md#a-full-mirror-working-offline-for-long-and-moving-between-forges). |
 | `results.paths` | The test results files the project keeps, or directories of them: see [test results](results.md). |
 | `repositories` | The other repositories whose items this project's items refer to: see [other repositories](repositories.md). |
 | `repositories.name` | The short name targets use before the colon: `compiler` in `%[compiler:lex.token]`. |
