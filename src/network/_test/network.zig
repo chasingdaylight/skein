@@ -81,11 +81,36 @@ const Fixture = struct {
     }
 
     fn check(self: *Fixture, state: Network.State) ![]const u8 {
-        return (try check_command.run(testing.io, self.arena.allocator(), .{ .root = self.site, .state = state })).text;
+        return self.checkWith(state, false);
+    }
+
+    fn checkWith(self: *Fixture, state: Network.State, offline: bool) ![]const u8 {
+        return (try check_command.run(testing.io, self.arena.allocator(), .{ .root = self.site, .state = state, .offline = offline })).text;
     }
 
     fn pin(self: *Fixture, name: ?[]const u8, revision: ?[]const u8) !@import("../../commands/Workspace.zig").Outcome {
         return pin_command.run(testing.io, self.arena.allocator(), .{ .common = .{ .root = self.site }, .name = name, .revision = revision });
+    }
+
+    /// Declares `other` by its address instead of its path
+    fn byUrl(self: *Fixture, url: []const u8) !void {
+        const a = self.arena.allocator();
+        try self.write("site/.skein/config.toml", try a.print(
+            \\[[sources]]
+            \\path = "pages"
+            \\
+            \\[[repositories]]
+            \\name = "other"
+            \\url = "{s}"
+            \\
+        , .{url}));
+    }
+
+    /// The address of `other`: its path, with forward slashes
+    fn otherUrl(self: *Fixture) ![]const u8 {
+        const path = try self.tmp.dir.realPathFileAlloc(testing.io, "other", self.arena.allocator());
+        std.mem.replaceScalar(u8, path, '\\', '/');
+        return path;
     }
 };
 
@@ -185,4 +210,46 @@ test "a record that does not match its commit is reported" {
     changed[at] = if (changed[at] == '0') '1' else '0';
     try f.write("site/.skein/network.toml", changed);
     try expectContains(try f.check(.recorded), ".skein/network.toml: error: other: its items at ");
+}
+
+// req: network.fetched, network.offline
+test "a repository by url is fetched into a cache, and read offline from it" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    try f.byUrl(try f.otherUrl());
+    const pinned = try f.pin(null, null);
+    try testing.expectEqual(.ok, pinned.status);
+    try expectContains(pinned.text, "other: pinned at ");
+    try expectContains(try f.check(.recorded), "no problems (");
+    try expectContains(try f.checkWith(.recorded, true), "no problems (");
+
+    // the tip moves on: --current fetches it, the record stays
+    try f.write("other/spec/more.md", "%rule[lex.more] More.\n");
+    try f.commit("other");
+    try f.write("site/pages/more.md", "%page[more] See %[other:lex.more].\n");
+    try expectContains(try f.check(.recorded), "'other:lex.more', and other has no such item at ");
+    try expectContains(try f.check(.current), "no problems (");
+
+    // with the cache gone, offline knows nothing, online fetches again
+    try f.tmp.dir.deleteTree(testing.io, "site/.git/skein/repositories");
+    try expectContains(try f.checkWith(.recorded, true), "warning: repositories: other: offline, and the commit ");
+    try expectContains(try f.check(.recorded), "'other:lex.more', and other has no such item at ");
+}
+
+test "a repository by url that cannot be fetched is a warning" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    try f.byUrl(try f.otherUrl());
+    _ = try f.pin(null, null);
+    const a = f.arena.allocator();
+    try f.byUrl(try a.print("{s}-gone", .{try f.otherUrl()}));
+    try f.tmp.dir.deleteTree(testing.io, "site/.git/skein/repositories");
+    const out = try f.check(.recorded);
+    try expectContains(out, "warning: repositories: other: the commit ");
+    try expectContains(out, " could not be fetched from ");
+    const refused = try f.pin(null, null);
+    try testing.expectEqual(.problems, refused.status);
+    try expectContains(refused.text, "its tip could not be fetched from ");
 }

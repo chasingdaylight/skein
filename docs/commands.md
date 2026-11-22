@@ -12,7 +12,7 @@ Every command that works on a project finds it from the current directory: the n
 | 1 | The project has problems; they are on standard error, one per line, as `file:line:column: error: message`. |
 | 2 | The command was not used as it must be, or there is no project. |
 
-A command that reads other repositories (`check`, `trace`, `coverage`, `export`, `render`) reads each at the commit `.skein/network.toml` records. `--current` reads each at the commit its checkout has checked out, and `--working` reads its files as they are, committed or not: see [other repositories](repositories.md).
+A command that reads other repositories (`check`, `trace`, `coverage`, `export`, `render`) reads each at the commit `.skein/network.toml` records. `--current` reads each at the commit its checkout has checked out, and `--working` reads its files as they are, committed or not. A repository given by its address is fetched into a cache; `--offline` fetches nothing and reads the cache. See [other repositories](repositories.md).
 
 ## `skein check`
 

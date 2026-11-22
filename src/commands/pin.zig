@@ -13,6 +13,7 @@ const Project = @import("../Project.zig");
 const Workspace = @import("Workspace.zig");
 const changes = @import("../graph/changes.zig");
 const cli = @import("../cli.zig");
+const fetch = @import("../network/fetch.zig");
 const git = @import("../git.zig");
 const history = @import("../history.zig");
 const record = @import("../network/record.zig");
@@ -36,7 +37,6 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Pin) !Workspace.Outcom
         error.OutOfMemory => return error.OutOfMemory,
         else => return misuse(arena, "pinning needs the project to be in a git repository", .{}),
     };
-    const scratch = try Io.Dir.path.join(arena, &.{ git_dir, "skein", "snapshots" });
 
     const old = try record.read(io, arena, ws.root, &ws.report);
     var entries: std.ArrayList(record.Entry) = .empty;
@@ -44,7 +44,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Pin) !Workspace.Outcom
     var out: std.ArrayList(u8) = .empty;
     for (repositories) |repository| {
         if (options.name) |name| if (!std.mem.eql(u8, name, repository.name)) continue;
-        const entry = try pinOne(io, arena, &ws, repository, options.revision, scratch, record.find(old, repository.name), &out) orelse continue;
+        const entry = try pinOne(io, arena, &ws, repository, options.revision, git_dir, options.common.offline, record.find(old, repository.name), &out) orelse continue;
         for (entries.items) |*e| {
             if (std.mem.eql(u8, e.name, entry.name)) {
                 e.* = entry;
@@ -67,33 +67,46 @@ fn pinOne(
     ws: *Workspace,
     repository: Project.Repository,
     revision: ?[]const u8,
-    scratch: []const u8,
+    git_dir: []const u8,
+    offline: bool,
     before: ?record.Entry,
     out: *std.ArrayList(u8),
 ) !?record.Entry {
     const name = repository.name;
-    const path = repository.path orelse {
-        try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: a repository with a url is not fetched yet; give the path of a checkout", .{name});
-        return null;
+    const where_from = repository.path orelse repository.url.?;
+    var o = switch (try Network.origin(io, arena, ws.root_path, git_dir, repository)) {
+        .ok => |o| o,
+        .failed => |why| {
+            try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: {s}", .{ name, why });
+            return null;
+        },
     };
-    var dir = Io.Dir.cwd().openDir(io, try Io.Dir.path.join(arena, &.{ ws.root_path, path }), .{}) catch {
-        try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: there is no checkout at '{s}'", .{ name, path });
-        return null;
-    };
-    defer dir.close(io);
-    if (revision == null) {
+    defer o.dir.close(io);
+    const dir = o.dir;
+    if (o.fetched) {
+        // what to read is fetched first: a commit by its hash, else a branch or tag
+        const url = repository.url.?;
+        const given = revision orelse repository.ref;
+        const ok = if (given != null and fetch.isHash(given.?)) try fetch.commit(io, arena, dir, url, given.?, offline) else try fetch.tip(io, arena, dir, url, given, offline) != null;
+        if (!ok) {
+            try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: {s}", .{ name, try Network.notFetched(arena, repository, offline, if (given != null and fetch.isHash(given.?)) given else null) });
+            return null;
+        }
+    } else if (revision == null) {
         const status = try git.output(io, arena, dir, &.{ "status", "--porcelain" }) orelse "";
         if (std.mem.trim(u8, status, " \r\n").len > 0) {
-            try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: '{s}' has changes that are not committed; commit them, or name the commit to pin", .{ name, path });
+            try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: '{s}' has changes that are not committed; commit them, or name the commit to pin", .{ name, where_from });
             return null;
         }
     }
-    const where = try Io.Dir.path.join(arena, &.{ scratch, name });
-    var snap = history.snapshotIn(io, arena, dir, revision orelse "HEAD", where) catch |e| {
+    // in a cache, a branch or tag fetched is read from where `tip` put it
+    const read_at = if (o.fetched and !(revision != null and fetch.isHash(revision.?))) fetch.current_ref else revision orelse "HEAD";
+    const where = try Io.Dir.path.join(arena, &.{ git_dir, "skein", "snapshots", name });
+    var snap = history.snapshotIn(io, arena, dir, read_at, where) catch |e| {
         switch (e) {
             error.OutOfMemory => return error.OutOfMemory,
-            error.NoGit => try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: '{s}' is not a git repository", .{ name, path }),
-            error.UnknownRevision => try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: there is no commit '{s}' in '{s}'", .{ name, revision orelse "HEAD", path }),
+            error.NoGit => try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: '{s}' is not a git repository", .{ name, where_from }),
+            error.UnknownRevision => try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: there is no commit '{s}' in '{s}'", .{ name, revision orelse "HEAD", where_from }),
             error.SnapshotFailed => try ws.report.add(Project.config_file, 0, 0, "repositories: {s}: its files could not be unpacked", .{name}),
         }
         return null;
@@ -110,6 +123,7 @@ fn pinOne(
         try out.print(arena, "{s}: still at {s}\n", .{ name, short });
         return entry;
     }
+    if (o.fetched) _ = try fetch.commit(io, arena, dir, repository.url.?, was.commit, offline);
     var prior = history.snapshotIn(io, arena, dir, was.commit, where) catch {
         try out.print(arena, "{s}: {s} to {s}; the commit pinned before is not in its checkout, so what changed is not known\n", .{ name, was.commit[0..@min(was.commit.len, 12)], short });
         return entry;

@@ -14,6 +14,7 @@ const Schema = @import("../schema/Schema.zig");
 const fingerprint = @import("../graph/fingerprint.zig");
 const git = @import("../git.zig");
 const history = @import("../history.zig");
+const fetch = @import("fetch.zig");
 const record = @import("record.zig");
 
 const Network = @This();
@@ -78,22 +79,48 @@ pub fn resolve(self: *const Network, target: []const u8) Found {
     return .{ .item = .{ .member = m, .item = item } };
 }
 
-/// Reads the repositories `project` declares, in the state `state`. What
-/// cannot be read is a member with the reason; a record that does not
-/// match the commit it names is reported.
-pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, root_path: []const u8, project: *const Project, state: State, report: *Report) !Network {
+pub const Options = struct {
+    state: State = .recorded,
+    /// fetch nothing: a repository by `url` is read from its cache alone
+    offline: bool = false,
+};
+
+/// Where a repository's commits are read from: its checkout, or the cache
+/// of a repository by `url`
+pub const Origin = struct {
+    dir: Io.Dir,
+    /// whether it is the cache of a `url`
+    fetched: bool,
+};
+
+/// The origin of `repository`, or why there is none
+pub fn origin(io: Io, arena: std.mem.Allocator, root_path: []const u8, git_dir: ?[]const u8, repository: Project.Repository) !union(enum) { ok: Origin, failed: []const u8 } {
+    if (repository.path) |path| {
+        const dir = Io.Dir.cwd().openDir(io, try Io.Dir.path.join(arena, &.{ root_path, path }), .{}) catch
+            return .{ .failed = try arena.print("there is no checkout at '{s}'", .{path}) };
+        return .{ .ok = .{ .dir = dir, .fetched = false } };
+    }
+    const where = git_dir orelse return .{ .failed = "the project is not in a git repository, which fetching needs" };
+    const dir = try fetch.cache(io, arena, where, repository.name) orelse return .{ .failed = "its cache under .git/skein could not be made" };
+    return .{ .ok = .{ .dir = dir, .fetched = true } };
+}
+
+/// Reads the repositories `project` declares, in the state `options`
+/// asks for. What cannot be read is a member with the reason; a record
+/// that does not match the commit it names is reported.
+pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, root_path: []const u8, project: *const Project, options: Options, report: *Report) !Network {
     if (project.repositories.len == 0) return .{};
     const entries = try record.read(io, arena, root, report);
-    // snapshots go into this repository's git directory, never another's
-    const scratch: ?[]const u8 = if (history.gitDir(io, arena, root)) |dir| try Io.Dir.path.join(arena, &.{ dir, "skein", "snapshots" }) else |e| switch (e) {
+    // snapshots and caches go into this repository's git directory, never another's
+    const git_dir: ?[]const u8 = history.gitDir(io, arena, root) catch |e| switch (e) {
         error.OutOfMemory => return error.OutOfMemory,
         else => null,
     };
     var members: std.ArrayList(Member) = .empty;
     for (project.repositories) |repository| {
         var m: Member = .{ .repository = repository };
-        try read(io, arena, root_path, scratch, entries, state, &m);
-        if (state == .recorded and m.unavailable == null) {
+        try read(io, arena, root_path, git_dir, entries, options, &m);
+        if (options.state == .recorded and m.unavailable == null) {
             const entry = record.find(entries, repository.name).?;
             const now = try ofProject(arena, &m.graph, &m.project.schema);
             if (!std.mem.eql(u8, now, entry.fingerprint)) {
@@ -106,46 +133,64 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, root_path: []const u
 }
 
 /// Fills in `m`: its commit and its items, or why they cannot be read
-fn read(io: Io, arena: std.mem.Allocator, root_path: []const u8, scratch: ?[]const u8, entries: []const record.Entry, state: State, m: *Member) !void {
-    const path = m.repository.path orelse {
-        m.unavailable = "a repository with a url is not fetched yet; give the path of a checkout";
-        return;
-    };
-    var dir = Io.Dir.cwd().openDir(io, try Io.Dir.path.join(arena, &.{ root_path, path }), .{}) catch {
-        m.unavailable = try arena.print("there is no checkout at '{s}'", .{path});
-        return;
-    };
-    defer dir.close(io);
-    var ignored: Report = .{ .arena = arena };
-    switch (state) {
-        .working => {
-            m.project = try Project.load(io, arena, dir, &ignored);
-            m.graph = try Graph.load(io, arena, dir, &m.project, &ignored);
+fn read(io: Io, arena: std.mem.Allocator, root_path: []const u8, git_dir: ?[]const u8, entries: []const record.Entry, options: Options, m: *Member) !void {
+    const name = m.repository.name;
+    var o = switch (try origin(io, arena, root_path, git_dir, m.repository)) {
+        .ok => |o| o,
+        .failed => |why| {
+            m.unavailable = why;
+            return;
         },
-        .recorded, .current => {
-            const revision = if (state == .current) "HEAD" else if (record.find(entries, m.repository.name)) |e| e.commit else {
-                m.unavailable = try arena.print("it is not pinned yet ('skein pin {s}')", .{m.repository.name});
-                return;
-            };
-            const where = scratch orelse {
-                m.unavailable = "the project is not in a git repository, which reading a commit needs";
-                return;
-            };
-            var snap = history.snapshotIn(io, arena, dir, revision, try Io.Dir.path.join(arena, &.{ where, m.repository.name })) catch |e| {
-                m.unavailable = switch (e) {
-                    error.OutOfMemory => return error.OutOfMemory,
-                    error.NoGit => try arena.print("'{s}' is not a git repository", .{path}),
-                    error.UnknownRevision => try arena.print("its checkout has no commit {s}; fetch it there", .{revision[0..@min(revision.len, 12)]}),
-                    error.SnapshotFailed => "its files at that commit could not be unpacked",
-                };
-                return;
-            };
-            defer snap.deinit();
-            m.commit = snap.commit;
-            m.project = snap.project;
-            m.graph = snap.graph;
-        },
+    };
+    defer o.dir.close(io);
+    if (options.state == .working and !o.fetched) {
+        var ignored: Report = .{ .arena = arena };
+        m.project = try Project.load(io, arena, o.dir, &ignored);
+        m.graph = try Graph.load(io, arena, o.dir, &m.project, &ignored);
+        return;
     }
+    const revision: []const u8 = switch (options.state) {
+        .recorded => blk: {
+            const entry = record.find(entries, name) orelse {
+                m.unavailable = try arena.print("it is not pinned yet ('skein pin {s}')", .{name});
+                return;
+            };
+            if (o.fetched and !try fetch.commit(io, arena, o.dir, m.repository.url.?, entry.commit, options.offline)) {
+                m.unavailable = try notFetched(arena, m.repository, options.offline, entry.commit);
+                return;
+            }
+            break :blk entry.commit;
+        },
+        // a repository by url has no working tree: its tip is as near as it gets
+        .current, .working => if (!o.fetched) "HEAD" else try fetch.tip(io, arena, o.dir, m.repository.url.?, m.repository.ref, options.offline) orelse {
+            m.unavailable = try notFetched(arena, m.repository, options.offline, null);
+            return;
+        },
+    };
+    const scratch = try Io.Dir.path.join(arena, &.{ git_dir orelse {
+        m.unavailable = "the project is not in a git repository, which reading a commit needs";
+        return;
+    }, "skein", "snapshots", name });
+    var snap = history.snapshotIn(io, arena, o.dir, revision, scratch) catch |e| {
+        m.unavailable = switch (e) {
+            error.OutOfMemory => return error.OutOfMemory,
+            error.NoGit => try arena.print("'{s}' is not a git repository", .{m.repository.path orelse name}),
+            error.UnknownRevision => try arena.print("its checkout has no commit {s}; fetch it there", .{revision[0..@min(revision.len, 12)]}),
+            error.SnapshotFailed => "its files at that commit could not be unpacked",
+        };
+        return;
+    };
+    defer snap.deinit();
+    m.commit = snap.commit;
+    m.project = snap.project;
+    m.graph = snap.graph;
+}
+
+/// Why a repository by url could not be read: offline, or not fetched
+pub fn notFetched(arena: std.mem.Allocator, repository: Project.Repository, offline: bool, commit: ?[]const u8) ![]const u8 {
+    const what = if (commit) |c| try arena.print("the commit {s}", .{c[0..@min(c.len, 12)]}) else "its tip";
+    if (offline) return arena.print("offline, and {s} is not in its cache", .{what});
+    return arena.print("{s} could not be fetched from {s}", .{ what, repository.url.? });
 }
 
 /// The fingerprint of all the items of a project: over each item's ID and
@@ -172,5 +217,6 @@ pub fn ofProject(arena: std.mem.Allocator, graph: *const Graph, schema: *const S
 
 test {
     _ = record;
+    _ = fetch;
     _ = @import("_test/network.zig");
 }

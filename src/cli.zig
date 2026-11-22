@@ -41,6 +41,8 @@ pub const usage =
     \\                    repositories at the commit each has checked out, not the
     \\                    one pinned
     \\  --working         the same, with their files as they are, committed or not
+    \\  --offline         the same commands, and pin: fetch nothing; a repository
+    \\                    by url is read from what its cache holds
     \\  --all            review, clear: every link, not those of the items named
     \\  --by NAME         approve: who approves (default: git's user.name)
     \\  --on DATE         approve: when, as 2027-03-01 (default: today)
@@ -95,6 +97,8 @@ pub const Common = struct {
     root: []const u8 = ".",
     /// which state of the other repositories to read
     state: Network.State = .recorded,
+    /// fetch nothing; repositories by url are read from their caches
+    offline: bool = false,
 };
 
 pub const Pin = struct {
@@ -253,6 +257,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--verification-from", .takes_value = true },
     .{ .name = "--current", .takes_value = false },
     .{ .name = "--working", .takes_value = false },
+    .{ .name = "--offline", .takes_value = false },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -277,26 +282,27 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
     const common: Common = .{
         .root = p.value("--root") orelse ".",
         .state = if (p.flag("--working")) .working else if (p.flag("--current")) .current else .recorded,
+        .offline = p.flag("--offline"),
     };
     const words = p.words.items;
 
     if (eql(name, "check")) {
-        if (try p.allow(&.{ "--root", "--current", "--working" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "check takes no items" };
         return .{ .check = common };
     }
     if (eql(name, "pin")) {
-        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 2) return .{ .misuse = "pin takes a repository, and a commit of it" };
         return .{ .pin = .{ .common = common, .name = if (words.len > 0) words[0] else null, .revision = if (words.len == 2) words[1] else null } };
     }
     if (eql(name, "trace")) {
-        if (try p.allow(&.{ "--root", "--json", "--current", "--working" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len != 1) return .{ .misuse = "trace takes one item" };
         return .{ .trace = .{ .common = common, .id = words[0], .json = p.flag("--json") } };
     }
     if (eql(name, "coverage")) {
-        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
         if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
         return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown") } };
@@ -310,7 +316,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .diff = .{ .common = common, .revisions = words, .impact = impact, .json = p.flag("--json"), .markdown = p.flag("--markdown") } };
     }
     if (eql(name, "export")) {
-        if (try p.allow(&.{ "--root", "--profile", "--current", "--working" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--profile", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 1) return .{ .misuse = "export takes one thing to export" };
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
             return .{ .misuse = "export: json, items, links or citations" };
@@ -338,7 +344,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .move = .{ .common = common, .old = words[0], .new = words[1] } };
     }
     if (eql(name, "render")) {
-        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "render takes no items" };
         const format: Render.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Render.Format, f) orelse
             return .{ .misuse = "render: the formats are markdown, html and document" } else .markdown;
@@ -649,5 +655,7 @@ test "pin, and the state of the other repositories" {
     try testing.expectEqual(.current, (try f.run(&.{ "check", "--current" })).check.state);
     try testing.expectEqual(.working, (try f.run(&.{ "trace", "x", "--working" })).trace.common.state);
     try testing.expectEqualStrings("give --current or --working, not both", (try f.run(&.{ "check", "--current", "--working" })).misuse);
+    try testing.expect((try f.run(&.{ "pin", "--offline" })).pin.common.offline);
+    try testing.expect((try f.run(&.{ "render", "--out", "x", "--offline" })).render.common.offline);
     try testing.expectEqualStrings("--current does not go with pin", (try f.run(&.{ "pin", "--current" })).misuse);
 }

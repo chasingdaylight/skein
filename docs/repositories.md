@@ -23,6 +23,17 @@ Then links, references and citations can point into it:
 \%page[syntax explains=compiler:lex.comment] A comment is %[compiler:lex.comment.line text from // to the end of the line].
 ```
 
+A repository that is not checked out beside this one can be given by its address instead, which git fetches:
+
+```toml
+[[repositories]]
+name = "compiler"
+url = "https://github.com/example/compiler.git"
+ref = "main"
+```
+
+skein fetches it with git, so any address and sign-in git has works, SSH included, into a cache under `.git/skein/repositories/` that is never committed. `ref` is the branch or tag that `--current` follows; without it, the default branch. With `--offline`, skein fetches nothing and reads what the cache holds.
+
 ## Pinning: the state of the network
 
 The items of the repositories together are a network, and a state of it is one commit of each repository. The project records the state it was last checked against in `.skein/network.toml`, which `skein pin` writes and the project commits:
@@ -56,11 +67,11 @@ The states between recorded ones can still be looked at, where links may be brok
 | `--current` | At the commit its checkout has checked out, so switching a branch there and running again shows the other branch. |
 | `--working` | As its files are on disk, committed or not, to try a change across repositories before committing it. |
 
-`check`, `trace`, `coverage`, `export` and `render` take them.
+`check`, `trace`, `coverage`, `export` and `render` take them, and `--offline` too. A repository by url has no working tree, so `--working` reads it as `--current` does.
 
 ## When a repository is not at hand
 
-A repository that is not pinned yet, whose checkout is not there, or whose checkout does not have the recorded commit, is not read. Its targets are then not checked, and `check` says so with a warning rather than a problem:
+A repository that is not pinned yet, whose checkout is not there, whose checkout does not have the recorded commit, or that could not be fetched (offline, or no answer for 30 seconds), is not read. Its targets are then not checked, and `check` says so with a warning rather than a problem:
 
 ```text
 .skein/config.toml: warning: repositories: compiler: there is no checkout at '../compiler', so 14 references to it are not checked

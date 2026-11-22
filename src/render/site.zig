@@ -169,7 +169,7 @@ fn front(arena: std.mem.Allocator, name: []const u8, ws: *const Workspace, ctx: 
         try out.appendSlice(arena, "\">");
         try inline_html.escape(arena, &out, p.title);
         try out.appendSlice(arena, "</a></td><td><code>");
-        try inline_html.escape(arena, &out, try std.fmt.allocPrint(arena, "{s}.md", .{p.path[0 .. p.path.len - 5]}));
+        try inline_html.escape(arena, &out, try arena.print("{s}.md", .{p.path[0 .. p.path.len - 5]}));
         try out.appendSlice(arena, "</code></td></tr>\n");
     }
     try out.appendSlice(arena, "</tbody>\n</table>\n");
