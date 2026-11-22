@@ -1,0 +1,8 @@
+description = "A requirement of NASA-STD-7009B ([M&S 40] is MS-40); read-only, from skein's template"
+id = "numbered"
+prefix = "MS"
+digits = 2
+
+# the paragraph of the standard
+[attributes.section]
+normative = false

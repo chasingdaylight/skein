@@ -1,0 +1,5 @@
+description = "A row of the Requirements Identification Matrix says how a model meets a requirement of the standard"
+from = ["ms-record"]
+to = ["ms"]
+# every requirement has its rows, one for each model in scope
+expected = true

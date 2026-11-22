@@ -22,6 +22,9 @@ skein shall carry a template for software work under NASA's NPR 7150.2D, `npr715
 %req[templates.nasa-std-8739.8b]
 skein shall carry a template for software assurance and software safety under NASA-STD-8739.8B, `nasa-std-8739.8b`, to be used with `npr7150.2d`: the standard's tasks for each requirement of the NPR (Table 1) and its requirements on the IV&V Provider (section 4.4.2) as a read-only source written into the project, the types of the assurance organization's mapping matrix, and skeletons of its documents. Its options `class` and `safety-critical` choose the groups of tasks a row of the matrix is expected for, as the NPR's do; `ivv` expects rows for the IV&V requirements.
 
+%req[templates.nasa-std-7009b]
+skein shall carry a template for models and simulations under NASA-STD-7009B, `nasa-std-7009b`: its 42 requirements as a read-only source written into the project, a type for each model with its intended use, its criticality (Appendix D) and its credibility factors (Appendix E), the rows of the Requirements Identification Matrix (Appendix A), and skeletons of the model register, the credibility assessments, the matrix, the plan and the results report.
+
 %req[templates.iso29148]
 skein shall carry a template for requirements as ISO/IEC/IEEE 29148:2018 describes them, `iso29148`: business, stakeholder, system and software requirements with the attributes the standard describes and its four verification methods, verifications, the links between the levels, and skeletons of its four specifications, a verification and traceability page, and a checklist of the characteristics of good requirements. The standard is under copyright: the template gives its structure in skein's own words, with its clause numbers, and quotes none of it.
 

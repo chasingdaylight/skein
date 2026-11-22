@@ -7,6 +7,7 @@ const testing = std.testing;
 
 const check_command = @import("../../commands/check.zig");
 const coverage_command = @import("../../commands/coverage.zig");
+const render_command = @import("../../commands/render.zig");
 const init_command = @import("../../commands/init.zig");
 const template_command = @import("../../commands/template.zig");
 
@@ -127,6 +128,27 @@ test "software assurance under NASA-STD-8739.8B, with the NPR 7150.2D template" 
     // a group of tasks for each requirement of the class, and no IV&V without the option
     try expectContains(coverage, "performs links to satask items: 0 of 88");
     try testing.expect(std.mem.find(u8, coverage, "ivv-performs") == null);
+}
+
+// req: templates.nasa-std-7009b, render.generated.list
+test "models and simulations under NASA-STD-7009B, with their factors in a list" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"nasa-std-7009b"} })).status);
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "meets links to ms items: 0 of 42");
+
+    // `list model columns=...`: the example model with its criticality
+    const out_dir = try std.Io.Dir.path.join(a, &.{ root, "out" });
+    try testing.expectEqual(.ok, (try render_command.run(testing.io, a, .{ .common = .{ .root = root }, .out = out_dir })).status);
+    const page = try tmp.dir.readFileAlloc(testing.io, "out/docs/models.md", a, .limited(1 << 20));
+    try expectContains(page, "| Item | Status | Consequence | Influence | Criticality | Intended_use |\n");
+    try expectContains(page, "[`MDL-001`](#MDL-001) | planned | III | 4 | red | Predict the peak load on the bracket during ascent |");
 }
 
 // req: templates.iso29148

@@ -1,4 +1,5 @@
-//! A generated matrix with columns of one's choosing:
+//! A generated matrix with columns of one's choosing (and the columns of
+//! a list, `list model columns=criticality,verification`):
 //!
 //!     matrix complies-with columns=text,classes from.columns=status,approach,evidence
 //!
@@ -90,7 +91,7 @@ pub fn render(req: Request, filter: *const generated.Filter) Error![]const u8 {
 }
 
 /// A column's heading: `text` as Text, an attribute as itself
-fn heading(a: std.mem.Allocator, column: []const u8) Error![]const u8 {
+pub fn heading(a: std.mem.Allocator, column: []const u8) Error![]const u8 {
     if (column.len == 0) return column;
     const out = try a.dupe(u8, column);
     out[0] = std.ascii.toUpper(out[0]);
@@ -98,7 +99,7 @@ fn heading(a: std.mem.Allocator, column: []const u8) Error![]const u8 {
 }
 
 /// The cell of `column` for `item`; a value that is an item's ID links to it
-fn value(ctx: generated.Context, out: *std.ArrayList(u8), item: *const Item, column: []const u8) Error!void {
+pub fn value(ctx: generated.Context, out: *std.ArrayList(u8), item: *const Item, column: []const u8) Error!void {
     const a = ctx.arena;
     const item_type = ctx.project.schema.itemType(item.type_name);
     if (std.mem.eql(u8, column, "id")) return generated.cell(a, out, item.id);
