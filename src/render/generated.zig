@@ -182,6 +182,7 @@ fn matrix(ctx: Context, args: []const []const u8) Error![]const u8 {
     try out.print(a, "| Item | Category | `{s}` from |\n| --- | --- | --- |\n", .{link_type.name});
     var rows: usize = 0;
     var covered: usize = 0;
+    var waived: usize = 0;
     for (ctx.graph.items) |*item| {
         if (!filter.passes(schema, ctx.graph, item)) continue;
         rows += 1;
@@ -192,16 +193,27 @@ fn matrix(ctx: Context, args: []const []const u8) Error![]const u8 {
         try out.appendSlice(a, " | ");
         var first = true;
         for (try walk.incoming(a, ctx.graph, item.id)) |in| {
-            if (!std.mem.eql(u8, in.link.type_name, link_type.name)) continue;
+            // a waiver that counts as this link type is listed as one, and named so
+            const as = if (schema.linkType(in.link.type_name)) |t| t.counts_as else null;
+            const counts = std.mem.eql(u8, in.link.type_name, link_type.name) or (as != null and std.mem.eql(u8, as.?, link_type.name));
+            if (!counts) continue;
             if (!first) try out.appendSlice(a, ", ");
             first = false;
+            if (!std.mem.eql(u8, in.link.type_name, link_type.name)) try out.print(a, "{s} by ", .{in.link.type_name});
             try link(ctx, &out, in.from);
         }
-        if (first) try out.appendSlice(a, "**none**") else covered += 1;
+        if (first) {
+            if (coverage.excusedBy(schema, ctx.graph, item.id, link_type.name)) |by| {
+                try out.appendSlice(a, "waived by ");
+                try link(ctx, &out, by);
+                waived += 1;
+            } else try out.appendSlice(a, "**none**");
+        } else covered += 1;
         try out.appendSlice(a, " |\n");
     }
     if (rows == 0) return a.print("*No item is selected.*\n", .{});
-    try out.print(a, "\n{d} of {d} with a `{s}` link.\n", .{ covered, rows, link_type.name });
+    try out.print(a, "\n{d} of {d} with a `{s}` link", .{ covered, rows - waived, link_type.name });
+    try out.appendSlice(a, if (waived > 0) try a.print(", {d} waived.\n", .{waived}) else ".\n");
     return out.items;
 }
 
@@ -226,7 +238,8 @@ fn coverageTable(ctx: Context, args: []const []const u8) Error![]const u8 {
             .link => "links",
             .citation => "citations",
         };
-        try out.print(a, "| `{s}` {s} | `{s}` items | {d} of {d} | {s} |\n", .{ e.name, kind, e.item_type, e.covered, e.total, try percent(a, e.covered, e.total) });
+        const waived = if (e.waived.len == 0) "" else try a.print(", {d} waived", .{e.waived.len});
+        try out.print(a, "| `{s}` {s} | `{s}` items | {d} of {d}{s} | {s} |\n", .{ e.name, kind, e.item_type, e.covered, e.total, waived, try percent(a, e.covered, e.total) });
     }
     for (expectations) |e| {
         if (e.uncovered.len == 0) continue;

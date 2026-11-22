@@ -66,6 +66,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
             try j.endArray();
             try j.key("uncovered");
             try j.strings(e.uncovered);
+            try j.key("waived");
+            try j.strings(e.waived);
             try j.endObject();
         }
         try j.endArray();
@@ -139,6 +141,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
         };
         try out.print(arena, "\n{s} {s} {s} items: ", .{ e.name, what, e.item_type });
         try ratio(arena, &out, e.covered, e.total);
+        if (e.waived.len > 0) try out.print(arena, ", {d} waived", .{e.waived.len});
         try out.append(arena, '\n');
         for (e.categories) |c| {
             if (c.total == 0) continue;
@@ -148,6 +151,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
         }
         if (e.uncovered.len > 0) try out.appendSlice(arena, "  without:\n");
         for (e.uncovered) |id| try out.print(arena, "    {s}\n", .{id});
+        if (e.waived.len > 0) try out.appendSlice(arena, "  waived:\n");
+        for (e.waived) |id| try out.print(arena, "    {s}\n", .{id});
     }
     for (summaries) |s| {
         try out.print(arena, "\nresults ({s}): {d} of {d} passed, {d} failed, {d} untested\n", .{ s.label, s.passed, s.total, s.failed.len, s.untested.len });
@@ -185,7 +190,7 @@ fn markdown(arena: std.mem.Allocator, name: []const u8, profile: ?[]const u8, ex
     }
     try out.appendSlice(arena, "| Expected | Of | Covered | |\n| --- | --- | ---: | ---: |\n");
     for (expectations) |e| {
-        try out.print(arena, "| `{s}` {s} | `{s}` items | {d} of {d} | {s} |\n", .{ e.name, kindName(e.kind, true), e.item_type, e.covered, e.total, try percent(arena, e.covered, e.total) });
+        try out.print(arena, "| `{s}` {s} | `{s}` items | {d} of {d}{s} | {s} |\n", .{ e.name, kindName(e.kind, true), e.item_type, e.covered, e.total, try waivedNote(arena, e), try percent(arena, e.covered, e.total) });
         for (e.categories) |c| {
             if (c.total == 0) continue;
             try out.print(arena, "| | {s} | {d} of {d} | {s} |\n", .{ c.name, c.covered, c.total, try percent(arena, c.covered, c.total) });
@@ -207,6 +212,11 @@ fn kindName(kind: coverage.Expectation.Kind, plural: bool) []const u8 {
         .link => if (plural) "links" else "link",
         .citation => if (plural) "citations" else "citation",
     };
+}
+
+/// ", 5 waived"; nothing when none is
+pub fn waivedNote(arena: std.mem.Allocator, e: coverage.Expectation) ![]const u8 {
+    return if (e.waived.len == 0) "" else arena.print(", {d} waived", .{e.waived.len});
 }
 
 /// "80%"; nothing when there is nothing to cover

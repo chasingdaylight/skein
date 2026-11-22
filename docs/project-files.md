@@ -119,6 +119,19 @@ expected = true
 | `expected` | Every item of a `to` type should be pointed to by one; coverage counts the ones that are not. |
 | `review` | Links of this type are reviewed: see [reviewing](reviewing.md). |
 | `open` | An issue or pull request a link of this type points to must be open: see [the forge](forge.md). |
+| `counts_as` | A link of this type counts as one of that type, for coverage: a tailoring as good as compliance. |
+| `excuses` | A link of this type excuses its target from the coverage of that type: shown as waived, counted neither way. |
+
+A standard's requirements, imported into a read-only source, are covered by the project's links to them; waivers and deviations are item types of the project's, linked to the requirement they relax:
+
+```toml
+# .skein/links/waives.toml
+from = ["waiver"]
+to = ["swe"]
+excuses = "complies-with"   # or counts_as = "complies-with"
+```
+
+A waiver counts only while it is in force: not removed, and approved when its type asks for approval (`approval = ["approved"]`).
 
 ## `.skein/profiles/<name>.toml`: a profile
 

@@ -26,6 +26,8 @@ pub const Expectation = struct {
     categories: []const Category = &.{},
     /// the items that are not covered, in order
     uncovered: []const []const u8 = &.{},
+    /// the items a waiver excuses: in neither count
+    waived: []const []const u8 = &.{},
 
     pub const Kind = enum { link, citation };
 };
@@ -92,11 +94,17 @@ fn count(
     const categories = try arena.alloc(Category, item_type.categories.len);
     for (categories, item_type.categories) |*c, category_name| c.* = .{ .name = category_name };
     var uncovered: std.ArrayList([]const u8) = .empty;
+    var waived: std.ArrayList([]const u8) = .empty;
 
     for (graph.items) |*item| {
         if (!std.mem.eql(u8, item.type_name, item_type.name) or item.isTombstone(item_type)) continue;
         if (profile) |p| {
             if (!inProfile(p, item, item_type)) continue;
+        }
+        // waived: neither covered nor not
+        if (kind == .link and excusedBy(schema, graph, item.id, name) != null) {
+            try waived.append(arena, item.id);
+            continue;
         }
         const covered = isCovered(.{ .kind = kind, .name = name, .to = to, .schema = schema, .graph = graph, .citations = citations }, item);
         out.total += 1;
@@ -109,6 +117,7 @@ fn count(
     }
     out.categories = categories;
     out.uncovered = uncovered.items;
+    out.waived = waived.items;
     return out;
 }
 
@@ -128,7 +137,7 @@ const Wanted = struct {
 /// parts do not count.
 fn isCovered(wanted: Wanted, item: *const Item) bool {
     const direct = switch (wanted.kind) {
-        .link => hasIncoming(wanted.graph, item.id, wanted.name),
+        .link => hasIncoming(wanted.schema, wanted.graph, item.id, wanted.name),
         .citation => hasCitation(wanted.citations, item.id, wanted.name),
     };
     if (direct) return true;
@@ -144,12 +153,37 @@ fn isCovered(wanted: Wanted, item: *const Item) bool {
     return counted > 0;
 }
 
-fn hasIncoming(graph: *const Graph, id: []const u8, link_type: []const u8) bool {
+/// Whether `id` has a link of `link_type` pointing to it, or one of a type
+/// that counts as it, from a waiver in force
+fn hasIncoming(schema: *const Schema, graph: *const Graph, id: []const u8, link_type: []const u8) bool {
     const list = graph.incoming.get(id) orelse return false;
     for (list.items) |in| {
         if (std.mem.eql(u8, in.link.type_name, link_type)) return true;
+        const t = schema.linkType(in.link.type_name) orelse continue;
+        const as = t.counts_as orelse continue;
+        if (std.mem.eql(u8, as, link_type) and inForce(schema, in.from)) return true;
     }
     return false;
+}
+
+/// The item that excuses `id` from the expectation of `link_type`, by a
+/// link of a type that `excuses` it; null when none does
+pub fn excusedBy(schema: *const Schema, graph: *const Graph, id: []const u8, link_type: []const u8) ?*const Item {
+    const list = graph.incoming.get(id) orelse return null;
+    for (list.items) |in| {
+        const t = schema.linkType(in.link.type_name) orelse continue;
+        const excuses = t.excuses orelse continue;
+        if (std.mem.eql(u8, excuses, link_type) and inForce(schema, in.from)) return in.from;
+    }
+    return null;
+}
+
+/// Whether a waiver counts: not removed, and approved when its type asks
+/// for approval (a status that needs one, which `check` holds it to)
+fn inForce(schema: *const Schema, waiver: *const Item) bool {
+    const t = schema.itemType(waiver.type_name) orelse return false;
+    if (waiver.isTombstone(t)) return false;
+    return t.approval.len == 0 or Schema.names.contains(t.approval, waiver.effectiveStatus(t));
 }
 
 fn hasCitation(citations: *const Graph.Citations, id: []const u8, set: []const u8) bool {
@@ -162,4 +196,5 @@ fn hasCitation(citations: *const Graph.Citations, id: []const u8, set: []const u
 
 test {
     _ = @import("_test/coverage.zig");
+    _ = @import("_test/waivers.zig");
 }
