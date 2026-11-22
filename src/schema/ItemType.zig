@@ -20,6 +20,9 @@ tombstone: ?[]const u8 = "removed",
 verification: []const []const u8 = &.{},
 /// the statuses an item may have only while it is approved as it is
 approval: []const []const u8 = &.{},
+/// the roles that must each approve it, for those statuses; none when any
+/// one approval will do
+approval_roles: []const []const u8 = &.{},
 attributes: []const Attribute = &.{},
 /// when the type's items are tested examples: how
 example: ?Example = null,
@@ -65,7 +68,15 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
     out.description = try r.string("description") orelse "";
     out.categories = try r.strings("categories");
     out.verification = try r.strings("verification");
-    out.approval = try r.strings("approval");
+    // `approval = [statuses]`, or `[approval]` with `statuses` and the `roles` that approve
+    if (r.table.get("approval")) |v| if (v == .table) {
+        const t = (try r.child("approval")).?;
+        try t.known(&.{ "statuses", "roles" });
+        out.approval = try t.strings("statuses");
+        out.approval_roles = try t.strings("roles");
+    } else {
+        out.approval = try r.strings("approval");
+    };
 
     const statuses = try r.strings("statuses");
     if (statuses.len > 0) out.statuses = statuses;
