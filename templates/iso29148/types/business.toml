@@ -1,0 +1,21 @@
+description = "A business requirement: what the organization needs, and why (29148, the BRS)"
+id = "numbered"
+prefix = "BRS"
+verification = ["inspection", "analysis", "demonstration", "test"]
+
+# the attributes of a requirement (29148, 5.2.8), in skein's words
+[attributes.priority]
+values = ["high", "medium", "low"]
+
+[attributes.owner]
+normative = false
+
+[attributes.source]
+normative = false
+
+[attributes.rationale]
+normative = false
+
+[attributes.risk]
+values = ["high", "medium", "low"]
+normative = false

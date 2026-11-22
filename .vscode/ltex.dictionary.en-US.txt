@@ -61,3 +61,7 @@ ndash
 nbsp
 hellip
 dard
+strs
+syrs
+StRS
+SyRS

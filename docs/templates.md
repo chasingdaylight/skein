@@ -48,7 +48,9 @@ safety-critical = false
 
 | `npr7150.2d` | Software work under NASA's NPR 7150.2D, NASA Software Engineering Requirements, as the NASA Software Engineering Handbook (NASA-HDBK-2203) reads it. See below. |
 
-More are planned: requirements as ISO/IEC/IEEE 29148 describes them, NASA-STD-8739.8B (software assurance and safety) and NASA-STD-7009B (models and simulations), the last two to go with `npr7150.2d`.
+| `iso29148` | Requirements as ISO/IEC/IEEE 29148:2018 describes them: business (`BRS-001`), stakeholder (`STK-001`), system (`SYS-001`) and software (`SRS-001`) requirements with the standard's attributes (priority, owner, source, rationale, risk, difficulty, acceptance) and verification methods, verifications (`VER-001`), the links between the levels (`refines`, `derives`, `allocates`, `verifies`), and skeletons of the BRS, StRS, SyRS and SRS, a traceability page and a checklist for writing requirements, in skein's words (the standard is under copyright). |
+
+More are planned: NASA-STD-8739.8B (software assurance and safety) and NASA-STD-7009B (models and simulations), the last two to go with `npr7150.2d`.
 
 ## NPR 7150.2D
 

@@ -67,7 +67,7 @@ test "the templates, listed and shown" {
     const a = arena.allocator();
     try expectContains((try template_command.run(testing.io, a, .{ .what = .list })).text, "langspec  The specification of a programming language");
     const shown = (try template_command.run(testing.io, a, .{ .what = .show, .name = "langspec" })).text;
-    try expectContains(shown, "Types:\n  rule.toml\n  term.toml\n  example.toml\n");
-    try expectContains(shown, "Links:\n  shows.toml\n  see.toml\n");
+    try expectContains(shown, "Types:\n  example.toml\n  rule.toml\n  term.toml\n  test.toml\n");
+    try expectContains(shown, "Links:\n  see.toml\n  shows.toml\n  verifies.toml\n");
     try expectContains((try template_command.run(testing.io, a, .{ .what = .show, .name = "nowhere" })).text, "skein has no template 'nowhere'");
 }
