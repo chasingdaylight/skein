@@ -28,5 +28,11 @@ A result with fingerprints shall be stale once one of the items they are of has 
 %req[results.rendered]
 A generated coverage page (`render.generated.coverage`) shall also show, when there are results, per implementation how many items passed, failed and are untested, with links to the items that failed. `render` takes `--results` as `coverage` does.
 
+%req[verification.records]
+An item whose verification method is not a test (analysis, inspection, demonstration) shall be verified by a record of that verification: a result a person recorded with `skein result`, of the item or of a procedure that links to it, with its evidence, the files that show it (`--evidence PATH`, more than once), kept in git with the project's results. `check` warns about evidence that is not in the project.
+
+%req[verification.coverage]
+`skein coverage` shall count, for each verification method the items name, how many of those items are verified as the method requires, and list those that are not: an item verified by `test` by a passing result of a test, in any implementation; any other by a passing result a person recorded that is not stale.
+
 %req[results.unmatched]
 A result that belongs to no item shall be listed by `coverage`, and reported by `check` as a warning for the results the project keeps; it is not a problem.

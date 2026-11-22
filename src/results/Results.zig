@@ -48,6 +48,8 @@ pub const Result = struct {
     commit: ?[]const u8 = null,
     /// "ID=fingerprint" of what it verified, when it was recorded
     fingerprints: []const []const u8 = &.{},
+    /// the files that show it, from the project's root: a report, a log
+    evidence: []const []const u8 = &.{},
     /// the item that has changed since, which makes it stale; a stale
     /// result belongs to no item
     stale: ?[]const u8 = null,
@@ -114,6 +116,7 @@ fn readFile(io: Io, arena: std.mem.Allocator, dir: Io.Dir, file: []const u8, out
             .item = r.get("item"),
             .items = r.list("items"),
             .fingerprints = r.list("fingerprints"),
+            .evidence = r.list("evidence"),
             .by = r.get("by"),
             .date = r.get("date"),
             .commit = r.get("commit"),

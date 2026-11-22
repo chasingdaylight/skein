@@ -6,9 +6,6 @@ What `docs/design.md` commits skein to and the code does not do yet, in the orde
 
 %req[render.site removed]
 
-%req[verification.records planned]
-An item whose verification method is not a test shall be verified by a record of that verification, with its evidence; coverage shall count an item as verified by whichever its method requires. (Design, section 4.5.)
-
 %req[standards.external planned]
 A standard the project must comply with shall be an item set of its own, read-only, which the project's items link to, with applicability by profile and with waivers and deviations as item types. (Design, section 4.7.)
 
