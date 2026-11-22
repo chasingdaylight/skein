@@ -53,14 +53,24 @@ ${body}
 
 /** The planning view's page: its script, from the extension's files, draws it */
 export function planPage(scriptUri: string, cspSource: string, scriptNonce: string): string {
+  return scriptPage("skein Plan", planStyle, scriptUri, cspSource, scriptNonce);
+}
+
+/** The graph view's page, drawn by its script */
+export function graphPage(scriptUri: string, cspSource: string, scriptNonce: string): string {
+  return scriptPage("skein Graph", graphStyle, scriptUri, cspSource, scriptNonce);
+}
+
+/** A page that its script, from the extension's files, draws into `#root` */
+function scriptPage(title: string, extraStyle: string, scriptUri: string, cspSource: string, scriptNonce: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${scriptNonce}' ${cspSource};">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>skein Plan</title>
-<style>${style}${planStyle}</style>
+<title>${escape(title)}</title>
+<style>${style}${extraStyle}</style>
 </head>
 <body>
 <div id="root"></div>
@@ -97,6 +107,35 @@ const planStyle = `
 .card.critical { border-left-color: var(--vscode-charts-red); }
 .card-id { font-family: var(--vscode-editor-font-family); font-weight: 600; }
 .card-meta { color: var(--vscode-descriptionForeground); font-size: 0.9em; }
+`;
+
+// the graph, its controls, the details beside it and the context menu
+const graphStyle = `
+body { padding: 0 12px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; margin: 10px 0; }
+.controls input[type=search], .controls select { background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, transparent); padding: 3px 6px; }
+.choose { background: var(--vscode-input-background); padding: 3px 6px; }
+.choose label { display: block; }
+.main { display: flex; gap: 12px; height: calc(100vh - 70px); }
+.canvas { flex: 1; min-width: 0; border: 1px solid var(--vscode-panel-border, transparent); overflow: hidden; }
+.graph { width: 100%; height: 100%; cursor: grab; }
+.node { cursor: pointer; }
+.node rect { fill: var(--vscode-editor-background); stroke-width: 2; }
+.node text { fill: var(--vscode-foreground); font-family: var(--vscode-editor-font-family); font-size: 12px; }
+.node.selected rect { fill: var(--vscode-list-activeSelectionBackground); }
+.node.selected text { fill: var(--vscode-list-activeSelectionForeground); }
+.node.other rect { stroke-dasharray: 4 3; }
+.dim { opacity: 0.25; }
+.edge { fill: none; stroke: var(--vscode-descriptionForeground); stroke-width: 1.2; }
+.edge.suspect { stroke: var(--vscode-charts-red); stroke-dasharray: 6 3; }
+.edge.never-reviewed { stroke-dasharray: 2 3; }
+.arrow { fill: var(--vscode-descriptionForeground); }
+.details { flex: 0 0 38%; overflow: auto; border-left: 1px solid var(--vscode-panel-border, transparent); padding-left: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.actions button { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 3px 10px; cursor: pointer; }
+.menu { position: fixed; background: var(--vscode-menu-background); color: var(--vscode-menu-foreground); border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border)); padding: 4px 0; z-index: 10; }
+.menu-item { padding: 3px 16px; cursor: pointer; }
+.menu-item:hover { background: var(--vscode-menu-selectionBackground); color: var(--vscode-menu-selectionForeground); }
 `;
 
 function escape(s: string): string {

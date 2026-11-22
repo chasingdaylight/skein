@@ -5,10 +5,10 @@
 //   one named, as context for the chat;
 // - the command that writes the project's agent instructions (`skein agents`).
 
-import { execFile } from "node:child_process";
 import * as vscode from "vscode";
 import { Server } from "./client";
-import { agentsArgs, findProgram } from "./program";
+import { agentsArgs } from "./program";
+import { programOf, run } from "./run";
 
 export function register(context: vscode.ExtensionContext, server: Server): void {
   const changed = new vscode.EventEmitter<void>();
@@ -50,10 +50,6 @@ export function register(context: vscode.ExtensionContext, server: Server): void
   );
 }
 
-function programOf(context: vscode.ExtensionContext): string | undefined {
-  return findProgram(vscode.workspace.getConfiguration("skein").get<string>("path", ""), context.extensionPath);
-}
-
 async function itemAtCursor(server: Server): Promise<string | undefined> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) return undefined;
@@ -64,15 +60,3 @@ async function itemAtCursor(server: Server): Promise<string | undefined> {
   return found?.id;
 }
 
-/** Runs skein in the workspace's folder; what it printed, or an error with it */
-function run(context: vscode.ExtensionContext, args: string[]): Promise<string> {
-  const program = programOf(context);
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  if (!program || !folder) return Promise.reject(new Error("skein: no skein program, or no folder open"));
-  return new Promise((resolve, reject) => {
-    execFile(program, args, { cwd: folder.uri.fsPath, timeout: 60_000, maxBuffer: 16 << 20 }, (error, stdout, stderr) => {
-      if (error) reject(new Error((stderr || stdout || error.message).trim()));
-      else resolve(stdout || stderr);
-    });
-  });
-}

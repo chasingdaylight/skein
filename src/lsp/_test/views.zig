@@ -161,6 +161,27 @@ test "skein/render: a document as skein render writes it, for the preview" {
     try testing.expect(try s.request("skein/render", try a.print("{{\"uri\":\"{s}\"}}", .{try s.uri(".skein/config.toml")})) == .null);
 }
 
+// req: lsp.graph
+test "skein/graph: the items and their links, for the graph view" {
+    var s: Session = undefined;
+    try s.init();
+    defer s.deinit();
+    try write(s.tmp.dir, "spec/lex.md", try std.mem.replaceOwned(u8, s.arena.allocator(), lex, "syntx", "syntax"));
+    const result = try s.request("skein/graph", "{}");
+    const nodes = get(result, "nodes").array.items;
+    try testing.expectEqual(6, nodes.len);
+    try testing.expectEqualStrings("lex.token", get(nodes[0], "id").string);
+    try testing.expectEqualStrings("spec", get(nodes[0], "source").string);
+    const edges = get(result, "edges").array.items;
+    // c.one and c.three verify; c.three by a former ID, which leads to the item now
+    try testing.expectEqual(2, edges.len);
+    try testing.expectEqualStrings("c.one", get(edges[0], "from").string);
+    try testing.expectEqualStrings("lex.token", get(edges[0], "to").string);
+    try testing.expectEqualStrings("lex.renamed", get(edges[1], "to").string);
+    try testing.expectEqualStrings("verifies", get(edges[1], "type").string);
+    try testing.expectEqual(2, get(result, "types").array.items.len);
+}
+
 test "code lenses: an item's links, and Trace" {
     var s: Session = undefined;
     try s.init();
