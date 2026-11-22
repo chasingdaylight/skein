@@ -42,6 +42,11 @@ pub const usage =
     \\                    import csv: the columns of the IDs and the text
     \\                    (default: id, text)
     \\  --replace         import csv: write over item files that are there
+    \\  --headings-as-text
+    \\                    import doorstop: non-normative items as plain Markdown
+    \\  --status-from NAME, --verification-from NAME
+    \\                    import doorstop: the attribute that gives the status,
+    \\                    or the verification method
     \\  --out DIR         render: where the rendered files go
     \\  --format NAME     render: markdown for a site generator (the default),
     \\                    html: the site itself, or document: one file per document
@@ -183,6 +188,13 @@ pub const Import = struct {
     id_column: ?[]const u8 = null,
     text_column: ?[]const u8 = null,
     replace: bool = false,
+    /// doorstop: non-normative items, which nothing links to, as plain
+    /// Markdown: headings and introductions, which are narrative
+    headings_as_text: bool = false,
+    /// doorstop: the attribute whose values are the statuses
+    status_from: ?[]const u8 = null,
+    /// doorstop: the attribute whose values are the verification methods
+    verification_from: ?[]const u8 = null,
 
     pub const Format = enum { doorstop, csv };
 };
@@ -217,6 +229,9 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--out", .takes_value = true },
     .{ .name = "--format", .takes_value = true },
     .{ .name = "--message", .takes_value = true },
+    .{ .name = "--headings-as-text", .takes_value = false },
+    .{ .name = "--status-from", .takes_value = true },
+    .{ .name = "--verification-from", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -306,9 +321,16 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         const format = std.meta.stringToEnum(Import.Format, words[0]) orelse return .{ .misuse = forms };
         switch (format) {
             .doorstop => {
-                if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+                if (try p.allow(&.{ "--root", "--headings-as-text", "--status-from", "--verification-from" })) |problem| return .{ .misuse = problem };
                 if (words.len < 2) return .{ .misuse = "import doorstop: name the directories of the Doorstop documents" };
-                return .{ .import = .{ .common = common, .format = format, .paths = words[1..] } };
+                return .{ .import = .{
+                    .common = common,
+                    .format = format,
+                    .paths = words[1..],
+                    .headings_as_text = p.flag("--headings-as-text"),
+                    .status_from = p.value("--status-from"),
+                    .verification_from = p.value("--verification-from"),
+                } };
             },
             .csv => {
                 if (try p.allow(&.{ "--root", "--type", "--to", "--id-column", "--text-column", "--replace" })) |problem| return .{ .misuse = problem };

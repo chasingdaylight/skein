@@ -46,6 +46,16 @@ Run `skein check`. Things to look at by hand:
 - `verification-method` or the like: skein has `verification`, with the methods the item type allows.
 - Doorstop's `references` point from an item to the code. skein reads the other direction, a citation in the code (`// Implements SRS-012.`), which cannot go stale unnoticed; see [writing items](writing-items.md).
 
+### Options
+
+| Option | What it does |
+| --- | --- |
+| `--headings-as-text` | Doorstop's non-normative items (headings, introductions) become plain Markdown: narrative text, not items. An item that another links to stays an item. |
+| `--status-from NAME` | The values of the attribute `NAME` (for example `status`) become the items' statuses, and the item type's lifecycle; `removed` stays the status of removed items. |
+| `--verification-from NAME` | The same for skein's verification method (for example `verification-method`). |
+
+Values are put in lowercase, with other characters as `-`: `In Review` becomes `in-review`.
+
 ## From a CSV file
 
 ```text

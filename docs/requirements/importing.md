@@ -22,6 +22,12 @@ A link that Doorstop recorded as reviewed shall be recorded as reviewed, against
 %req[import.doorstop.refusals]
 A directory that is not a Doorstop document, a file that is not in the form Doorstop writes, and an item type that already exists shall each be refused, and nothing of that document shall be changed.
 
+%req[import.doorstop.headings]
+With `--headings-as-text`, an active item that Doorstop marks as not normative, and that no item of its document links to, shall be written as plain Markdown, its text alone, so that it is narrative and no item; whether the document's categories become skein's is then decided by the items that remain.
+
+%req[import.doorstop.statuses]
+With `--status-from NAME`, the values of the attribute `NAME` shall be the items' statuses, in lowercase with other characters as `-`, and the item type's statuses those values in the order they come, with `removed` as the status of removed items. With `--verification-from NAME`, the same for the verification method and the type's methods. The attribute named is then not kept as an attribute.
+
 ## From CSV
 
 %req[import.csv.rows]

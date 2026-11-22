@@ -86,7 +86,31 @@ pub const Item = struct {
     active: bool = true,
     category: []const u8 = "",
     links: []const Link = &.{},
+    /// Doorstop's `normative`: false for headings and introductions
+    normative: bool = true,
+    /// skein's status and verification method, when the import is told
+    /// which attribute gives them (`Options`)
+    status: ?[]const u8 = null,
+    verification: ?[]const u8 = null,
 };
+
+/// What the import is told about the documents
+pub const Options = struct {
+    /// the attribute whose values are the statuses
+    status_from: ?[]const u8 = null,
+    /// the attribute whose values are the verification methods
+    verification_from: ?[]const u8 = null,
+};
+
+/// A value of Doorstop as a name skein takes for a status or method:
+/// in lowercase, other characters as `-`
+pub fn nameOf(arena: std.mem.Allocator, value: []const u8) std.mem.Allocator.Error![]const u8 {
+    const lower = try std.ascii.allocLowerString(arena, std.mem.trim(u8, value, " "));
+    for (lower) |*c| {
+        if (!std.ascii.isLower(c.*) and !std.ascii.isDigit(c.*) and c.* != '-' and c.* != '_') c.* = '-';
+    }
+    return if (names.valid(lower)) lower else arena.print("v-{s}", .{lower});
+}
 
 /// The fields skein has a place of its own for, or leaves out
 const handled = [_][]const u8{ "active", "links", "reviewed", "text", "header", "category" };
@@ -109,6 +133,7 @@ pub fn readItem(arena: std.mem.Allocator, id: []const u8, source: []const u8, is
     }
     if (out.front != .map) return error.NotDoorstop;
     if (out.front.string("active")) |active| out.active = !std.mem.eql(u8, active, "false");
+    if (out.front.string("normative")) |normative| out.normative = !std.mem.eql(u8, normative, "false");
     out.category = out.front.string("category") orelse "";
 
     var links: std.ArrayList(Link) = .empty;
@@ -141,10 +166,13 @@ pub fn attributeName(arena: std.mem.Allocator, name: []const u8) std.mem.Allocat
 /// The attributes of `item` as skein takes them: name and value, in the
 /// order Doorstop wrote them. Empty ones are left out, and so are
 /// booleans at Doorstop's defaults.
-pub fn attributesOf(arena: std.mem.Allocator, item: Item, use_category: bool) std.mem.Allocator.Error![]const [2][]const u8 {
+pub fn attributesOf(arena: std.mem.Allocator, item: Item, use_category: bool, options: Options) std.mem.Allocator.Error![]const [2][]const u8 {
     var out: std.ArrayList([2][]const u8) = .empty;
     for (item.front.map) |e| {
         if (names.contains(&handled, e.key) and !(std.mem.eql(u8, e.key, "category") and !use_category)) continue;
+        // what became the status or the verification method is no attribute
+        if (options.status_from) |key| if (std.mem.eql(u8, e.key, key)) continue;
+        if (options.verification_from) |key| if (std.mem.eql(u8, e.key, key)) continue;
         const value: []const u8 = switch (e.value) {
             .scalar => |s| s,
             .list => |list| blk: {
@@ -169,17 +197,20 @@ pub fn attributesOf(arena: std.mem.Allocator, item: Item, use_category: bool) st
 
 /// The item as a skein item file. `use_category`: whether the document's
 /// categories become skein's.
-pub fn render(arena: std.mem.Allocator, item: Item, use_category: bool) std.mem.Allocator.Error![]const u8 {
+pub fn render(arena: std.mem.Allocator, item: Item, use_category: bool, options: Options) std.mem.Allocator.Error![]const u8 {
     var out: std.ArrayList(u8) = .empty;
     try out.print(arena, "+++\nid = {s}\n", .{try write.string(arena, item.id)});
-    if (!item.active) try out.appendSlice(arena, "status = \"removed\"\n");
+    if (!item.active) {
+        try out.appendSlice(arena, "status = \"removed\"\n");
+    } else if (item.status) |status| try out.print(arena, "status = {s}\n", .{try write.string(arena, status)});
+    if (item.verification) |method| try out.print(arena, "verification = {s}\n", .{try write.string(arena, method)});
     if (use_category and item.category.len > 0) try out.print(arena, "category = {s}\n", .{try write.string(arena, item.category)});
     if (item.links.len > 0) {
         var targets: std.ArrayList([]const u8) = .empty;
         for (item.links) |link| try targets.append(arena, link.target);
         try out.print(arena, "parent = {s}\n", .{try write.strings(arena, targets.items)});
     }
-    for (try attributesOf(arena, item, use_category)) |attribute| {
+    for (try attributesOf(arena, item, use_category, options)) |attribute| {
         const boolean = std.mem.eql(u8, attribute[0], "normative") or std.mem.eql(u8, attribute[0], "derived");
         try out.print(arena, "{s} = {s}\n", .{ attribute[0], if (boolean) attribute[1] else try write.string(arena, attribute[1]) });
     }
@@ -190,12 +221,16 @@ pub fn render(arena: std.mem.Allocator, item: Item, use_category: bool) std.mem.
 }
 
 /// The item type for `document`, as the text of its file. `attributes`
-/// are the names its items use; `categories` its categories, when used.
+/// are the names its items use; `categories` its categories, when used;
+/// `statuses` and `verifications` the values of the attributes named for
+/// them, when the import is told of them.
 pub fn renderType(
     arena: std.mem.Allocator,
     document: Document,
     attributes: []const []const u8,
     categories: []const []const u8,
+    statuses: []const []const u8,
+    verifications: []const []const u8,
 ) std.mem.Allocator.Error![]const u8 {
     var out: std.ArrayList(u8) = .empty;
     if (document.title.len > 0) try out.print(arena, "description = {s}\n", .{try write.string(arena, document.title)});
@@ -203,6 +238,14 @@ pub fn renderType(
     if (!std.mem.eql(u8, document.separator, "-")) try out.print(arena, "separator = {s}\n", .{try write.string(arena, document.separator)});
     if (document.names) try out.appendSlice(arena, "names = true\n");
     if (categories.len > 0) try out.print(arena, "categories = {s}\n", .{try write.strings(arena, categories)});
+    if (statuses.len > 0) {
+        // a removed item keeps its status of Doorstop's own
+        var all: std.ArrayList([]const u8) = .empty;
+        try all.appendSlice(arena, statuses);
+        if (!names.contains(statuses, "removed")) try all.append(arena, "removed");
+        try out.print(arena, "statuses = {s}\ntombstone = \"removed\"\n", .{try write.strings(arena, all.items)});
+    }
+    if (verifications.len > 0) try out.print(arena, "verification = {s}\n", .{try write.strings(arena, verifications)});
     for (attributes) |name| {
         try out.print(arena, "\n[attributes.{s}]\n", .{name});
         if (std.mem.eql(u8, name, "normative") or std.mem.eql(u8, name, "derived")) try out.appendSlice(arena, "type = \"boolean\"\n");
@@ -268,7 +311,7 @@ test "a Markdown item becomes a skein item file" {
         \\
         \\The solver **shall** solve it.
         \\
-    , try render(a, item, true));
+    , try render(a, item, true, .{}));
 }
 
 test "a YAML item: inactive, not normative, without a category" {
@@ -305,7 +348,7 @@ test "a YAML item: inactive, not normative, without a category" {
         \\The text, on
         \\two lines.
         \\
-    , try render(a, item, false));
+    , try render(a, item, false, .{}));
 }
 
 test "a document becomes an item type" {
@@ -343,7 +386,7 @@ test "a document becomes an item type" {
         \\[attributes.verification-method]
         \\normative = true
         \\
-    , try renderType(a, document, &.{ "level", "normative", "verification-method" }, &.{ "functional", "performance" }));
+    , try renderType(a, document, &.{ "level", "normative", "verification-method" }, &.{ "functional", "performance" }, &.{}, &.{}));
 
     const bare = try readDocument(a, "settings:\n  prefix: REQ\n  digits: 4\n", &line);
     try testing.expectEqualStrings(
@@ -352,7 +395,7 @@ test "a document becomes an item type" {
         \\digits = 4
         \\separator = ""
         \\
-    , try renderType(a, bare, &.{}, &.{}));
+    , try renderType(a, bare, &.{}, &.{}, &.{}, &.{}));
     try testing.expectError(error.NotDoorstop, readDocument(a, "something: else\n", &line));
 }
 
