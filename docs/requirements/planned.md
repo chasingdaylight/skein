@@ -4,8 +4,7 @@ What `docs/design.md` commits skein to and the code does not do yet, in the orde
 
 ## Rendering and results
 
-%req[render.site planned]
-The static site of `skein render` shall also have generated pages: traceability matrices between item types, a page of coverage per expectation, and lists of items by type, category, status or attribute. The site itself is built. (Design, section 8.)
+%req[render.site removed]
 
 %req[render.documents planned]
 Each document shall also be rendered as one self-contained file with a print style sheet, for delivery as a document. (Design, section 8.)

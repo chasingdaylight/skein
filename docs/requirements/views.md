@@ -110,3 +110,15 @@ The site shall have a front page that lists its pages with their titles and file
 
 %req[render.site.relative]
 Every link and every reference to a file in the site shall be relative, and nothing shall be loaded from another address: the styles are in each page. So the site can be served under any address, or opened from disk.
+
+%req[render.generated]
+A fenced code block of the language `skein` in a document shall be a request for a page that skein generates from the graph: `skein render` puts the page in its place, as Markdown and as HTML alike, and its links lead to the items from the page they are on. A request skein cannot read is replaced by a note that says what is wrong. Removed items are never listed.
+
+%req[render.generated.list]
+`list [TYPE...] [category=C] [status=S] [profile=P] [ATTRIBUTE=V]` shall give a table of the items that pass every condition given, in the order of the items: each with a link to it, its category, its status and the first paragraph of its text. A glossary is the list of the type of terms.
+
+%req[render.generated.matrix]
+`matrix LINKTYPE [conditions]` shall give a table of the items that the link type may point to, each with the items that link to it by that type, the ones without any shown as such, and a count of how many have one.
+
+%req[render.generated.coverage]
+`coverage [profile=P]` shall give what `skein coverage` counts, as a table, with links to the items that are not covered.

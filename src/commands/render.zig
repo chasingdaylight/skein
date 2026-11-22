@@ -29,6 +29,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
         .graph = &ws.graph,
         .schema = &ws.project.schema,
         .item_sources = item_sources.items,
+        .project = &ws.project,
+        .citations = &ws.citations,
     };
 
     var out = Io.Dir.cwd().createDirPathOpen(io, options.out, .{}) catch |e| return .{
