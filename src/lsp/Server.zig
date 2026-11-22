@@ -29,6 +29,7 @@ const Workspace = @import("../commands/Workspace.zig");
 const check = @import("../commands/check.zig");
 const complete = @import("complete.zig");
 const fixes = @import("fixes.zig");
+const form = @import("form.zig");
 const lens = @import("lens.zig");
 const move = @import("../commands/move.zig");
 const network = @import("network.zig");
@@ -116,6 +117,8 @@ fn request(s: *Server, a: Allocator, id: json.Value, method: []const u8, params:
     if (std.mem.eql(u8, method, "skein/coverage")) return views.coverage(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/render")) return views.render(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/graph")) return network.graph(s, a, id);
+    if (std.mem.eql(u8, method, "skein/form")) return form.form(s, a, id, params);
+    if (std.mem.eql(u8, method, "skein/saveItem")) return form.save(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/schedule")) return planning.scheduleOf(s, a, id);
     if (std.mem.eql(u8, method, "skein/plan")) return planning.plan(s, a, id, params);
     return s.respondError(a, id, protocol.error_codes.method_not_found, method);
@@ -544,4 +547,5 @@ test {
     _ = @import("_test/server.zig");
     _ = @import("_test/views.zig");
     _ = @import("_test/planning.zig");
+    _ = @import("_test/form.zig");
 }

@@ -7,6 +7,7 @@
 
 import * as vscode from "vscode";
 import { Server } from "./client";
+import * as commands from "./commands";
 import { agentsArgs } from "./program";
 import { programOf, run } from "./run";
 
@@ -32,7 +33,7 @@ export function register(context: vscode.ExtensionContext, server: Server): void
     vscode.lm.registerTool<{ id?: string }>("skein_item", {
       prepareInvocation: (options) => ({ invocationMessage: options.input.id ? `Tracing ${options.input.id}` : "Tracing the item under the cursor" }),
       invoke: async (options) => {
-        const id = options.input.id || (await itemAtCursor(server));
+        const id = options.input.id || (await commands.itemAtCursor(server));
         if (!id) throw new Error("There is no skein item under the cursor; name one with its ID.");
         const text = await run(context, ["trace", id]);
         return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(text)]);
@@ -48,15 +49,5 @@ export function register(context: vscode.ExtensionContext, server: Server): void
       }
     }),
   );
-}
-
-async function itemAtCursor(server: Server): Promise<string | undefined> {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) return undefined;
-  const found = await server.request<{ id: string } | null>("skein/itemAt", {
-    textDocument: { uri: editor.document.uri.toString() },
-    position: editor.selection.active,
-  });
-  return found?.id;
 }
 

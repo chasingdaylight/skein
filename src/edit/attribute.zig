@@ -92,6 +92,62 @@ pub fn markerWord(arena: std.mem.Allocator, text: []const u8, number: u32, old: 
     return edit(arena, text, number, Pick{ .old = old }, new);
 }
 
+/// `text` without the word that `pick` chooses (a `key=` or a bare word) in
+/// the marker on line `number`; `text` as it is when the marker has none,
+/// null when the line has no marker
+fn remove(arena: std.mem.Allocator, text: []const u8, number: u32, pick: anytype) Error!?[]const u8 {
+    const f = findMarker(text, number) orelse return null;
+    const ws = try words(arena, f);
+    for (ws[@min(1, ws.len)..]) |w| {
+        if (!pick.matches(f.line[w.start..w.end])) continue;
+        // with the space before it
+        const at = f.line_start;
+        return try std.mem.concat(arena, u8, &.{ text[0 .. at + w.start - 1], text[at + w.end ..] });
+    }
+    return text;
+}
+
+/// `text` without `key=...` in the marker on line `number`
+pub fn markerRemove(arena: std.mem.Allocator, text: []const u8, number: u32, key: []const u8) Error!?[]const u8 {
+    const Pick = struct {
+        key: []const u8,
+        fn matches(self: @This(), w: []const u8) bool {
+            return w.len > self.key.len and std.mem.startsWith(u8, w, self.key) and w[self.key.len] == '=';
+        }
+    };
+    return remove(arena, text, number, Pick{ .key = key });
+}
+
+/// `text` without the bare word `word` in the marker on line `number`
+pub fn markerRemoveWord(arena: std.mem.Allocator, text: []const u8, number: u32, word: []const u8) Error!?[]const u8 {
+    const Pick = struct {
+        word: []const u8,
+        fn matches(self: @This(), w: []const u8) bool {
+            return std.mem.eql(u8, w, self.word);
+        }
+    };
+    return remove(arena, text, number, Pick{ .word = word });
+}
+
+/// `text`, an item file with TOML front matter, without the line of `key`
+/// in it; null when it has no such front matter
+pub fn frontMatterRemove(arena: std.mem.Allocator, text: []const u8, key: []const u8) Error!?[]const u8 {
+    var lines = std.mem.splitScalar(u8, text, '\n');
+    var kept: std.ArrayList([]const u8) = .empty;
+    var in_front = false;
+    var n: usize = 0;
+    while (lines.next()) |line| : (n += 1) {
+        const bare = std.mem.trim(u8, line, " \t\r");
+        if (n == 0) {
+            if (!std.mem.eql(u8, bare, "+++")) return null;
+            in_front = true;
+        } else if (in_front and std.mem.eql(u8, bare, "+++")) in_front = false;
+        if (in_front and n > 0) if (keyOf(bare)) |k| if (std.mem.eql(u8, k, key)) continue;
+        try kept.append(arena, line);
+    }
+    return try std.mem.join(arena, "\n", kept.items);
+}
+
 /// `text`, an item file with TOML front matter (`+++`), with `key = value`
 /// (`value` written as TOML: `"float"`, `2027-03-01`, `5`) in place of the
 /// key's line, or after the ID when it has none; null when it has no such
@@ -159,6 +215,16 @@ test markerWord {
     try testing.expectEqualStrings("%task[t.a days=2 done] T.", (try markerWord(a, "%task[t.a days=2] T.", 1, null, "done")).?);
     // the ID is not a word to replace
     try testing.expectEqualStrings("%task[open done] T.", (try markerWord(a, "%task[open] T.", 1, "open", "done")).?);
+}
+
+test "removing a key or a word" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    try testing.expectEqualStrings("%task[t.a open] T.", (try markerRemove(a, "%task[t.a open days=2] T.", 1, "days")).?);
+    try testing.expectEqualStrings("%task[t.a days=2] T.", (try markerRemoveWord(a, "%task[t.a open days=2] T.", 1, "open")).?);
+    try testing.expectEqualStrings("%task[t.a] T.", (try markerRemove(a, "%task[t.a] T.", 1, "days")).?);
+    try testing.expectEqualStrings("+++\nid = \"t.a\"\n+++\n", (try frontMatterRemove(a, "+++\nid = \"t.a\"\ndays = 2\n+++\n", "days")).?);
 }
 
 test frontMatter {

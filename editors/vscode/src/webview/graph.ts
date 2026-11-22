@@ -32,6 +32,9 @@ window.addEventListener("message", (event: MessageEvent) => {
 });
 vscode.postMessage({ kind: "ready" });
 document.addEventListener("click", () => closeMenu());
+/** the zoom keys of the chart drawn last */
+let keys: (e: KeyboardEvent) => void = () => {};
+document.addEventListener("keydown", (e) => keys(e));
 
 function draw(): void {
   const root = document.getElementById("root")!;
@@ -148,15 +151,56 @@ function chart(canvas: HTMLElement, n: Network): void {
     view = { ...view, x: canvas.clientWidth / 2 - (p.x + nodeWidth / 2) * view.scale, y: 60 - p.y * view.scale };
     apply();
   }
+  // zoom about a point of the panel, by the wheel (or a touchpad's pinch) or the buttons
+  const zoomAt = (factor: number, mx: number, my: number) => {
+    const scale = Math.min(4, Math.max(0.1, view.scale * factor));
+    const f = scale / view.scale;
+    view = { scale, x: mx - (mx - view.x) * f, y: my - (my - view.y) * f };
+    apply();
+  };
+  const zoomCenter = (factor: number) => zoomAt(factor, canvas.clientWidth / 2, canvas.clientHeight / 2);
+  const fit = () => {
+    let width = 0;
+    let height = 0;
+    for (const node of nodes) {
+      const p = xy(node.id);
+      width = Math.max(width, p.x + nodeWidth);
+      height = Math.max(height, p.y + nodeHeight);
+    }
+    const scale = Math.min(2, (canvas.clientWidth - 40) / width, (canvas.clientHeight - 40) / height);
+    view = { scale, x: (canvas.clientWidth - width * scale) / 2, y: 20 };
+    apply();
+  };
   svg.addEventListener("wheel", (e: WheelEvent) => {
     e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
     const r = svg.getBoundingClientRect();
-    const mx = e.clientX - r.left;
-    const my = e.clientY - r.top;
-    view = { scale: view.scale * factor, x: mx - (mx - view.x) * factor, y: my - (my - view.y) * factor };
-    apply();
+    zoomAt(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.clientX - r.left, e.clientY - r.top);
   });
+  // for touchpads and keyboards without a wheel
+  const buttons = el("div", "zoom");
+  for (const [label, title, act] of [
+    ["+", "Zoom in (+)", () => zoomCenter(1.25)],
+    ["−", "Zoom out (-)", () => zoomCenter(1 / 1.25)],
+    ["Fit", "Fit the graph to the panel (f)", fit],
+    ["100%", "Actual size (0)", () => zoomCenter(1 / view.scale)],
+  ] as [string, string, () => void][]) {
+    const b = el("button", "");
+    b.textContent = label;
+    b.title = title;
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      act();
+    });
+    buttons.append(b);
+  }
+  canvas.append(buttons);
+  keys = (e: KeyboardEvent) => {
+    if (e.target instanceof Element && e.target.closest("input, select, textarea")) return;
+    if (e.key === "+" || e.key === "=") zoomCenter(1.25);
+    else if (e.key === "-") zoomCenter(1 / 1.25);
+    else if (e.key === "0") zoomCenter(1 / view.scale);
+    else if (e.key === "f") fit();
+  };
   svg.addEventListener("pointerdown", (down: PointerEvent) => {
     if ((down.target as Element).closest(".node")) return;
     const start = { ...view };

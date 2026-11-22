@@ -49,7 +49,8 @@ export async function openItem(tree: ItemTree, id: string): Promise<void> {
   await vscode.window.showTextDocument(vscode.Uri.parse(item.uri), { selection: new vscode.Range(at, at), viewColumn: vscode.ViewColumn.One });
 }
 
-async function itemAtCursor(server: Server): Promise<string | undefined> {
+/** The ID of the item under the cursor of the active editor */
+export async function itemAtCursor(server: Server): Promise<string | undefined> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) return undefined;
   const found = await server.request<{ id: string } | null>("skein/itemAt", {

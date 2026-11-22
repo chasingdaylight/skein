@@ -11,6 +11,7 @@ import * as vscode from "vscode";
 import * as agents from "./agents";
 import { Server } from "./client";
 import * as commands from "./commands";
+import { FormView } from "./formview";
 import { GraphView } from "./graphview";
 import { Preview } from "./preview";
 import { MarkdownIt } from "./previewplugin";
@@ -52,6 +53,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<Api> {
   };
   commands.register(context, server, tree, views, refresh);
   context.subscriptions.push(vscode.commands.registerCommand("skein.showGraph", () => graph.show()));
+  const forms = new FormView(context, server, refresh);
+  context.subscriptions.push(
+    vscode.commands.registerCommand("skein.newItem", () => forms.show()),
+    // from the tree: its item; from the editor: the item under the cursor
+    vscode.commands.registerCommand("skein.editItem", async (node?: { item?: { id: string } }) => {
+      const id = node?.item?.id ?? (await commands.itemAtCursor(server));
+      if (id) await forms.show(id);
+      else void vscode.window.showWarningMessage("skein: there is no item under the cursor");
+    }),
+  );
   agents.register(context, server);
 
   const watcher = vscode.workspace.createFileSystemWatcher("**/*.{md,toml,yaml,yml,json}");

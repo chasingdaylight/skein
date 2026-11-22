@@ -97,7 +97,13 @@ The request `skein/render` (`{ "uri": URI }`) shall give a file of the project's
 %req[lsp.graph]
 The request `skein/graph` shall give the network of items: each item that is not removed with its type, status, first line of text, place, source and the profiles it is in; each link with its type and, where links of its type are reviewed, whether it is reviewed, suspect or never reviewed, a link by a former ID leading to the item now; an item of another repository that a link points to as a node of its own; and the project's item types, link types, profiles and sources.
 
+%req[lsp.forms]
+The request `skein/form` (`{ "id": ID }` or `{ "type": TYPE }`) shall give what an item form shows: the item's category, status, verification method, attributes, links and text, and what its type allows (categories, statuses, attributes with their kinds and values, the link types it may have with the items each may point to, whether its IDs are numbered), and where a new item goes (a source of item files, or the project's documents). `skein/saveItem` shall write a form: each value that differs from the item's into its marker or front matter, an empty one taken out; a new item started as `skein new` starts it, in a file of its own or at the end of the document chosen, with its text. It refuses, with the reason, a category, status, verification method, attribute or link type the type does not have, a link to an item there is not, and an item in a read-only source.
+
 ## The VS Code extension
+
+%req[edit.vscode]
+A VS Code extension on the language server shall be skein's graphical interface, with the item tree, trace and coverage views, forms for items, and interactive planning views. (Design, section 9.)
 
 %req[vscode.server]
 The VS Code extension shall start `skein lsp` itself, the program it carries or the one `skein.path` names, and restart it when that setting changes or on the command; diagnostics, go to definition, references, hover, completion and rename then work with nothing to configure.
@@ -118,7 +124,10 @@ The status bar shall show how much of what is expected is covered, and open the 
 VS Code's Markdown preview shall show a saved document of the project as `skein render` writes it, from `skein/render`: markers as the item's anchor and ID with its category and status, references as links to the items (which open their files), unresolved references marked in the theme's error color, and generated pages in place. While a document has changes that are not saved, the preview shows it as written; it is rendered again when it is saved, and when the project changes. (emanspeaks, 2026-11-22, #158.)
 
 %req[vscode.graph]
-"Show Graph" shall open a view of the network of items, modeled on the Git Graph extension (#130): items in layers, each above the items that link to it, colored by type in the theme's colors, suspect and never-reviewed links drawn as such, items of other repositories set apart; panned by dragging and zoomed with the wheel; a search that brings the items it finds into view and dims the rest; filters by item type, link type, profile, source and other repositories, kept between sessions; a chosen item's trace beside the graph, whose links choose other items; and, there and on a node's context menu, the actions on an item: open it, trace it, copy its ID, review its links, approve it.
+"Show Graph" shall open a view of the network of items, modeled on the Git Graph extension (#130): items in layers, each above the items that link to it, colored by type in the theme's colors, suspect and never-reviewed links drawn as such, items of other repositories set apart; panned by dragging and zoomed with the wheel or a touchpad's pinch, and, without either, with buttons and keys to zoom in and out, fit the graph to the panel and show it at its size; a search that brings the items it finds into view and dims the rest; filters by item type, link type, profile, source and other repositories, kept between sessions; a chosen item's trace beside the graph, whose links choose other items; and, there and on a node's context menu, the actions on an item: open it, trace it, copy its ID, review its links, approve it.
+
+%req[vscode.forms]
+"New Item" (the command palette, the Items view's title bar) and "Edit Item" (the editor's and the tree's context menus) shall open a form of an item's type, ID (for a new one; empty for the next number of a numbered type), category, status, verification method, attributes (a choice where the attribute has values, a number, a date) and links (with the items they may point to offered), and, for a new item, the document it goes in and its text. A required attribute left empty, and a new item with no ID or place, are said before anything is sent; saving writes the form (`lsp.forms`), says why when it is refused, and opens the item.
 
 %req[vscode.commands]
 Every action of the extension shall be a command in the command palette, and on the context menus where it belongs; its settings are under `skein.*`, each with a description.
