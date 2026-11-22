@@ -1,7 +1,7 @@
 //! `skein init [--template NAME]`: starts a project here: `.skein/` with
 //! its configuration, and, from a template, what the template's
-//! `config.toml` adds to it and its document skeletons (`documents/`)
-//! under `docs/`.
+//! `config.toml` adds to it, its document skeletons (`documents/`) under
+//! `docs/`, and its `project/` files where they say.
 
 const std = @import("std");
 const Io = std.Io;
@@ -30,6 +30,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
         } else try config.print(arena, "{s}\n[template.\"{s}\"]\n", .{ sources, name });
         for (declared) |o| if (o.default) |d| {
             try values.append(arena, .{ .name = o.name, .value = d });
+            try values.appendSlice(arena, o.setBy(d));
             try config.print(arena, "# {s}\n\"{s}\" = \"{s}\"\n", .{ o.description, o.name, d });
         } else try config.print(arena, "# {s} (needed)\n# \"{s}\" = \"\"\n", .{ o.description, o.name });
         // what the template adds to a project's configuration, such as citations
@@ -46,6 +47,13 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
             if (Io.Dir.path.dirnamePosix(path)) |d| try root.createDirPath(io, d);
             try root.writeFile(io, .{ .sub_path = path, .data = try Template.substitute(arena, f.data, values.items) });
             written += 1;
+        }
+        // files that go where the template puts them, such as a standard's read-only text
+        for (try Template.filesOf(arena, name, "project/")) |f| {
+            const path = f.path["project/".len..];
+            if (root.access(io, path, .{})) |_| continue else |_| {}
+            if (Io.Dir.path.dirnamePosix(path)) |d| try root.createDirPath(io, d);
+            try root.writeFile(io, .{ .sub_path = path, .data = f.data });
         }
     }
     try root.createDirPath(io, "docs");

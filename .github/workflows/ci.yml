@@ -199,7 +199,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
 
       - name: zig fmt
-        run: zig fmt --check build build.zig src templates
+        run: zig fmt --check build build.zig src templates tools
 
       - name: Markdown
         run: npx --yes markdownlint-cli2@0.24.2 "**/*.md"

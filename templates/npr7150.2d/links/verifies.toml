@@ -1,0 +1,5 @@
+description = "A test procedure verifies a software requirement (SWE-052, SWE-065)"
+from = ["procedure"]
+to = ["requirement"]
+# every software requirement is traced to its verification, for classes A to D and F
+expected = {{trace_verification}}

@@ -1,0 +1,4 @@
+description = "A test procedure or test case (SWE-065; 5.14), with its pass and fail criteria; its results are recorded with skein result"
+id = "numbered"
+prefix = "TST"
+categories = ["unit", "integration", "system", "acceptance", "regression"]

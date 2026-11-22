@@ -1,0 +1,6 @@
+description = "A software non-conformance or problem report (SWE-201; 5.01 CR-PR), with its severity (SWE-202)"
+id = "numbered"
+prefix = "NCR"
+# the minimum severity levels of SWE-202's note: loss of life or vehicle; mission success; visible to the user with a workaround; anything else
+categories = ["1", "2", "3", "4"]
+statuses = ["open", "analyzed", "fixed", "verified", "closed", "rejected"]

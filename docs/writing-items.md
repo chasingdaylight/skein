@@ -59,7 +59,7 @@ When an entry of an item's list has a marker of its own, it is a **part** of tha
 
 This is three items: `lex.keywords`, and its parts `lex.keywords.as` and `lex.keywords.fn`. Parts can have parts, to any depth.
 
-- **Names:** an ID that starts with a dot extends the ID of the containing item, as above. An ID without the dot is used as written, so a part does not have to be named after the item that contains it. The dot form needs hierarchical IDs (IDs joined by dots) for both the part and the containing item.
+- **Names:** an ID that starts with a dot extends the ID of the containing item, as above. An ID without the dot is used as written, so a part does not have to be named after the item that contains it. The dot form needs IDs of one kind for both the part and the containing item: hierarchical (`lex.keywords` and `.as` make `lex.keywords.as`), or numbered, where the part's name follows the number (`SWE-134` and `.a` make `SWE-134.a`, as a standard's lettered sub-parts).
 - **Text:** the text of a part belongs to the part only. The own text of the containing item is the rest: here, the first line and the last entry.
 - **Content:** the content of the containing item includes the content of its parts. A change to a part is also a change to the containing item (see [Fingerprints](reviewing.md#fingerprints)), and `skein diff` lists both.
 - **Coverage:** an item with parts counts as linked to, or cited, when it has such a link or citation itself, or when every one of its parts does (`skein coverage`). Removed parts are not counted.

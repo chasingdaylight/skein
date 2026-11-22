@@ -38,4 +38,18 @@ pub fn build(b: *std.Build) void {
     const tests = b.addTest(.{ .root_module = mod });
     const test_step = b.step("test", "Run skein's unit tests");
     test_step.dependOn(&b.addRunArtifact(tests).step);
+
+    // the generator of the npr7150.2d template's requirements, run by hand
+    // when NASA revises the NPR; not part of the skein program
+    const npr = b.createModule(.{
+        .root_source_file = b.path("tools/npr7150/__main__.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    // skein's own code, shared rather than copied
+    npr.addImport("skein", mod);
+    const npr_run = b.addRunArtifact(b.addExecutable(.{ .name = "npr7150", .root_module = npr }));
+    npr_run.addPassthruArgs();
+    b.step("npr7150", "Write NPR 7150.2D as skein documents: -- HTML_DIR OUT_DIR RETRIEVED").dependOn(&npr_run.step);
+    test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = npr })).step);
 }

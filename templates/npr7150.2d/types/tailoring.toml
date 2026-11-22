@@ -1,0 +1,18 @@
+description = "Relief from a requirement of the NPR (SWE-121, SWE-126): a deviation, asked before the requirement is under configuration control, or a waiver, asked after; with its rationale, risk and mitigation"
+id = "numbered"
+prefix = "TLR"
+categories = ["deviation", "waiver"]
+statuses = ["draft", "submitted", "approved", "rejected", "withdrawn"]
+tombstone = "withdrawn"
+
+# in force only once the Technical Authorities have signed (NPR 7150.2D 2.1.8.2;
+# add the Health and Medical TA, the CIO's designee or the SAISO where Appendix C names them)
+[approval]
+statuses = ["approved"]
+roles = ["engineering-ta", "sma-ta"]
+
+[attributes.risk]
+normative = false
+
+[attributes.mitigation]
+normative = false

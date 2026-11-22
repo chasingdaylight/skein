@@ -40,6 +40,17 @@ pub const Option = struct {
     values: []const []const u8 = &.{},
     /// when the project gives none; null when it must give one
     default: ?[]const u8 = null,
+    /// what each value sets besides: `[options.class.sets.A]` gives the
+    /// values a project of class A has (`trace_design = "true"`)
+    sets: []const Sets = &.{},
+
+    pub const Sets = struct { value: []const u8, values: []const Value };
+
+    /// The values `value` of this option sets
+    pub fn setBy(self: Option, value: []const u8) []const Value {
+        for (self.sets) |s| if (std.mem.eql(u8, s.value, value)) return s.values;
+        return &.{};
+    }
 };
 
 pub const Info = struct {
@@ -73,6 +84,20 @@ pub fn info(arena: std.mem.Allocator, name: []const u8) std.mem.Allocator.Error!
                 var values: std.ArrayList([]const u8) = .empty;
                 for (v.array.values()) |s| if (s == .string) try values.append(arena, s.string);
                 opt.values = values.items;
+            };
+            if (t.table.get("sets")) |v| if (v == .table) {
+                var sets: std.ArrayList(Option.Sets) = .empty;
+                for (v.table.keys()) |value| {
+                    const set = v.table.get(value).?;
+                    if (set != .table) continue;
+                    var values: std.ArrayList(Value) = .empty;
+                    for (set.table.keys()) |set_name| {
+                        const s = set.table.get(set_name).?;
+                        if (s == .string) try values.append(arena, .{ .name = set_name, .value = s.string });
+                    }
+                    try sets.append(arena, .{ .value = value, .values = values.items });
+                }
+                opt.sets = sets.items;
             };
             try list.append(arena, opt);
         }

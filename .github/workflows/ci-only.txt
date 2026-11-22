@@ -9,3 +9,5 @@
 .gitattributes
 # CI's workflows, lists and scripts, and the release notes' sections
 .github/*
+# the generator of the npr7150.2d template's requirements: tested, not shipped (what it writes is, in templates/)
+tools/npr7150/*

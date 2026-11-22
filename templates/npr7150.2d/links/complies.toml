@@ -1,0 +1,5 @@
+description = "A row of the Requirements Mapping Matrix says how the project meets a requirement of the NPR"
+from = ["compliance"]
+to = ["swe"]
+# every requirement the project's class invokes has its row (SWE-125)
+expected = { profile = "class" }

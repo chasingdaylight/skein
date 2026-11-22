@@ -1,0 +1,3 @@
+description = "A software design component (SWE-057, SWE-058; 5.13 SwDD), which the code that implements it cites"
+id = "numbered"
+prefix = "DES"

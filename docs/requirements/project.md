@@ -37,7 +37,7 @@ A problem with a key or a value of a file of `.skein/` or of the front matter of
 ## The schema
 
 %req[schema.item-type]
-An item type shall declare its ID scheme: hierarchical (`lex.comment.line`), or numbered (`SRS-012`) with a prefix, a number of digits, a separator that may be empty, and whether a name may be used in place of the number.
+An item type shall declare its ID scheme: hierarchical (`lex.comment.line`), or numbered (`SRS-012`) with a prefix, a number of digits, a separator that may be empty, and whether a name may be used in place of the number. A numbered ID may go on with a part's name after a dot (`SRS-012.a`), in lowercase words as hierarchical IDs have.
 
 %req[schema.categories]
 An item type may declare categories. An item of such a type has exactly one of them; an item of a type without categories has none.

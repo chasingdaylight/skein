@@ -95,6 +95,15 @@ pub fn readAll(r: Reader) Reader.Error![]const Use {
                 ok = false;
             }
         }
+        // what the values chosen set besides
+        const chosen = options.items.len;
+        for (0..chosen) |i| {
+            const given = options.items[i];
+            const declared = for (info.options) |o| {
+                if (std.mem.eql(u8, o.name, given.name)) break o;
+            } else continue;
+            try options.appendSlice(r.arena, declared.setBy(given.value));
+        }
         if (ok) try out.append(r.arena, .{ .name = n.name, .options = options.items });
     }
     return out.items;

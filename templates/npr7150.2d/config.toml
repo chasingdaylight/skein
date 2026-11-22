@@ -1,0 +1,23 @@
+
+# NPR 7150.2D as NASA publishes it, and the handbook's reading of each requirement:
+# read-only, written by skein init from the template (skein's tools/npr7150)
+[[sources]]
+path = "standards/npr7150.2d"
+read_only = true
+
+# Tests cite the software requirements they verify, and code the design it implements,
+# in comments: `// verifies: SRS-001`, `// implements: DES-001`. Give the places and
+# file names, and remove the #s:
+# [[citations]]
+# name = "test"
+# path = "tests"
+# files = [".c"]
+# marker = "// verifies:"
+# to = ["requirement"]
+#
+# [[citations]]
+# name = "code"
+# path = "src"
+# files = [".c"]
+# marker = "// implements:"
+# to = ["design"]
