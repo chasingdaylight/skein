@@ -205,6 +205,34 @@ test "AI in a software project under NPR 7150.2D: the handbook's notes link to i
     try expectContains(notes, "%ai-note[AIN-003 topic=7.25 section=7.2 bears-on=SWE-219]");
 }
 
+// req: templates.npr7120.7a, render.generated.list
+test "IT project management under NPR 7120.7A: the matrix is expected of the kind of effort" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7120.7a"} })).status);
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    // a project: its chapter and what both kinds share
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies-it links to it items: 0 of 74");
+
+    // a service line instead
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    const lined = try std.mem.replaceOwned(u8, a, config, "\"kind\" = \"project\"", "\"kind\" = \"service-line\"");
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = lined });
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies-it links to it items: 0 of 46");
+
+    // the reviews in a list
+    const out_dir = try std.Io.Dir.path.join(a, &.{ root, "out" });
+    try testing.expectEqual(.ok, (try render_command.run(testing.io, a, .{ .common = .{ .root = root }, .out = out_dir })).status);
+    const page = try tmp.dir.readFileAlloc(testing.io, "out/docs/it-life-cycle.md", a, .limited(1 << 20));
+    try expectContains(page, "[`ITR-001`](#ITR-001) | SRR | planned | 2027-03-01 | SE DA |");
+}
+
 // req: templates.npr7123.1d
 test "systems engineering under NPR 7123.1D: its requirements and its reviews" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);

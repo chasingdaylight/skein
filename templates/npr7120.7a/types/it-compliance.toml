@@ -1,0 +1,15 @@
+description = "A row of the compliance matrix of NPR 7120.7A (Appendix C): how the service line or project meets a requirement, and the justification and approval where it tailors it"
+# comply, partially comply, not comply, not applicable (Appendix C.8.4)
+categories = ["C", "PC", "NC", "NA"]
+
+# the phase the row answers for, where it differs: the matrix has a table for each phase
+[attributes.phase]
+normative = false
+
+# for a row that is not C: why and how it is tailored, and the name of the requirement
+# owner who approved it in writing, with the date (Appendix C.3 and C.8.5)
+[attributes.justification]
+normative = false
+
+[attributes.evidence]
+normative = false

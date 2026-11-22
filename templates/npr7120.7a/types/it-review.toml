@@ -1,0 +1,19 @@
+description = "A key decision point or systems engineering review of the project or service line (NPR 7120.7A, chapters 4 and 5): its kind, date and who decides"
+id = "numbered"
+prefix = "ITR"
+statuses = ["planned", "held", "passed", "cancelled"]
+tombstone = "cancelled"
+
+# the reviews and decision points as the NPR names them
+# cspell:ignore SCDR TDF TDI TDT DRR
+[attributes.kind]
+values = ["SCDR", "KDP-1", "KDP-2-n", "KDP-TDF", "KDP-TDI", "KDP-TDT", "KDP-Formulation", "SRR", "PDR", "KDP-Implementation", "CDR", "TRR", "ORR", "KDP-Operations", "DRR", "KDP-Decommission", "PCR", "IA", "Termination"]
+required = true
+
+# when it is held: a milestone of the schedule
+[attributes.date]
+type = "date"
+
+# the decision authority: the KDP DA for a key decision point, the SE DA for a systems engineering review
+[attributes.authority]
+normative = false

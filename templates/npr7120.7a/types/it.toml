@@ -1,0 +1,10 @@
+description = "A requirement of NPR 7120.7A, named by its paragraph and item (IT-3.3.a is paragraph 3.3, item a); read-only, from skein's template"
+id = "numbered"
+prefix = "IT"
+digits = 1
+names = true
+
+# whom it binds: IT service lines (chapter 4), IT projects (chapter 5), or both (the preface and chapter 3)
+[attributes.scope]
+values = ["both", "service-line", "project"]
+normative = false
