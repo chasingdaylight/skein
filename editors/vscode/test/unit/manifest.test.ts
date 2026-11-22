@@ -12,7 +12,7 @@ import { findProgram, programName } from "../../src/program";
 
 const root = path.join(__dirname, "..", "..");
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-const source = ["commands.ts", "agents.ts"].map((f) => fs.readFileSync(path.join(root, "src", f), "utf8")).join("\n");
+const source = ["commands.ts", "agents.ts", "extension.ts"].map((f) => fs.readFileSync(path.join(root, "src", f), "utf8")).join("\n");
 
 test("every command has a title and is registered", () => {
   const commands: { command: string; title: string; category: string }[] = manifest.contributes.commands;

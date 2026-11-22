@@ -85,7 +85,8 @@ fn titleOf(text: []const u8) []const u8 {
     return line[0..end];
 }
 
-fn sourceOf(ws: *const Workspace, file: []const u8) []const u8 {
+/// The source the file is in: its path, or empty for none
+pub fn sourceOf(ws: *const Workspace, file: []const u8) []const u8 {
     for (ws.project.sources) |src| {
         if (std.mem.startsWith(u8, file, src.path) and (file.len == src.path.len or file[src.path.len] == '/')) return src.path;
     }

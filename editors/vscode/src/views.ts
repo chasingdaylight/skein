@@ -83,7 +83,8 @@ export class Views {
     return panel;
   }
 
-  private async follow(href: string): Promise<void> {
+  /** Opens what a link of a view leads to: an item, a place in a file, or a page of the web */
+  async follow(href: string): Promise<void> {
     const link = parseLink(href);
     if (!link) return;
     switch (link.kind) {

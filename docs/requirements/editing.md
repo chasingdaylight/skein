@@ -94,6 +94,9 @@ The request `skein/schedule` shall give the work items as `skein schedule` sched
 %req[lsp.preview]
 The request `skein/render` (`{ "uri": URI }`) shall give a file of the project's sources as `skein render` writes it (markers as anchors and IDs, references as links, unresolved references marked, generated pages in place), with the text on disk it was rendered from; nothing for a file that is in no source.
 
+%req[lsp.graph]
+The request `skein/graph` shall give the network of items: each item that is not removed with its type, status, first line of text, place, source and the profiles it is in; each link with its type and, where links of its type are reviewed, whether it is reviewed, suspect or never reviewed, a link by a former ID leading to the item now; an item of another repository that a link points to as a node of its own; and the project's item types, link types, profiles and sources.
+
 ## The VS Code extension
 
 %req[vscode.server]
@@ -113,6 +116,9 @@ The status bar shall show how much of what is expected is covered, and open the 
 
 %req[vscode.preview]
 VS Code's Markdown preview shall show a saved document of the project as `skein render` writes it, from `skein/render`: markers as the item's anchor and ID with its category and status, references as links to the items (which open their files), unresolved references marked in the theme's error color, and generated pages in place. While a document has changes that are not saved, the preview shows it as written; it is rendered again when it is saved, and when the project changes. (emanspeaks, 2026-11-22, #158.)
+
+%req[vscode.graph]
+"Show Graph" shall open a view of the network of items, modeled on the Git Graph extension (#130): items in layers, each above the items that link to it, colored by type in the theme's colors, suspect and never-reviewed links drawn as such, items of other repositories set apart; panned by dragging and zoomed with the wheel; a search that brings the items it finds into view and dims the rest; filters by item type, link type, profile, source and other repositories, kept between sessions; a chosen item's trace beside the graph, whose links choose other items; and, there and on a node's context menu, the actions on an item: open it, trace it, copy its ID, review its links, approve it.
 
 %req[vscode.commands]
 Every action of the extension shall be a command in the command palette, and on the context menus where it belongs; its settings are under `skein.*`, each with a description.

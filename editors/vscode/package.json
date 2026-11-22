@@ -135,6 +135,12 @@
         "icon": "$(calendar)"
       },
       {
+        "command": "skein.showGraph",
+        "title": "Show Graph",
+        "category": "skein",
+        "icon": "$(type-hierarchy-sub)"
+      },
+      {
         "command": "skein.writeAgentInstructions",
         "title": "Write Agent Instructions",
         "category": "skein"
@@ -166,6 +172,10 @@
         },
         {
           "command": "skein.writeAgentInstructions",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.showGraph",
           "when": "skein.project"
         },
         {
@@ -207,6 +217,11 @@
           "command": "skein.showPlan",
           "when": "view == skein.items",
           "group": "navigation@3"
+        },
+        {
+          "command": "skein.showGraph",
+          "when": "view == skein.items",
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [
@@ -278,7 +293,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
-    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node24 --minify --sourcemap && esbuild src/webview/plan.ts --bundle --outfile=dist/plan.js --format=iife --platform=browser --target=es2022 --minify",
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node24 --minify --sourcemap && esbuild src/webview/plan.ts src/webview/graph.ts --bundle --outdir=dist --format=iife --platform=browser --target=es2022 --minify",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p test",
     "unit": "esbuild test/unit/*.test.ts --bundle --outdir=out/unit --platform=node --target=node24 --format=cjs && node --test out/unit/*.test.js"
   },

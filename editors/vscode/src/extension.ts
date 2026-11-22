@@ -11,6 +11,7 @@ import * as vscode from "vscode";
 import * as agents from "./agents";
 import { Server } from "./client";
 import * as commands from "./commands";
+import { GraphView } from "./graphview";
 import { Preview } from "./preview";
 import { MarkdownIt } from "./previewplugin";
 import { findProgram } from "./program";
@@ -34,6 +35,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Api> {
   const views = new Views(server, (id) => commands.openItem(tree, id), context.extensionUri);
   const status = new Status(server);
   const preview = new Preview(server);
+  const graph = new GraphView(context, server, views, (id) => commands.openItem(tree, id));
   context.subscriptions.push(output, status, vscode.window.registerTreeDataProvider("skein.items", tree));
 
   let timer: NodeJS.Timeout | undefined;
@@ -45,9 +47,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<Api> {
       void status.refresh();
       void views.refresh();
       preview.refresh();
+      void graph.refresh();
     }, settle_ms);
   };
   commands.register(context, server, tree, views, refresh);
+  context.subscriptions.push(vscode.commands.registerCommand("skein.showGraph", () => graph.show()));
   agents.register(context, server);
 
   const watcher = vscode.workspace.createFileSystemWatcher("**/*.{md,toml,yaml,yml,json}");
