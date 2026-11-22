@@ -204,6 +204,38 @@ jobs:
       - name: Markdown
         run: npx --yes markdownlint-cli2@0.24.2 "**/*.md"
 
+  # The VS Code extension's TypeScript: its types, its unit tests, and its
+  # packages kept free of known vulnerabilities
+  extension:
+    name: Extension
+    needs: changes
+    if: needs.changes.outputs.ci == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: editors/vscode
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install
+        run: npm ci --no-fund
+
+      - name: Audit
+        run: npm audit
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run unit
+
+      - name: Bundle
+        run: npm run build
+
   # What a release publishes: skein for each platform, built on one runner
   # (Zig compiles for all of them), and the VS Code extension.
   package:
@@ -248,12 +280,14 @@ jobs:
       # One package per platform, each with the skein built for it in bin/,
       # and the universal one, without a program, for the platforms that
       # have none. Alpine takes the Linux program, which is static. They are
-      # pre-releases until the language server is in the extension; the mark
-      # is set here, since the registries read it from the package.
+      # pre-releases; the mark is set here, since the registries read it
+      # from the package. The extension's code is bundled into
+      # dist/extension.js (vscode:prepublish), so no node_modules go in.
       - name: The VS Code extension
         working-directory: editors/vscode
         run: |
-          vsce() { npx --yes "@vscode/vsce@$VSCE_VERSION" "$@"; }
+          npm ci --no-fund
+          vsce() { npx --yes "@vscode/vsce@$VSCE_VERSION" "$@" --no-dependencies; }
           while read -r platform target; do
             rm -rf bin
             mkdir bin
@@ -282,7 +316,11 @@ jobs:
           mkdir "$RUNNER_TEMP/vsix"
           unzip -q "dist/skein-vscode-v$VERSION-linux-x64.vsix" -d "$RUNNER_TEMP/vsix"
           test "$("$RUNNER_TEMP/vsix/extension/bin/skein" version)" = "$VERSION"
-          test -f "$RUNNER_TEMP/vsix/extension/extension.js"
+          test -f "$RUNNER_TEMP/vsix/extension/dist/extension.js"
+          if unzip -l "dist/skein-vscode-v$VERSION-linux-x64.vsix" | grep -q 'node_modules/'; then
+            echo "::error::the package carries node_modules"
+            exit 1
+          fi
           if unzip -l "dist/skein-vscode-v$VERSION-universal.vsix" | grep -q 'extension/bin/'; then
             echo "::error::the universal package carries a program"
             exit 1
@@ -299,7 +337,7 @@ jobs:
     # the one check main's ruleset requires: passes when every job passed or
     # was skipped for a change that needs none
     if: always()
-    needs: [changes, version, test, lint, package]
+    needs: [changes, version, test, lint, extension, package]
     runs-on: ubuntu-24.04
     steps:
       - name: Check the jobs

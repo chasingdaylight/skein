@@ -23,7 +23,7 @@ pub const Context = struct {
 };
 
 /// What a reviewed link is, in words; null for a link that is not reviewed
-fn stateName(ctx: Context, item: *const Item, link: Item.Link) Error!?[]const u8 {
+pub fn stateName(ctx: Context, item: *const Item, link: Item.Link) Error!?[]const u8 {
     const state = try ctx.reviews.stateOf(ctx.arena, &ctx.project.schema, ctx.graph, item, link) orelse return null;
     return switch (state) {
         .reviewed => "reviewed",
@@ -148,7 +148,7 @@ pub fn json(ctx: Context, j: *Json, item: *const Item, with_text: bool) Error!vo
 }
 
 /// The IDs the item's text refers to, each once, in order
-fn referenceTargets(arena: std.mem.Allocator, item: *const Item) Error![]const []const u8 {
+pub fn referenceTargets(arena: std.mem.Allocator, item: *const Item) Error![]const []const u8 {
     var seen: std.array_hash_map.String(void) = .empty;
     for (item.references) |r| try seen.put(arena, r.target, {});
     return seen.keys();

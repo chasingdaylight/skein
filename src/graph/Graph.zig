@@ -73,6 +73,13 @@ pub fn formerly(self: *const Graph, id: []const u8) ?*const Item {
     return &self.items[i];
 }
 
+/// The ID now of the item `id` names: `id`, unless it is a former ID
+fn current(self: *const Graph, id: []const u8) []const u8 {
+    if (self.by_id.contains(id)) return id;
+    const i = self.by_alias.get(id) orelse return id;
+    return self.items[i].id;
+}
+
 /// The graph of `items`. An ID used twice is reported, and found as its
 /// first use.
 pub fn init(arena: std.mem.Allocator, items: []const Item, report: *Report) std.mem.Allocator.Error!Graph {
@@ -99,14 +106,15 @@ pub fn init(arena: std.mem.Allocator, items: []const Item, report: *Report) std.
             } else entry.value_ptr.* = i;
         }
     }
+    // a link or reference by a former ID is one to the item that had it
     for (items) |*item| {
         for (item.links) |link| {
-            const entry = try out.incoming.getOrPut(arena, link.target);
+            const entry = try out.incoming.getOrPut(arena, out.current(link.target));
             if (!entry.found_existing) entry.value_ptr.* = .empty;
             try entry.value_ptr.append(arena, .{ .from = item, .link = link });
         }
         for (item.references) |r| {
-            const entry = try out.referrers.getOrPut(arena, r.target);
+            const entry = try out.referrers.getOrPut(arena, out.current(r.target));
             if (!entry.found_existing) entry.value_ptr.* = .empty;
             const ids = entry.value_ptr.items;
             if (ids.len == 0 or !std.mem.eql(u8, ids[ids.len - 1], item.id)) try entry.value_ptr.append(arena, item.id);

@@ -1,7 +1,7 @@
 # Only what the extension needs at run time goes into the VSIX
 **
 !package.json
-!extension.js
+!dist/extension.js
 !icon.png
 !bin/**
 !syntaxes/skein.injection.tmLanguage.json

@@ -7,7 +7,7 @@ const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Marker = @import("../markdown/Marker.zig");
 
-fn isIdChar(c: u8) bool {
+pub fn isIdChar(c: u8) bool {
     return std.ascii.isAlphanumeric(c) or c == '_' or c == '.' or c == '-' or c == ':';
 }
 

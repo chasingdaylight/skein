@@ -16,7 +16,22 @@ pub const Problem = struct {
     line: u32 = 0,
     column: u32 = 0,
     message: []const u8,
+    /// what would mend it, which an editor offers as a quick fix
+    fix: ?Fix = null,
 };
+
+/// A word to write in place of another, on the problem's line or the
+/// lines of its item after it
+pub const Fix = struct { old: []const u8, new: []const u8 };
+
+/// Gives the problem or warning recorded last a fix
+pub fn fixLast(self: *Report, of: enum { problem, warning }, fix: Fix) void {
+    const list = switch (of) {
+        .problem => self.problems.items,
+        .warning => self.warnings.items,
+    };
+    list[list.len - 1].fix = fix;
+}
 
 pub fn add(
     self: *Report,

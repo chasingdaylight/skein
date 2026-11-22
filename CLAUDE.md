@@ -81,7 +81,7 @@ The list is not complete (zfls's `CLAUDE.md` has a longer one); the standard lib
 
 ## Checks before a pull request
 
-`zig build test`, `zig fmt --check build build.zig src templates tools`, `npx markdownlint-cli2 "**/*.md"`, cspell (`npx cspell --no-progress "**/*.md" "src/**" "templates/**" "tools/**"`), and skein on itself: `zig build`, then `zig-out/bin/skein check` and `zig-out/bin/skein coverage --profile implemented`. CI does not run on pull requests into `dev` (only on those into `main`, and when started by hand: `gh workflow run ci.yml --ref BRANCH`), so these checks are what stands between a change and `dev`; say in the pull request which were run. `tools/agent/land.sh` runs them and lands the change (the `land-a-change` skill).
+`zig build test`, `zig fmt --check build build.zig src templates tools`, `npx markdownlint-cli2 "**/*.md"`, cspell (`npx cspell --no-progress "**/*.md" "src/**" "templates/**" "tools/**"`), and skein on itself: `zig build`, then `zig-out/bin/skein check` and `zig-out/bin/skein coverage --profile implemented`. For a change to the VS Code extension (`editors/vscode/`, TypeScript bundled by esbuild), in that directory: `npm ci`, `npm audit`, `npm run typecheck`, `npm run unit` and `npm run build`; its unit tests cite requirements as skein's do (`// req:`). CI does not run on pull requests into `dev` (only on those into `main`, and when started by hand: `gh workflow run ci.yml --ref BRANCH`), so these checks are what stands between a change and `dev`; say in the pull request which were run. `tools/agent/land.sh` runs them and lands the change (the `land-a-change` skill).
 
 ## Skills, scripts and tools
 

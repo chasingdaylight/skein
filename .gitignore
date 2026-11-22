@@ -10,3 +10,6 @@ zig-pkg/
 
 *.log
 editors/vscode/bin/
+editors/vscode/node_modules/
+editors/vscode/dist/
+editors/vscode/out/

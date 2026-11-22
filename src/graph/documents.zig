@@ -12,6 +12,7 @@ const Builder = @import("Builder.zig");
 const fence = @import("../markdown.zig").fence;
 const Item = @import("Item.zig");
 const markdown = @import("../markdown.zig");
+const nearest = @import("../edit/nearest.zig");
 const Report = @import("../Report.zig");
 const Schema = @import("../schema/Schema.zig");
 
@@ -198,6 +199,8 @@ const Reader = struct {
                 try self.report.add(self.file, line, column, "{s}: '{s}' is one category or status too many", .{ id, word });
             } else {
                 try self.report.add(self.file, line, column, "{s}: '{s}' is neither a category nor a status of a '{s}'", .{ id, word, item_type.name });
+                const either = try std.mem.concat(self.report.arena, []const u8, &.{ item_type.categories, item_type.statuses });
+                if (nearest.nearest(word, either, 2)) |meant| self.report.fixLast(.problem, .{ .old = word, .new = meant });
             }
         }
         for (fields) |f| try b.set(f.key, f.values, line);

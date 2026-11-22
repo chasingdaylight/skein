@@ -10,6 +10,8 @@
     "zig-pkg/**",
     ".zig-cache*/**",
     "zig-out/**",
+    "**/node_modules/**",
+    "editors/vscode/package-lock.json",
     // the standards' own text, as the templates carry it, and what it was taken from
     "templates/*/project/standards/**",
     // code of other projects, as they published it
