@@ -18,4 +18,5 @@ pub const files = [_]File{
     .{ .template = "langspec", .path = "types/example.toml", .data = @embedFile("langspec/types/example.toml") },
     .{ .template = "langspec", .path = "links/shows.toml", .data = @embedFile("langspec/links/shows.toml") },
     .{ .template = "langspec", .path = "links/see.toml", .data = @embedFile("langspec/links/see.toml") },
+    .{ .template = "langspec", .path = "documents/introduction.md", .data = @embedFile("langspec/documents/introduction.md") },
 };
