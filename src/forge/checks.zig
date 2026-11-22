@@ -100,7 +100,8 @@ fn learnOf(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proje
     for (places) |p| {
         const r = known.forge.ref(p.target).?;
         const entry = try known.answers.getOrPut(arena, try key(arena, r));
-        if (!entry.found_existing) entry.value_ptr.* = try answer(io, arena, root, git_dir, &known.forge, r, offline, &known.why);
+        // an issue of a former forge that the map does not have is not asked about
+        if (!entry.found_existing) entry.value_ptr.* = if (r.unmapped) .missing else try answer(io, arena, root, git_dir, &known.forge, r, offline, &known.why);
     }
     return known;
 }
@@ -112,6 +113,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proje
     const why = known.why;
     for (places) |p| {
         const r = known.forge.ref(p.target).?;
+        if (r.former) |former| try report.warn(p.file, p.line, p.column, "{s} '{s}', the number {s} gave, which is #{d} here now ('skein rewrite-refs' writes the new one)", .{ p.what, p.target, former, r.number });
         const a = try known.of(arena, p.target) orelse {
             unchecked += 1;
             continue;
@@ -150,4 +152,5 @@ test {
     _ = @import("pulls.zig");
     _ = @import("_test/pulls.zig");
     _ = @import("_test/mirror.zig");
+    _ = @import("_test/moved.zig");
 }

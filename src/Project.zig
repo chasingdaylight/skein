@@ -64,6 +64,7 @@ pub const Maturity = struct {
 
 pub const Repository = @import("network/Repository.zig");
 pub const Forge = @import("forge/Forge.zig");
+const ForgeMap = @import("forge/Map.zig");
 pub const Template = @import("template/Template.zig");
 const template_use = @import("template/use.zig");
 
@@ -125,6 +126,9 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
     if (try readToml(io, arena, root, config_file, report)) |table| {
         try out.readConfig(.{ .report = report, .arena = arena, .file = config_file, .table = table });
     }
+    if (out.forge) |*f| if (f.formerly.len > 0) {
+        f.moved = try ForgeMap.load(io, arena, root);
+    };
     out.schema = .{
         .types = try loadEach(Schema.ItemType, io, arena, root, "types", out.templates, report),
         .links = try loadEach(Schema.LinkType, io, arena, root, "links", out.templates, report),
