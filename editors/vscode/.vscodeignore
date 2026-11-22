@@ -2,6 +2,7 @@
 **
 !package.json
 !dist/extension.js
+!dist/plan.js
 !icon.png
 !bin/**
 !syntaxes/skein.injection.tmLanguage.json

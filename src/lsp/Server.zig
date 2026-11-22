@@ -9,7 +9,8 @@
 //! - `textDocument/definition`, `references` and `hover` on the ID of an
 //!   item, wherever it is written; completion and rename
 //! - code lenses above items (lens.zig) and quick fixes (fixes.zig)
-//! - skein's own requests for the editor's views (views.zig)
+//! - skein's own requests for the editor's views (views.zig) and its
+//!   planning views (planning.zig)
 //!
 //! The project is read again for each of these; nothing is kept between
 //! messages but the text of the open documents.
@@ -30,6 +31,7 @@ const complete = @import("complete.zig");
 const fixes = @import("fixes.zig");
 const lens = @import("lens.zig");
 const move = @import("../commands/move.zig");
+const planning = @import("planning.zig");
 const views = @import("views.zig");
 const Schema = @import("../schema/Schema.zig");
 const jsonrpc = @import("jsonrpc.zig");
@@ -111,6 +113,8 @@ fn request(s: *Server, a: Allocator, id: json.Value, method: []const u8, params:
     if (std.mem.eql(u8, method, "skein/itemAt")) return views.itemAt(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/trace")) return views.trace(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/coverage")) return views.coverage(s, a, id, params);
+    if (std.mem.eql(u8, method, "skein/schedule")) return planning.scheduleOf(s, a, id);
+    if (std.mem.eql(u8, method, "skein/plan")) return planning.plan(s, a, id, params);
     return s.respondError(a, id, protocol.error_codes.method_not_found, method);
 }
 
@@ -208,6 +212,11 @@ pub fn fileOf(s: *Server, a: Allocator, ws: *const Workspace, uri: []const u8) A
 /// may not be saved yet; null when it cannot be read
 pub fn textOf(s: *Server, a: Allocator, ws: *const Workspace, uri: []const u8, file: []const u8) ?[]const u8 {
     return s.docs.get(uri) orelse ws.root.readFileAlloc(s.io, file, a, .limited(1 << 26)) catch null;
+}
+
+/// Publishes the problems again, after a change the server made
+pub fn publishAll(s: *Server, a: Allocator) Error!void {
+    return s.publish(a);
 }
 
 /// Checks the project and publishes its problems, file by file; a file
@@ -531,4 +540,5 @@ test {
     _ = Graph;
     _ = @import("_test/server.zig");
     _ = @import("_test/views.zig");
+    _ = @import("_test/planning.zig");
 }

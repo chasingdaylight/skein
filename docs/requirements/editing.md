@@ -88,6 +88,9 @@ The request `skein/items` shall give every item of the project with its type, ca
 %req[lsp.views]
 The request `skein/trace` shall give the trace of an item, found also by a former ID, as HTML: what `skein trace` prints, with each item and place a link that the editor opens (`skein:item/ID`, `skein:file/PATH#LINE`). `skein/coverage` shall give the coverage page that a document's `coverage` request renders, as HTML with the same links, and how many items of all that are expected are covered.
 
+%req[lsp.planning]
+The request `skein/schedule` shall give the work items as `skein schedule` schedules them, with their status, mode, slack, predecessors, parents and assignees, the statuses of the work types, and the calendar. `skein/plan` (`{ "id": ID }` with `start`, `finish` or `status`) shall write the change into the item's marker or front matter: a start moves the item, and makes a float item fixed; a finish sets its duration in working days (and its finish, where one is written); a status replaces its status. Then the stored schedule is written again, as `skein schedule` writes it. It is refused, with its reason, for an item that is no work or is in a read-only source, a status its type does not have, and while the item's file has changes the editor has not saved.
+
 ## The VS Code extension
 
 %req[vscode.server]
@@ -101,6 +104,9 @@ The extension shall show the items in a tree in the side bar, by source and file
 
 %req[vscode.status]
 The status bar shall show how much of what is expected is covered, and open the coverage view when it is clicked.
+
+%req[vscode.planning]
+"Show Plan" shall open the planning view: a Gantt chart of the schedule, with the critical path, the links between items, the milestones and the days off, whose bars are dragged to move an item or, by their right end, to change its length; and a board with a column for each status, whose cards are dragged from one to another. Each drag is written into the item's file (`lsp.planning`), and the view shows the schedule that follows; a change that is refused is said, and the view shows what is there. (Design, sections 9 and 10.3.)
 
 %req[vscode.commands]
 Every action of the extension shall be a command in the command palette, and on the context menus where it belongs; its settings are under `skein.*`, each with a description.

@@ -51,6 +51,54 @@ ${body}
 </html>`;
 }
 
+/** The planning view's page: its script, from the extension's files, draws it */
+export function planPage(scriptUri: string, cspSource: string, scriptNonce: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${scriptNonce}' ${cspSource};">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>skein Plan</title>
+<style>${style}${planStyle}</style>
+</head>
+<body>
+<div id="root"></div>
+<script nonce="${scriptNonce}" src="${escape(scriptUri)}"></script>
+</body>
+</html>`;
+}
+
+// the Gantt chart and the board, in the theme's colors
+const planStyle = `
+.tabs { display: flex; gap: 4px; margin: 12px 0; }
+.tab { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 4px 12px; cursor: pointer; }
+.tab.active { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+.gantt { display: flex; border: 1px solid var(--vscode-panel-border, transparent); }
+.names { flex: none; border-right: 1px solid var(--vscode-panel-border, transparent); }
+.name { padding: 0 8px; line-height: 26px; white-space: nowrap; cursor: pointer; font-family: var(--vscode-editor-font-family); }
+.name:hover { color: var(--vscode-textLink-foreground); }
+.scroll { overflow-x: auto; }
+.timeline .off { fill: var(--vscode-editor-inactiveSelectionBackground); opacity: 0.5; }
+.timeline .week { stroke: var(--vscode-panel-border, var(--vscode-foreground)); stroke-opacity: 0.4; }
+.timeline text { fill: var(--vscode-descriptionForeground); font-size: 10px; }
+.timeline .day-label { text-anchor: middle; }
+.bar .body { fill: var(--vscode-charts-blue); cursor: grab; }
+.bar .end { fill: var(--vscode-charts-blue); opacity: 0.6; cursor: ew-resize; }
+.bar.critical .body, .bar.critical .end { fill: var(--vscode-charts-red); }
+.bar .milestone { fill: var(--vscode-charts-purple); cursor: grab; }
+.arrow { fill: none; stroke: var(--vscode-descriptionForeground); stroke-width: 1; }
+.hint { color: var(--vscode-descriptionForeground); }
+.board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto; }
+.column { flex: 0 0 220px; background: var(--vscode-sideBar-background); padding: 8px; min-height: 80px; border-radius: 4px; }
+.column.over { outline: 2px dashed var(--vscode-focusBorder); }
+.column h3 { margin: 0 0 8px; font-size: 1em; text-transform: capitalize; }
+.card { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border, transparent); border-left: 3px solid var(--vscode-charts-blue); padding: 6px 8px; margin-bottom: 6px; cursor: grab; border-radius: 3px; }
+.card.critical { border-left-color: var(--vscode-charts-red); }
+.card-id { font-family: var(--vscode-editor-font-family); font-weight: 600; }
+.card-meta { color: var(--vscode-descriptionForeground); font-size: 0.9em; }
+`;
+
 function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
