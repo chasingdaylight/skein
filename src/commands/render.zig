@@ -8,6 +8,7 @@ const Io = std.Io;
 const cli = @import("../cli.zig");
 const Results = @import("../results/Results.zig");
 const forge = @import("../forge/checks.zig");
+const Control = @import("../render/control.zig");
 const Workspace = @import("Workspace.zig");
 const files = @import("../files.zig");
 const markdown = @import("../render/markdown.zig");
@@ -37,6 +38,13 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
     if (ws.report.problems.items.len > before) return ws.problems();
     const idx = try results.index(arena, &ws.graph, &ws.citations);
     const known = try forge.learn(io, arena, ws.root, &ws.project, &ws.graph, options.common.offline);
+    // document control, from git: every file of every source
+    var all_files: std.ArrayList([]const u8) = .empty;
+    for (ws.project.sources) |source| {
+        const found = files.list(io, arena, ws.root, source.path, &.{".md"}) catch continue;
+        try all_files.appendSlice(arena, found);
+    }
+    const control = try Control.load(io, arena, ws.root, &ws.project, all_files.items);
     const ctx: markdown.Context = .{
         .arena = arena,
         .graph = &ws.graph,
@@ -47,6 +55,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
         .profile = profile,
         .results = if (results.all.len > 0) .{ .results = &results, .index = &idx } else null,
         .issues = if (known) |*k| k else null,
+        .control = &control,
     };
 
     var out = Io.Dir.cwd().createDirPathOpen(io, options.out, .{}) catch |e| return .{
