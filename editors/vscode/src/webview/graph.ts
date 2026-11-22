@@ -58,8 +58,8 @@ function controls(n: Network): HTMLElement {
     chart(canvas, n);
   });
   bar.append(box);
-  bar.append(choose("Types", n.types, filters.types, (v) => set({ types: v })));
-  bar.append(choose("Links", n.links, filters.links, (v) => set({ links: v })));
+  bar.append(choose("Types", n.types, "types"));
+  bar.append(choose("Links", n.links, "links"));
   if (n.profiles.length > 0) bar.append(pick("Profile", n.profiles, filters.profile, (v) => set({ profile: v })));
   if (n.sources.length > 1) bar.append(pick("Source", n.sources, filters.source, (v) => set({ source: v })));
   if (n.nodes.some((x) => x.repository)) {
@@ -74,25 +74,32 @@ function controls(n: Network): HTMLElement {
   return bar;
 }
 
+/** Changes the filters and draws the chart again; the controls stay as they are, open or not */
 function set(change: Partial<Filters>): void {
   filters = { ...filters, ...change };
   vscode.setState({ filters });
-  draw();
+  const canvas = document.querySelector(".canvas") as HTMLElement | null;
+  if (canvas && net) chart(canvas, net);
 }
 
-/** A drop-down of checkboxes; none checked is all */
-function choose(name: string, all: string[], chosen: string[], done: (v: string[]) => void): HTMLElement {
+/** A drop-down of checkboxes, which stays open while they are checked; none checked is all */
+function choose(name: string, all: string[], key: "types" | "links"): HTMLElement {
   const d = document.createElement("details");
   d.className = "choose";
   const s = document.createElement("summary");
-  s.textContent = chosen.length === 0 ? `${name}: all` : `${name}: ${chosen.join(", ")}`;
+  const summary = () => (s.textContent = filters[key].length === 0 ? `${name}: all` : `${name}: ${filters[key].join(", ")}`);
+  summary();
   d.append(s);
   for (const v of all) {
     const label = el("label", "");
     const check = document.createElement("input");
     check.type = "checkbox";
-    check.checked = chosen.includes(v);
-    check.addEventListener("change", () => done(check.checked ? [...chosen, v] : chosen.filter((c) => c !== v)));
+    check.checked = filters[key].includes(v);
+    check.addEventListener("change", () => {
+      const chosen = filters[key];
+      set({ [key]: check.checked ? [...chosen, v] : chosen.filter((c) => c !== v) });
+      summary();
+    });
     label.append(check, ` ${v}`);
     d.append(label);
   }
