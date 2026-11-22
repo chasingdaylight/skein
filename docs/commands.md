@@ -214,6 +214,23 @@ skein: lex.keywords is now lex.kw, with 2 parts: 6 places in 3 files
 
 `skein move` refuses, and changes nothing, when the new ID is taken or is not a valid ID of the item's type. Look at the result with `git diff` before committing; nothing is committed for you.
 
+## `skein baseline [NAME]`
+
+Freezes the project as it is committed, as a git tag: a version of a specification, a delivered set of requirements.
+
+```text
+$ skein baseline v1.0 --message "As delivered to review."
+skein: baseline v1.0 at 3f2a91c; share it with: git push origin v1.0
+$ skein diff v1.0
+```
+
+- The tag is annotated, and its message says what the project held: its number of items and its coverage.
+- It is refused while there are uncommitted changes, or while `skein check` reports problems: a baseline is a state others can build on.
+- `skein diff` and `skein impact` compare against a baseline like any commit: what changed since v1.0, and what it reaches.
+- Without a name, `skein baseline` lists the baselines, oldest first. Ordinary tags are not listed.
+
+The tag is only made locally; push it to share it.
+
 ## `skein import doorstop DIR...`
 
 Turns Doorstop documents into skein items, where they are; see [importing](importing.md).

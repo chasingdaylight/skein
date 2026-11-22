@@ -16,7 +16,7 @@ An item whose verification method is not a test shall be verified by a record of
 A standard the project must comply with shall be an item set of its own, read-only, which the project's items link to, with applicability by profile and with waivers and deviations as item types. (Design, section 4.7.)
 
 %req[baselines planned]
-`skein baseline` shall freeze a named state of the project as a git tag, first writing what a tag alone would not hold. (Design, section 6.)
+When a plan uses values the forge holds (dates, milestones), `skein baseline` shall first write them to a file under `.skein/baselines/`, commit it, and tag that commit. The tag itself is built. (Design, section 6.)
 
 %req[forge.adapter planned]
 An adapter per forge shall resolve references to issues and pull requests, report `check` and `coverage` in the forge's CI, and record the approvals of a merged change. (Design, section 7.)
