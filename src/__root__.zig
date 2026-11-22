@@ -47,6 +47,7 @@ test {
     _ = @import("results/Results.zig");
     _ = @import("commands/_test/check_formats.zig");
     _ = @import("forge/checks.zig");
+    _ = @import("forge/gitlab.zig");
     _ = @import("template/Template.zig");
     _ = @import("template/_test/use.zig");
     _ = @import("template/_test/start.zig");

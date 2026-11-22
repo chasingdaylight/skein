@@ -12,15 +12,16 @@ const Forge = @import("Forge.zig");
 const Graph = @import("../graph/Graph.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
+const adapter = @import("adapter.zig");
 const cache = @import("cache.zig");
 const github = @import("github.zig");
 const history = @import("../history.zig");
 
 /// How an issue is looked up: the forge itself, or something else in tests
-pub var lookup: *const fn (Io, std.mem.Allocator, *const Forge, Forge.Ref) anyerror!github.Answer = github.lookup;
+pub var lookup: *const fn (Io, std.mem.Allocator, *const Forge, Forge.Ref) anyerror!github.Answer = adapter.lookup;
 
 /// How an issue is written: the forge itself, or something else in tests
-pub var update: *const fn (Io, std.mem.Allocator, *const Forge, Forge.Ref, github.Changes, []const u8) anyerror!?[]const u8 = github.update;
+pub var update: *const fn (Io, std.mem.Allocator, *const Forge, Forge.Ref, github.Changes, []const u8) anyerror!?[]const u8 = adapter.update;
 
 const Place = struct {
     file: []const u8,

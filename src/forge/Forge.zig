@@ -76,7 +76,7 @@ pub fn host(self: *const Forge) []const u8 {
 /// The address of the page of `r` in a browser
 pub fn page(self: *const Forge, arena: std.mem.Allocator, r: Ref) std.mem.Allocator.Error![]const u8 {
     const base = self.url orelse try arena.print("https://{s}", .{self.host()});
-    return arena.print("{s}/{s}/issues/{d}", .{ base, r.repository, r.number });
+    return arena.print("{s}/{s}/{s}issues/{d}", .{ base, r.repository, if (self.kind == .gitlab) "-/" else "", r.number });
 }
 
 // req: forge.refs
@@ -97,4 +97,7 @@ test "references to issues and pull requests" {
     var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
     defer arena.deinit();
     try std.testing.expectEqualStrings("https://github.example.com/team/project/issues/3", try enterprise.page(arena.allocator(), enterprise.ref("#3").?));
+    const lab: Forge = .{ .kind = .gitlab, .repository = "group/sub/project" };
+    try std.testing.expectEqualStrings("gitlab.com", lab.host());
+    try std.testing.expectEqualStrings("https://gitlab.com/group/sub/project/-/issues/3", try lab.page(arena.allocator(), lab.ref("#3").?));
 }
