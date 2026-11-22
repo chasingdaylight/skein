@@ -34,6 +34,8 @@ pub const ServerCapabilities = struct {
     definitionProvider: bool = true,
     referencesProvider: bool = true,
     hoverProvider: bool = true,
+    completionProvider: CompletionOptions = .{},
+    renameProvider: RenameOptions = .{},
 };
 
 pub const InitializeResult = struct {
@@ -72,4 +74,37 @@ pub const error_codes = struct {
     pub const method_not_found = -32601;
     pub const invalid_params = -32602;
     pub const server_not_initialized = -32002;
+};
+
+pub const CompletionOptions = struct {
+    triggerCharacters: []const []const u8 = &.{ "%", "[", "=", ",", "." },
+};
+
+pub const TextEdit = struct { range: Range, newText: []const u8 };
+
+/// `kind`: 7 class (an item type), 18 reference (an ID), 20 enum member
+/// (a category, a status, a value), 5 field (a key)
+pub const CompletionItem = struct {
+    label: []const u8,
+    kind: u8,
+    detail: ?[]const u8 = null,
+    textEdit: TextEdit,
+};
+
+pub const RenameOptions = struct { prepareProvider: bool = true };
+
+pub const RenameParams = struct {
+    textDocument: struct { uri: []const u8 },
+    position: Position,
+    newName: []const u8,
+};
+
+/// What `prepareRename` answers: the word to rename, and its text
+pub const PrepareRename = struct { range: Range, placeholder: []const u8 };
+
+/// The changes of a rename. The server makes them on disk, as `skein
+/// move` does, so the edit it answers with is empty and the editor
+/// reloads the files.
+pub const WorkspaceEdit = struct {
+    changes: struct {} = .{},
 };

@@ -50,8 +50,7 @@ What a forge holds about an issue shall stay there and be read through the adapt
 %req[edit.commands planned]
 `skein new` and `link` shall create items with the next free ID and add links. Renaming is `skein move`, which is built. (Design, section 5.)
 
-%req[edit.lsp planned]
-`skein lsp` shall complete IDs, item types, categories, statuses and attribute names, and rename an ID across files. Diagnostics, go to definition, find references and hover are built. (Design, section 9.)
+%req[edit.lsp removed]
 
 %req[edit.vscode planned]
 A VS Code extension on the language server shall be skein's graphical interface, with the item tree, trace and coverage views, forms for items, and interactive planning views. (Design, section 9.)

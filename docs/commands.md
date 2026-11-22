@@ -206,6 +206,8 @@ A language server for editors, on standard input and output. It works in the Mar
 - **Go to definition:** from the ID of an item to where it is declared, whether the ID stands in a reference (`%[lex.token]`), a link (`verifies=lex.token`), a citation in a test (`// spec: lex.token`) or plain text.
 - **Find references:** every place that names an item: references, links and citations.
 - **Hover:** the item's type, category and status, its text and its parts.
+- **Completion:** item types after `%`, IDs in references and after a citation marker, and after the ID of a marker its categories, statuses, attributes and link types, then their values.
+- **Rename:** renaming an item does what `skein move` does. Save your files first; the rename is made in them, and the editor shows them again.
 
 Any editor with a Language Server Protocol client can use it. Tell the editor to start `skein lsp` for Markdown files (and for the source files that hold citations) with the project's directory as the root. For example, in Neovim:
 
@@ -226,7 +228,7 @@ name = "markdown"
 language-servers = ["skein"]
 ```
 
-The VS Code extension does not start the server yet. Completion of IDs and renaming from the editor are planned; `skein move` renames from the command line.
+The VS Code extension does not start the server yet.
 
 ## `skein help`, `skein version`
 
