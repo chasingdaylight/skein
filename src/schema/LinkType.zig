@@ -1,5 +1,6 @@
 //! One kind of link, as `.skein/links/<name>.toml` declares it.
 
+const Profile = @import("Profile.zig");
 const Reader = @import("Reader.zig");
 
 const LinkType = @This();
@@ -15,6 +16,8 @@ required: bool = false,
 /// every item of a `to` type should be pointed to by one: `coverage`
 /// counts the ones that are not
 expected: bool = false,
+/// which of the `to` items it is expected of, when not all
+expected_of: Profile.Expected = .{},
 /// a link of this kind is reviewed: it records its target as last
 /// reviewed, and is suspect when the target has changed since
 review: bool = false,
@@ -29,6 +32,7 @@ excuses: ?[]const u8 = null,
 
 /// The link type that the table of `r` declares; problems go to its report.
 pub fn read(r: Reader, name: []const u8) Reader.Error!LinkType {
+    const expected = try Profile.readExpected(r);
     try r.known(&.{ "description", "from", "to", "required", "expected", "review", "open", "counts_as", "excuses" });
     return .{
         .name = name,
@@ -36,7 +40,8 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!LinkType {
         .from = try r.strings("from"),
         .to = try r.strings("to"),
         .required = try r.boolean("required", false),
-        .expected = try r.boolean("expected", false),
+        .expected = expected.on,
+        .expected_of = expected,
         .review = try r.boolean("review", false),
         .open = try r.boolean("open", false),
         .counts_as = try r.string("counts_as"),

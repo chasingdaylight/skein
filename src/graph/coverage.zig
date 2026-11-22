@@ -69,14 +69,14 @@ pub fn compute(
         if (!link_type.expected) continue;
         for (project.schema.types) |*item_type| {
             if (link_type.to.len > 0 and !Schema.names.contains(link_type.to, item_type.name)) continue;
-            try out.append(arena, try count(arena, .link, link_type.name, item_type, link_type.to, &project.schema, graph, citations, profile));
+            try out.append(arena, try count(arena, .link, link_type.name, item_type, link_type.to, link_type.expected_of, &project.schema, graph, citations, profile));
         }
     }
     for (project.citations) |set| {
         if (!set.expected) continue;
         for (project.schema.types) |*item_type| {
             if (set.to.len > 0 and !Schema.names.contains(set.to, item_type.name)) continue;
-            try out.append(arena, try count(arena, .citation, set.name, item_type, set.to, &project.schema, graph, citations, profile));
+            try out.append(arena, try count(arena, .citation, set.name, item_type, set.to, set.expected_of, &project.schema, graph, citations, profile));
         }
     }
     return out.items;
@@ -88,6 +88,7 @@ fn count(
     name: []const u8,
     item_type: *const Schema.ItemType,
     to: []const []const u8,
+    of: Schema.Profile.Expected,
     schema: *const Schema,
     graph: *const Graph,
     citations: *const Graph.Citations,
@@ -104,6 +105,7 @@ fn count(
         if (profile) |p| {
             if (!inProfile(p, item, item_type)) continue;
         }
+        if (!expectedOf(of, schema, item, item_type)) continue;
         // waived: neither covered nor not
         if (kind == .link and excusedBy(schema, graph, item.id, name) != null) {
             try waived.append(arena, item.id);
@@ -122,6 +124,31 @@ fn count(
     out.uncovered = uncovered.items;
     out.waived = waived.items;
     return out;
+}
+
+/// Whether the expectation `of` applies to `item`: it is in the profile
+/// `of` names, and its attributes have the values `of` asks for
+pub fn expectedOf(of: Schema.Profile.Expected, schema: *const Schema, item: *const Item, item_type: *const Schema.ItemType) bool {
+    if (of.profile) |name| {
+        const p = schema.profile(name) orelse return false;
+        if (!inProfile(p, item, item_type)) return false;
+    }
+    for (of.where) |condition| {
+        // the keys skein reads itself can be conditions too
+        const own: ?[]const u8 = if (std.mem.eql(u8, condition.attribute, "verification"))
+            item.verification orelse ""
+        else if (std.mem.eql(u8, condition.attribute, "category"))
+            item.category orelse ""
+        else if (std.mem.eql(u8, condition.attribute, "status"))
+            item.effectiveStatus(item_type)
+        else
+            null;
+        const has = for (condition.values) |v| {
+            if (if (own) |o| std.mem.eql(u8, o, v) else item.hasValue(condition.attribute, v)) break true;
+        } else false;
+        if (!has) return false;
+    }
+    return true;
 }
 
 /// One expectation, as `isCovered` needs it
@@ -201,4 +228,5 @@ test {
     _ = @import("_test/coverage.zig");
     _ = @import("_test/waivers.zig");
     _ = @import("_test/lists.zig");
+    _ = @import("_test/expected_of.zig");
 }

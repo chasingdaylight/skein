@@ -50,6 +50,8 @@ pub const CitationSet = struct {
     /// every item of a `to` type should be cited by the set: coverage
     /// counts the ones that are not
     expected: bool = false,
+    /// which of the `to` items it is expected of, when not all
+    expected_of: Schema.Profile.Expected = .{},
 };
 
 pub fn citationSet(self: *const Project, name: []const u8) ?*const CitationSet {
@@ -151,6 +153,7 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
     var citations: std.ArrayList(CitationSet) = .empty;
     for (try r.children("citations")) |c| {
         try c.known(&.{ "name", "path", "files", "marker", "to", "expected" });
+        const expected = try Schema.Profile.readExpected(c);
         const name = try c.string("name") orelse "";
         const path = try c.string("path") orelse "";
         const marker = try c.string("marker") orelse "";
@@ -170,7 +173,8 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
             .files = files,
             .marker = marker,
             .to = try c.strings("to"),
-            .expected = try c.boolean("expected", false),
+            .expected = expected.on,
+            .expected_of = expected,
         });
     }
     self.citations = citations.items;
