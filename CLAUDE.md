@@ -19,7 +19,7 @@ Plain-text requirements, specifications and traceability kept in git. `docs/desi
 
 - Git and the files are the only source of truth. Forges (GitHub, GitLab, Forgejo) are reached only through adapters, and nothing in the core may rely on a feature one of them lacks.
 - One codebase: no dependency is fetched at build or run time, or run as a separate tool. Code taken from another project (Zine and what it builds on, mermaid.js) is copied in as a fork skein maintains: read before it goes in, recorded with its origin (project, commit) and license, updated only by a reviewed change, and only after asking emanspeaks.
-- Zig over other languages: the tool, build steps, generators, test drivers and tools are Zig, built with the pinned official release (0.17.1). No Python, Node or Java; scripts are bash or batch.
+- Zig over other languages: the tool, build steps, generators, test drivers and tools are Zig, built with the pinned official release (0.17.1). No Python, Node or Java in the repository; its scripts are bash or batch. Scratch scripts an agent writes to analyze something (a document's layout, a table) may be in any language, Python too, and stay in its scratchpad, never committed (emanspeaks, 2026-11-22).
 - Never run a command that downloads or installs software without asking first, package managers included (markdownlint through `npx` excepted).
 - The repository owner is `emanspeaks` in every file, issue and pull request; write `@emanspeaks` only to ask for his input, since every `@` notifies him.
 
@@ -70,7 +70,7 @@ The list is not complete (zfls's `CLAUDE.md` has a longer one); the standard lib
 - Files ideally under 500 lines, never over 1000, one per logical unit; a folder for a unit too complex for one file. Test-only code goes in `_test/` folders. Code several files use goes in one shared file, never copied.
 - Panics only for unrecoverable states; bad input is an error. Exact error sets with plain names; slices, not pointers plus lengths; allocator first; `try`, never `catch @panic("OOM")`.
 - Comments sparse and terse, no em dashes (semicolons instead), American English. Don't remove comments or commented-out lines you didn't write.
-- Data derived from an outside source says where it came from and that it is regenerated, not edited; generated files are fixed in their generator.
+- Data taken from an outside source says where it came from and when. A standard's text in a template is taken once and kept by hand from then on, when the standard is revised (emanspeaks, 2026-11-22); what a generator kept in the repository writes is fixed in the generator.
 - Markdown: one line per paragraph or list item, no hard wraps; no markdownlint warnings: `npx markdownlint-cli2 "**/*.md"` before finishing a change to a `.md` file. Don't add dictionary words on your own; list new ones in your report.
 
 ## Commands
@@ -81,4 +81,16 @@ The list is not complete (zfls's `CLAUDE.md` has a longer one); the standard lib
 
 ## Checks before a pull request
 
-`zig build test`, `zig fmt --check build build.zig src`, `npx markdownlint-cli2 "**/*.md"`, and skein on itself: `zig build`, then `zig-out/bin/skein check` and `zig-out/bin/skein coverage --profile implemented`. CI does not run on pull requests into `dev` (only on those into `main`, and when started by hand: `gh workflow run ci.yml --ref BRANCH`), so these checks are what stands between a change and `dev`; say in the pull request which were run.
+`zig build test`, `zig fmt --check build build.zig src templates tools`, `npx markdownlint-cli2 "**/*.md"`, cspell (`npx cspell --no-progress "**/*.md" "src/**" "templates/**" "tools/**"`), and skein on itself: `zig build`, then `zig-out/bin/skein check` and `zig-out/bin/skein coverage --profile implemented`. CI does not run on pull requests into `dev` (only on those into `main`, and when started by hand: `gh workflow run ci.yml --ref BRANCH`), so these checks are what stands between a change and `dev`; say in the pull request which were run. `tools/agent/land.sh` runs them and lands the change (the `land-a-change` skill).
+
+## Skills, scripts and tools
+
+- `.claude/skills/`: `land-a-change` (checks, pull request, merge, the standing pull request, CI), `roadmap-issue` (filing at a place in the Roadmap, Rank, whose action is next, the board), `skein-template` (adding or changing a template), `standard-text` (taking a standard's text into a template).
+- `tools/agent/`: the scripts those skills run: `land.sh`, `file-issue.sh`, `rank.sh`, `board.sh`, and `register-templates.sh`, which writes the file list of `templates/__root__.zig` (run it after adding or removing a template's file).
+- `tools/` otherwise holds programs that are not part of the skein program, built by `zig build` steps of their own, tested by `zig build test`, and listed in `.github/workflows/ci-only.txt`: `tools/pdf` (`zig build pdftext`, the text of a PDF with positions) and `tools/npr7150` (NPR 7150.2D's NODIS pages as skein documents). They are kept for reuse, and may move into a library of file formats such as rstd.
+
+## Traps met before
+
+- In the Bash tool on this machine, a command line containing a single quote fails ("unexpected EOF while looking for matching") before it runs: put such a command in a script file and run the file.
+- Zig result locations: `v = .{ .stream = .{ .dict = v.dict } }` overwrites `v` while reading it; build the new value in a `const` first.
+- Windows Python does not see MSYS paths such as `/tmp`; give scratch scripts Windows paths.
