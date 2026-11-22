@@ -3,6 +3,7 @@
 const std = @import("std");
 
 const Network = @import("network/Network.zig");
+const Results = @import("results/Results.zig");
 
 pub const usage =
     \\Usage: skein <command> [options]
@@ -31,6 +32,9 @@ pub const usage =
     \\  review ID...      Record the links of these items as reviewed
     \\  clear ID...       Record the links to these items as reviewed
     \\  approve ID...     Record an approval of these items as they are now
+    \\  result ID pass|fail|skip
+    \\                    Record a result a person obtained, such as a procedure
+    \\                    carried out by hand, in the results the project keeps
     \\  lsp               Serve editors as a language server, on standard input and output
     \\  help              Show this text
     \\  version           Show skein's version
@@ -46,14 +50,17 @@ pub const usage =
     \\  --working         the same, with their files as they are, committed or not
     \\  --offline         the same commands, and pin: fetch nothing; a repository
     \\                    by url is read from what its cache holds
-    \\  --results FILE    trace, coverage: test results besides the project's own
+    \\  --results FILE    trace, coverage, render: test results besides the project's own
     \\                    (TOML, JSON or YAML); may be given more than once
     \\  --alias, --no-alias
     \\                    move: keep the old ID as an alias, or not (default: kept
     \\                    when the project declares an id, so others can cite it)
     \\  --all             review, clear: every link, not those of the items named
-    \\  --by NAME         approve: who approves (default: git's user.name)
-    \\  --on DATE         approve: when, as 2027-03-01 (default: today)
+    \\  --by NAME         approve, result: who (default: git's user.name)
+    \\  --on DATE         approve, result: when, as 2027-03-01 (default: today)
+    \\  --note TEXT       result: what to keep with it
+    \\  --implementation NAME
+    \\                    result: what produced it
     \\  --type TYPE       import csv: the item type of the rows
     \\  --to DIR          import csv: where the item files go
     \\  --id-column NAME, --text-column NAME
@@ -94,6 +101,7 @@ pub const Command = union(enum) {
     review: Review,
     clear: Review,
     approve: Approve,
+    result: Result,
     /// the first argument, which names no command
     unknown: []const u8,
     /// what is wrong with the arguments of a command
@@ -209,6 +217,8 @@ pub const Render = struct {
     format: Format = .markdown,
     /// only the items of this profile
     profile: ?[]const u8 = null,
+    /// results files besides the project's own
+    results: []const []const u8 = &.{},
 
     pub const Format = enum {
         /// Markdown for a site generator
@@ -257,6 +267,16 @@ pub const Approve = struct {
     on: ?[]const u8 = null,
 };
 
+pub const Result = struct {
+    common: Common = .{},
+    id: []const u8,
+    outcome: Results.Outcome,
+    by: ?[]const u8 = null,
+    on: ?[]const u8 = null,
+    note: ?[]const u8 = null,
+    implementation: ?[]const u8 = null,
+};
+
 /// Every option, and whether a value follows it
 const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--root", .takes_value = true },
@@ -283,6 +303,8 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--alias", .takes_value = false },
     .{ .name = "--no-alias", .takes_value = false },
     .{ .name = "--results", .takes_value = true },
+    .{ .name = "--note", .takes_value = true },
+    .{ .name = "--implementation", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -377,12 +399,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .move = .{ .common = common, .old = words[0], .new = words[1], .alias = keep } };
     }
     if (eql(name, "render")) {
-        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline", "--results" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "render takes no items" };
         const format: Render.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Render.Format, f) orelse
             return .{ .misuse = "render: the formats are markdown, html and document" } else .markdown;
         const out = p.value("--out") orelse return .{ .misuse = "render: say where the files go, with --out DIR" };
-        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile") } };
+        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.values("--results") } };
     }
     if (eql(name, "import")) {
         const forms = "import: doorstop DIR..., or csv FILE --type TYPE --to DIR";
@@ -422,6 +444,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (p.flag("--all") == (words.len > 0)) return .{ .misuse = "name the items, or give --all" };
         const review: Review = .{ .common = common, .ids = words, .all = p.flag("--all") };
         return if (eql(name, "review")) .{ .review = review } else .{ .clear = review };
+    }
+    if (eql(name, "result")) {
+        if (try p.allow(&.{ "--root", "--by", "--on", "--note", "--implementation" })) |problem| return .{ .misuse = problem };
+        if (words.len != 2) return .{ .misuse = "result takes the item and how it went: pass, fail or skip" };
+        const outcome = std.meta.stringToEnum(Results.Outcome, words[1]) orelse return .{ .misuse = "result: pass, fail or skip" };
+        return .{ .result = .{ .common = common, .id = words[0], .outcome = outcome, .by = p.value("--by"), .on = p.value("--on"), .note = p.value("--note"), .implementation = p.value("--implementation") } };
     }
     if (eql(name, "approve")) {
         if (try p.allow(&.{ "--root", "--by", "--on" })) |problem| return .{ .misuse = problem };

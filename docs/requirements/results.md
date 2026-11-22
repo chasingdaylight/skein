@@ -19,5 +19,14 @@ A result shall belong to the items cited in the file of its test (`file`), to th
 %req[results.verdicts]
 Per implementation, an item shall pass when every result that belongs to it passed, fail when one failed, and be untested when none belongs to it or all were skipped; results of several implementations are never merged. `coverage` gives, per implementation, how many of the items passed, which failed and which are untested, counting the items of the types a citation set expects to be cited and the items that have results; `trace` gives an item's verdict and its results per implementation.
 
+%req[results.recorded]
+`skein result ID pass|fail|skip [--note TEXT] [--by NAME] [--on DATE] [--implementation NAME]` shall record a result a person obtained, such as a procedure of a test plan carried out by hand, in the results the project keeps: in the first of `[results] paths`, a TOML file, or `recorded.toml` in that directory. It records the item, the result, who (default: git's `user.name`), when (default: today), the commit checked out, the note, and the fingerprints of the item and of the items it links to. It refuses an item that does not exist, a project that keeps no results, and a first path that is a JSON or YAML file.
+
+%req[results.stale]
+A result with fingerprints shall be stale once one of the items they are of has changed: it then belongs to no item, and `check` warns that it is to be recorded again.
+
+%req[results.rendered]
+A generated coverage page (`render.generated.coverage`) shall also show, when there are results, per implementation how many items passed, failed and are untested, with links to the items that failed. `render` takes `--results` as `coverage` does.
+
 %req[results.unmatched]
 A result that belongs to no item shall be listed by `coverage`, and reported by `check` as a warning for the results the project keeps; it is not a problem.

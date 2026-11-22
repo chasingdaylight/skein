@@ -30,6 +30,8 @@ pub const Context = struct {
     /// only the items of this profile are rendered; the others are left
     /// out, with their parts, and references to them are plain words
     profile: ?*const Schema.Profile = null,
+    /// test results, for the generated coverage pages
+    results: ?generated.ResultsOf = null,
 };
 
 /// The document `file`, whose text is `source`, rendered.
@@ -147,6 +149,7 @@ const Page = struct {
                 .href = hrefOf,
                 .default_profile = self.ctx.profile,
                 .href_ctx = self,
+                .results = self.ctx.results,
             }, request);
             try self.generated.put(self.ctx.arena, b.first_line, .{ .last_line = b.last_line, .text = std.mem.trimEnd(u8, text, "\n") });
         }

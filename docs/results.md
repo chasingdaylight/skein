@@ -45,6 +45,17 @@ paths = ["verification/results"]
 
 Every results file under those paths is read by `check`, `trace` and `coverage`. A CI run's results need not be kept: `skein coverage --results run.json` reads them for that command alone, and `--results` may be given more than once.
 
+## A result a person obtained
+
+A procedure of a test plan carried out by hand, an inspection, an analysis: someone records how it went.
+
+```text
+$ skein result tp.lex.inspect-comments pass --note "Checked the listing in section 2."
+skein: recorded that tp.lex.inspect-comments passed, by A. Tester, in verification/results/recorded.toml
+```
+
+It goes into the results the project keeps (the first of `[results] paths`), with who (`--by`, default git's `user.name`), when (`--on`, default today), the commit checked out, and the fingerprints of the procedure and of what it verifies. As an approval does, it then goes stale once one of them changes: the result says nothing of the item any more, and `check` warns that it is to be recorded again.
+
 ## What skein says of them
 
 Per implementation, an item **passes** when every result that belongs to it passed, **fails** when one failed, and is **untested** when none belongs to it or all were skipped.
@@ -60,4 +71,4 @@ results (cesium0 0.3.1): 40 of 47 passed, 2 failed, 5 untested
     ...
 ```
 
-The items counted are those of the types a citation set expects to be cited, and any that have results. `skein trace ID` shows an item's verdict and its results per implementation. A result that belongs to no item (its file cites nothing, the items it names do not exist) is listed by `coverage`, and `check` warns about it for kept results.
+The items counted are those of the types a citation set expects to be cited, and any that have results. A generated coverage page (a ```` ```skein ```` block with `coverage`) shows the same, with links to the items that failed; `skein render --results FILE` gives it a run's results. `skein trace ID` shows an item's verdict and its results per implementation. A result that belongs to no item (its file cites nothing, the items it names do not exist) is listed by `coverage`, and `check` warns about it for kept results.

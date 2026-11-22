@@ -258,6 +258,10 @@ Record that links have been reviewed; see [reviewing](reviewing.md). `review` ta
 
 Records that someone approved these items as they are now; see [reviewing](reviewing.md). `--by NAME` says who (default: the name git has for the user), `--on DATE` when (default: today).
 
+## `skein result ID pass|fail|skip`
+
+Records a result that a person obtained, such as a procedure of a test plan carried out by hand, in the results the project keeps, with `--note TEXT`, `--implementation NAME`, `--by` and `--on` as for `approve`. It is stale once the item or what it links to changes; see [test results](results.md).
+
 ## `skein new TYPE [ID]`
 
 Starts an item of a type.

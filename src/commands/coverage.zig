@@ -26,7 +26,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
     const expectations = try coverage.compute(arena, &ws.project, &ws.graph, &ws.citations, profile);
     // results that cannot be read are the command's to report
     const before = ws.report.problems.items.len;
-    const results = try Results.load(io, arena, ws.root, &ws.project, options.results, &ws.report);
+    const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, options.results, &ws.report);
     if (ws.report.problems.items.len > before) return ws.problems();
     const idx = try results.index(arena, &ws.graph, &ws.citations);
     const summaries = try summary.compute(arena, &results, &idx, &ws.project, &ws.graph, profile);

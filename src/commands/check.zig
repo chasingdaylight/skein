@@ -41,10 +41,14 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     // the results the project keeps: a result that belongs to no item is to be looked at
-    const results = try Results.load(io, arena, ws.root, &ws.project, &.{}, &ws.report);
+    const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, &.{}, &ws.report);
     const idx = try results.index(arena, &ws.graph, &ws.citations);
     for (idx.unmatched) |i| {
         const r = results.all[i];
         try ws.report.warn(r.source, 0, 0, "result {d} ({s}) belongs to no item: no item cites its file, and it names none that exists", .{ r.index, r.label() });
+    }
+    for (results.all) |r| {
+        const changed = r.stale orelse continue;
+        try ws.report.warn(r.source, 0, 0, "result {d} ({s}) is stale: '{s}' has changed since it was recorded; record it again ('skein result')", .{ r.index, r.label(), changed });
     }
 }

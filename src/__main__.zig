@@ -16,6 +16,7 @@ const baseline = @import("commands/baseline.zig");
 const examples = @import("commands/examples.zig");
 const pin = @import("commands/pin.zig");
 const render = @import("commands/render.zig");
+const result = @import("commands/result.zig");
 const review = @import("commands/review.zig");
 const trace = @import("commands/trace.zig");
 const stdio = @import("stdio.zig");
@@ -35,6 +36,7 @@ pub fn main(init: std.process.Init) !void {
         .review => |options| try review.run(io, arena, options, .from),
         .clear => |options| try review.run(io, arena, options, .to),
         .approve => |options| try approve.run(io, arena, options),
+        .result => |options| try result.run(io, arena, options),
         .diff => |options| try diff.run(io, arena, options),
         .exporting => |options| try exporter.run(io, arena, options),
         .render => |options| try render.run(io, arena, options),

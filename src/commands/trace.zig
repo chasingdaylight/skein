@@ -30,7 +30,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Trace) !Workspace.Outc
     const approvals = try Approvals.load(io, arena, ws.root, &ignored);
     // results that cannot be read are the command's to report
     const before = ws.report.problems.items.len;
-    const results = try Results.load(io, arena, ws.root, &ws.project, options.results, &ws.report);
+    const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, options.results, &ws.report);
     if (ws.report.problems.items.len > before) return ws.problems();
     const idx = try results.index(arena, &ws.graph, &ws.citations);
     const mine: []const usize = if (idx.by_item.get(item.id)) |l| l.items else &.{};
