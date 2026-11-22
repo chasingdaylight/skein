@@ -23,6 +23,7 @@ const Schema = @import("../schema/Schema.zig");
 const coverage = @import("../graph/coverage.zig");
 const Results = @import("../results/Results.zig");
 const summary = @import("../results/summary.zig");
+const matrix_columns = @import("matrix_columns.zig");
 const walk = @import("../graph/walk.zig");
 
 pub const Error = std.mem.Allocator.Error;
@@ -77,14 +78,14 @@ fn problem(a: std.mem.Allocator, comptime fmt: []const u8, args: anytype) Error!
 }
 
 /// What a request selects items by
-const Filter = struct {
+pub const Filter = struct {
     types: std.ArrayList([]const u8) = .empty,
     category: ?[]const u8 = null,
     status: ?[]const u8 = null,
     profile: ?*const Schema.Profile = null,
     attributes: std.ArrayList(Item.Attribute) = .empty,
 
-    fn passes(self: *const Filter, schema: *const Schema, graph: *const Graph, item: *const Item) bool {
+    pub fn passes(self: *const Filter, schema: *const Schema, graph: *const Graph, item: *const Item) bool {
         const item_type = schema.itemType(item.type_name) orelse return false;
         if (item.isTombstone(item_type)) return false;
         if (self.types.items.len > 0 and !Schema.names.contains(self.types.items, item.type_name)) return false;
@@ -125,8 +126,15 @@ fn readFilter(ctx: Context, args: []const []const u8, filter: *Filter, bare_type
     return null;
 }
 
+fn splitList(a: std.mem.Allocator, text: []const u8) Error![]const []const u8 {
+    var out: std.ArrayList([]const u8) = .empty;
+    var it = std.mem.tokenizeScalar(u8, text, ',');
+    while (it.next()) |w| try out.append(a, w);
+    return out.items;
+}
+
 /// `text` for a cell of a Markdown table: on one line, its `|` escaped
-fn cell(a: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) Error!void {
+pub fn cell(a: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) Error!void {
     for (text) |c| switch (c) {
         '\r' => {},
         '\n' => try out.append(a, ' '),
@@ -136,12 +144,12 @@ fn cell(a: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) Error!v
 }
 
 /// The first paragraph of an item's text
-fn firstParagraph(text: []const u8) []const u8 {
+pub fn firstParagraph(text: []const u8) []const u8 {
     const end = std.mem.find(u8, text, "\n\n") orelse text.len;
     return std.mem.trim(u8, text[0..end], " \t\r\n");
 }
 
-fn link(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void {
+pub fn link(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void {
     try out.print(ctx.arena, "[`{s}`]({s})", .{ item.id, try ctx.href(ctx.href_ctx, item) });
 }
 
@@ -174,9 +182,21 @@ fn matrix(ctx: Context, args: []const []const u8) Error![]const u8 {
     const schema = &ctx.project.schema;
     if (args.len == 0) return problem(a, "matrix needs a link type: matrix LINKTYPE", .{});
     const link_type = schema.linkType(args[0]) orelse return problem(a, "there is no link type '{s}'", .{args[0]});
+    // the columns, apart from the conditions
+    var columns: ?[]const []const u8 = null;
+    var from_columns: []const []const u8 = &.{};
+    var conditions: std.ArrayList([]const u8) = .empty;
+    for (args[1..]) |word| {
+        if (std.mem.startsWith(u8, word, "columns=")) {
+            columns = try splitList(a, word["columns=".len..]);
+        } else if (std.mem.startsWith(u8, word, "from.columns=")) {
+            from_columns = try splitList(a, word["from.columns=".len..]);
+        } else try conditions.append(a, word);
+    }
     var filter: Filter = .{ .profile = ctx.default_profile };
-    if (try readFilter(ctx, args[1..], &filter, false)) |message| return message;
+    if (try readFilter(ctx, conditions.items, &filter, false)) |message| return message;
     for (link_type.to) |t| try filter.types.append(a, t);
+    if (columns != null or from_columns.len > 0) return matrix_columns.render(.{ .ctx = ctx, .link_type = link_type, .columns = columns orelse &.{}, .from_columns = from_columns }, &filter);
 
     var out: std.ArrayList(u8) = .empty;
     try out.print(a, "| Item | Category | `{s}` from |\n| --- | --- | --- |\n", .{link_type.name});
@@ -282,6 +302,7 @@ fn percent(a: std.mem.Allocator, covered: usize, total: usize) Error![]const u8 
 
 test {
     _ = @import("_test/generated.zig");
+    _ = @import("_test/matrix_columns.zig");
 }
 
 /// Whether `item` is in `profile`, and so is the item it is a part of

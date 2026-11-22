@@ -190,7 +190,7 @@ list term
 | Request | Gives |
 | --- | --- |
 | `list [TYPE...] [category=C] [status=S] [profile=P] [ATTRIBUTE=V]` | A table of the items that pass every condition, with category, status and first paragraph. `list term` is a glossary. |
-| `matrix LINKTYPE [conditions]` | Each item the link type may point to, with the items that link to it; the gaps marked **none**. A traceability matrix. |
+| `matrix LINKTYPE [conditions]` | Each item the link type may point to, with the items that link to it; the gaps marked **none**. A traceability matrix. With `columns=text,classes` and `from.columns=status,evidence`, those columns of the item and of each item linking to it, one row per linking item: a compliance matrix. |
 | `coverage [profile=P]` | The coverage table, with links to the items that are not covered. |
 
 A request skein cannot read becomes a note in its place, saying what is wrong.
