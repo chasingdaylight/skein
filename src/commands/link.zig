@@ -41,6 +41,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Link) !Workspace.Outco
         }
     }
 
+    if (ws.project.readOnlySource(item.file)) |s| return misuse(arena, "{s} is in the read-only source '{s}'", .{ item.id, s.path });
     const text = try ws.root.readFileAlloc(io, item.file, arena, .limited(1 << 26));
     const edited = (if (item.in_document)
         try inMarker(arena, text, item.line, link_type.name, options.to)

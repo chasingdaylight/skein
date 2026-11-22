@@ -64,6 +64,10 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Move) !Workspace.Outco
         try changed.append(arena, .{ .file = file, .text = result.text });
     }
 
+    // a read-only source is imported again, not edited
+    for (changed.items) |c| {
+        if (ws.project.readOnlySource(c.file)) |s| return misuse(arena, "the rename would change {s}, which is in the read-only source '{s}'", .{ c.file, s.path });
+    }
     // nothing is written before everything is known to be writable
     for (changed.items) |c| try ws.root.writeFile(io, .{ .sub_path = c.file, .data = c.text });
     try renameItemFiles(io, arena, &ws, &renames);

@@ -53,6 +53,9 @@ pub const Source = struct {
     kind: Kind,
     /// items: the type of an item that names none
     item_type: ?[]const u8 = null,
+    /// what skein's editing commands do not change: an external standard,
+    /// which is imported again, not edited
+    read_only: bool = false,
 
     pub const Kind = enum {
         /// Markdown documents whose paragraphs can be items
@@ -95,7 +98,7 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
     }
     var sources: std.ArrayList(Source) = .empty;
     for (try r.children("sources")) |s| {
-        try s.known(&.{ "path", "kind", "type" });
+        try s.known(&.{ "path", "kind", "type", "read_only" });
         const path = try s.string("path") orelse {
             try s.complain("path", "a source needs a path", .{});
             continue;
@@ -110,6 +113,7 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
             .path = std.mem.trimEnd(u8, path, "/"),
             .kind = kind,
             .item_type = try s.string("type"),
+            .read_only = try s.boolean("read_only", false),
         });
     }
     self.sources = sources.items;
@@ -222,4 +226,14 @@ pub fn findRoot(io: Io, arena: std.mem.Allocator, start: []const u8) !?[]const u
 
 test {
     _ = @import("_test/project.zig");
+}
+
+/// The read-only source the file `file` (a path from the root) is in;
+/// null when it is in none
+pub fn readOnlySource(self: *const Project, file: []const u8) ?Source {
+    for (self.sources) |s| {
+        if (!s.read_only) continue;
+        if (std.mem.eql(u8, s.path, ".") or (file.len > s.path.len and std.mem.startsWith(u8, file, s.path) and file[s.path.len] == '/')) return s;
+    }
+    return null;
 }

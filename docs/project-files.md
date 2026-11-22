@@ -28,6 +28,7 @@ type = "srs"
 | `sources.path` | A directory, from the project's root, with forward slashes. |
 | `sources.kind` | `"documents"` (the default) or `"items"`. |
 | `sources.type` | For `"items"`: the item type of a file that names none. |
+| `sources.read_only` | `true` for a source that is imported, not edited, such as an external standard: `skein move`, `link` and `new` refuse to change its files. `check` reads it as any other. |
 | `citations` | The places whose files cite items in comments. |
 | `citations.name` | What the citations are: `"test"`, `"code"`. Coverage counts by this name. |
 | `citations.path` | A directory, from the project's root; `"."` for all of it. |

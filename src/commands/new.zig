@@ -33,6 +33,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.New) !Workspace.Outcom
         .none => return .{ .text = try arena.print("%{s}[{s}]\n", .{ item_type.name, id }) },
         .refused => |why| return .{ .text = why, .status = .misuse },
     };
+    if (source.read_only) return misuse(arena, "'{s}' is a read-only source", .{source.path});
     const file = try arena.print("{s}/{s}.md", .{ source.path, id });
     var front: std.ArrayList(u8) = .empty;
     try front.print(arena, "+++\nid = \"{s}\"\n", .{id});
