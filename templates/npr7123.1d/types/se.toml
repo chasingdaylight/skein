@@ -1,0 +1,8 @@
+description = "A requirement of NPR 7123.1D, as NASA publishes it (SE-07); read-only, from skein's template"
+id = "numbered"
+prefix = "SE"
+digits = 2
+
+# the paragraph of the NPR
+[attributes.section]
+normative = false

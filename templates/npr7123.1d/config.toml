@@ -1,0 +1,5 @@
+
+# NPR 7123.1D's requirements and review criteria: read-only, written by skein init from the template
+[[sources]]
+path = "standards/npr7123.1d"
+read_only = true

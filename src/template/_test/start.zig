@@ -151,6 +151,24 @@ test "models and simulations under NASA-STD-7009B, with their factors in a list"
     try expectContains(page, "[`MDL-001`](#MDL-001) | planned | III | 4 | red | Predict the peak load on the bracket during ascent |");
 }
 
+// req: templates.npr7123.1d
+test "systems engineering under NPR 7123.1D: its requirements and its reviews" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7123.1d"} })).status);
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies-se links to se items: 0 of 62");
+    // the criteria of the 21 reviews, each criterion a part
+    const criteria = try tmp.dir.readFileAlloc(testing.io, "standards/npr7123.1d/review-criteria.md", a, .limited(1 << 20));
+    try testing.expectEqual(21, std.mem.count(u8, criteria, "\n%criteria[G-"));
+    try expectContains(criteria, "- %criteria[.e1] ");
+}
+
 // req: templates.iso29148
 test "a project with requirements as ISO/IEC/IEEE 29148 describes them" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);

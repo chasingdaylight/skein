@@ -1,0 +1,4 @@
+description = "A review of the project is judged by a table of Appendix G (a PDR by Table G-6)"
+from = ["review"]
+to = ["criteria"]
+required = true

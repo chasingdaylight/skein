@@ -1,0 +1,3 @@
+description = "A check says how a review met a criterion of Appendix G (G-6.e1)"
+from = ["review-check"]
+to = ["criteria"]

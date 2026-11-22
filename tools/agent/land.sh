@@ -23,7 +23,13 @@ branch=$(git branch --show-current)
 npx --no-install markdownlint-cli2 "**/*.md" 2>&1 | tail -1
 npx --no-install cspell --no-progress "**/*.md" ".github/**" "src/**" "build/**" "templates/**" "tools/**" 2>&1 | tail -1
 
-git add -- "$@"
+# .claude/ may be in the checkout's own ignore file: its paths are added past it
+for path in "$@"; do
+  case "$path" in
+    .claude/*) git add -f -- "$path" ;;
+    *) git add -- "$path" ;;
+  esac
+done
 git status --short
 bash /c/scratch/github-apps/app-git.sh chasingdaylight commit -q -m "$message" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 bash /c/scratch/github-apps/app-git.sh chasingdaylight push -q -u origin "$branch" 2>&1 | tail -1 || true

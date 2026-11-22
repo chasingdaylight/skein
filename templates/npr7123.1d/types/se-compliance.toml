@@ -1,0 +1,10 @@
+description = "A row of the project's compliance matrix for NPR 7123.1D (Appendix H): whether it complies with a requirement, and the justification"
+# fully compliant, tailored, not applicable (the "Comply?" column of Appendix H)
+categories = ["FC", "T", "NA"]
+
+# where or how the requirement is met: the "Justification" column
+[attributes.evidence]
+normative = false
+
+[attributes.rationale]
+normative = false

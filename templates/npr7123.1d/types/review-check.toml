@@ -1,0 +1,12 @@
+description = "A criterion of a review judged at one of the project's reviews: met or not, with the evidence, and the actions (RIDs, RFAs) it leaves open"
+categories = ["met", "not-met", "waived", "na"]
+
+# the review it was judged at (its ID)
+[attributes.review]
+required = true
+
+[attributes.evidence]
+normative = false
+
+[attributes.actions]
+normative = false
