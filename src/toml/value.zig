@@ -12,10 +12,18 @@ pub const Value = union(enum) {
     table: *Table,
 };
 
+/// Where a key or a table header is in its document: 1-based
+pub const Place = struct { line: u32 = 0, column: u32 = 0 };
+
 pub const Table = struct {
     /// keys in the order the document gives them
     map: std.array_hash_map.String(Value) = .empty,
     kind: Kind = .implicit,
+    /// where each key of the table is written, by key
+    places: std.array_hash_map.String(Place) = .empty,
+    /// where the table's header is; nothing for the root and for tables
+    /// made on the way
+    place: Place = .{},
 
     pub const Kind = enum {
         root,
@@ -31,6 +39,11 @@ pub const Table = struct {
 
     pub fn get(self: *const Table, key: []const u8) ?Value {
         return self.map.get(key);
+    }
+
+    /// Where `key` is written; else where the table's header is
+    pub fn placeOf(self: *const Table, key: []const u8) Place {
+        return self.places.get(key) orelse self.place;
     }
 
     pub fn keys(self: *const Table) []const []const u8 {

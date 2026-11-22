@@ -154,10 +154,10 @@ test "citation sets that are not complete" {
     try testing.expectEqualStrings(
         \\.skein/config.toml: error: citations: cannot read the directory 'missing' (FileNotFound)
         \\.skein/config.toml: error: citations: there is no item type 'need'
-        \\.skein/config.toml: error: citations[1].name: citations need a name: a name is lowercase letters, digits, '-' and '_', starting with a letter
-        \\.skein/config.toml: error: citations[2].files: citations need the ends of the names of the files to read, like [".zig"]
-        \\.skein/config.toml: error: citations[2].marker: citations need a marker, the text that comes before the IDs
-        \\.skein/config.toml: error: citations[2].path: citations need a path
+        \\.skein/config.toml:2:1: error: citations[1].name: citations need a name: a name is lowercase letters, digits, '-' and '_', starting with a letter
+        \\.skein/config.toml:6:1: error: citations[2].files: citations need the ends of the names of the files to read, like [".zig"]
+        \\.skein/config.toml:6:1: error: citations[2].path: citations need a path
+        \\.skein/config.toml:8:1: error: citations[2].marker: citations need a marker, the text that comes before the IDs
         \\
     , try report.render(a));
 }

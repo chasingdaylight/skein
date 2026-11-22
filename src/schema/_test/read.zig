@@ -105,15 +105,15 @@ test "mistakes in an item type are each reported" {
         \\maximum = 3
     ), "srs");
     try f.expectProblems(
-        \\x.toml: error: attributes.Priority.type: expected "string", "integer", "boolean" or "date"
         \\x.toml: error: attributes.Priority: a name is lowercase letters, digits, '-' and '_', starting with a letter
-        \\x.toml: error: attributes.count.maximum: unknown key
-        \\x.toml: error: attributes.count.values: only a string attribute lists its values
-        \\x.toml: error: categories: expected an array of strings
-        \\x.toml: error: descripton: unknown key
-        \\x.toml: error: digits: expected 1 to 9
         \\x.toml: error: prefix: a type with numbered IDs needs a prefix
-        \\x.toml: error: tombstone: 'gone' is not one of the statuses
+        \\x.toml:1:1: error: descripton: unknown key
+        \\x.toml:3:1: error: digits: expected 1 to 9
+        \\x.toml:4:1: error: categories: expected an array of strings
+        \\x.toml:5:1: error: tombstone: 'gone' is not one of the statuses
+        \\x.toml:7:1: error: attributes.Priority.type: expected "string", "integer", "boolean" or "date"
+        \\x.toml:10:1: error: attributes.count.values: only a string attribute lists its values
+        \\x.toml:11:1: error: attributes.count.maximum: unknown key
         \\
     );
 }

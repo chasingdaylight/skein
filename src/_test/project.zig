@@ -79,10 +79,10 @@ test "mistakes in a project's files are reported with their files" {
     var report: Report = .{ .arena = a };
     _ = try Project.load(testing.io, a, tmp.dir, &report);
     try testing.expectEqualStrings(
-        \\.skein/config.toml: error: project.title: unknown key
         \\.skein/config.toml: error: sources: there is no item type 'need'
-        \\.skein/config.toml: error: sources[1].path: a path is written from the project's root, with forward slashes
-        \\.skein/config.toml: error: sources[2].kind: expected "documents" or "items"
+        \\.skein/config.toml:2:1: error: project.title: unknown key
+        \\.skein/config.toml:4:1: error: sources[1].path: a path is written from the project's root, with forward slashes
+        \\.skein/config.toml:7:1: error: sources[2].kind: expected "documents" or "items"
         \\.skein/links/verifies.toml: error: to: there is no item type 'rule'
         \\.skein/types/Rule.toml: error: the file's name is the name it declares: a name is lowercase letters, digits, '-' and '_', starting with a letter
         \\.skein/types/srs.toml:2:10: error: expected a value

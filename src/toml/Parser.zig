@@ -50,6 +50,13 @@ pub fn fail(self: *Parser, message: []const u8) error{InvalidToml} {
 }
 
 pub fn failAt(self: *Parser, at: usize, message: []const u8) error{InvalidToml} {
+    const place = self.placeAt(at);
+    self.diag.* = .{ .line = place.line, .column = place.column, .message = message };
+    return error.InvalidToml;
+}
+
+/// The line and column of the offset `at`
+fn placeAt(self: *const Parser, at: usize) value.Place {
     var line: u32 = 1;
     var column: u32 = 1;
     for (self.src[0..@min(at, self.src.len)]) |c| {
@@ -58,8 +65,7 @@ pub fn failAt(self: *Parser, at: usize, message: []const u8) error{InvalidToml} 
             column = 1;
         } else column += 1;
     }
-    self.diag.* = .{ .line = line, .column = column, .message = message };
-    return error.InvalidToml;
+    return .{ .line = line, .column = column };
 }
 
 pub fn eof(self: *const Parser) bool {
@@ -156,13 +162,16 @@ fn parseKeyValue(self: *Parser, table: *Table) Error!void {
             else => return self.failAt(start, "the key passes through a value that is not a table"),
         } else {
             const sub = try self.newTable(.dotted);
+            sub.place = self.placeAt(start);
             try t.map.put(self.arena, part, .{ .table = sub });
+            try t.places.put(self.arena, part, sub.place);
             t = sub;
         }
     }
     const last = key[key.len - 1];
     if (t.map.contains(last)) return self.failAt(start, "the key is defined twice");
     try t.map.put(self.arena, last, v);
+    try t.places.put(self.arena, last, self.placeAt(start));
 }
 
 // --------------------------------------------------------------------------
@@ -213,6 +222,7 @@ fn parseHeader(self: *Parser, root: *Table) Error!*Table {
             break :blk arr;
         };
         const element = try self.newTable(.header);
+        element.place = self.placeAt(start);
         try arr.items.append(self.arena, .{ .table = element });
         return element;
     }
@@ -220,11 +230,13 @@ fn parseHeader(self: *Parser, root: *Table) Error!*Table {
         .table => |sub| {
             if (sub.kind != .implicit) return self.failAt(start, "the table is defined twice");
             sub.kind = .header;
+            sub.place = self.placeAt(start);
             return sub;
         },
         else => return self.failAt(start, "this name is already defined and is not a table"),
     };
     const sub = try self.newTable(.header);
+    sub.place = self.placeAt(start);
     try t.map.put(self.arena, last, .{ .table = sub });
     return sub;
 }
