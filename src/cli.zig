@@ -13,6 +13,7 @@ pub const usage =
     \\  impact [REV]      Show what the changes since a commit reach
     \\  export [WHAT]     Write the graph as JSON, or items, links or citations as CSV
     \\  render --out DIR  Write the documents as Markdown for a site generator
+    \\  move OLD NEW      Give an item another ID, everywhere the old one is used
     \\  import doorstop DIR...
     \\                    Turn Doorstop documents into skein items, in place
     \\  import csv FILE --type TYPE --to DIR
@@ -53,6 +54,7 @@ pub const Command = union(enum) {
     /// `export`
     exporting: Export,
     render: Render,
+    move: Move,
     import: Import,
     review: Review,
     clear: Review,
@@ -107,6 +109,14 @@ pub const Export = struct {
         links,
         citations,
     };
+};
+
+pub const Move = struct {
+    common: Common = .{},
+    /// the ID the item has
+    old: []const u8,
+    /// the ID it is to have
+    new: []const u8,
 };
 
 pub const Render = struct {
@@ -207,6 +217,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
             return .{ .misuse = "export: json, items, links or citations" };
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
+    }
+    if (eql(name, "move")) {
+        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (words.len != 2) return .{ .misuse = "move takes the ID an item has, and the ID it is to have" };
+        return .{ .move = .{ .common = common, .old = words[0], .new = words[1] } };
     }
     if (eql(name, "render")) {
         if (try p.allow(&.{ "--root", "--out", "--format" })) |problem| return .{ .misuse = problem };
@@ -440,6 +455,15 @@ test "export takes what to export" {
     try testing.expectEqual(.links, e.what);
     try testing.expectEqualStrings("s0", e.profile.?);
     try testing.expectEqualStrings("export: json, items, links or citations", (try f.run(&.{ "export", "everything" })).misuse);
+}
+
+test "move takes two IDs" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    const m = (try f.run(&.{ "move", "lex.a", "lex.b" })).move;
+    try testing.expectEqualStrings("lex.a", m.old);
+    try testing.expectEqualStrings("lex.b", m.new);
+    try testing.expectEqualStrings("move takes the ID an item has, and the ID it is to have", (try f.run(&.{ "move", "lex.a" })).misuse);
 }
 
 test "render needs a place to write to" {

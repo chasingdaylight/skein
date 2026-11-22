@@ -38,6 +38,17 @@ pub fn startsOne(line: []const u8) bool {
     return i < line.len and line[i] == '[';
 }
 
+/// Where the marker of `line` starts: after its indentation and the
+/// bullets or numbers of the list entries it opens; null when the line
+/// starts with no marker
+pub fn startIn(line: []const u8) ?usize {
+    for (line, 0..) |c, i| {
+        if (c == '%') return if (startsOne(line[i..])) i else null;
+        if (std.mem.findScalar(u8, " \t-*+.)0123456789", c) == null) return null;
+    }
+    return null;
+}
+
 /// How much of `line`, which starts a marker, the marker takes: up to its
 /// closing bracket, or all of it when it has none
 pub fn extent(line: []const u8) usize {

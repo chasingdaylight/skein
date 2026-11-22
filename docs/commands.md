@@ -165,6 +165,23 @@ is written as
 
 The project itself is not changed. `DIR` is created when needed and is best kept out of git. skein rendering HTML by itself is planned; this command is for projects that already publish with a generator.
 
+## `skein move OLD NEW`
+
+Gives an item another ID, everywhere the old one is used, in one step:
+
+```text
+$ skein move lex.keywords lex.kw
+skein: lex.keywords is now lex.kw, with 2 parts: 6 places in 3 files
+```
+
+- **What is rewritten:** the item's marker or front matter, every reference to it (`%[lex.keywords]`) in items and in narrative text, every link to it, and every citation of it in code, tests and `.skein-cites` files.
+- **Parts follow:** a part whose ID continues the old ID is renamed with it (`lex.keywords.as` becomes `lex.kw.as`). A part with an ID of its own is left as it is.
+- **Item files:** a file named after its ID (`SRS-012.md`) is renamed too.
+- **Reviews and approvals survive:** a rename changes no content, so what was reviewed stays reviewed and what was approved stays approved, under the new IDs.
+- **Only whole IDs on the lines that name them** are replaced. `lex.token` is not touched inside `lex.token.kinds`, nor in a line of code that merely contains the same letters.
+
+`skein move` refuses, and changes nothing, when the new ID is taken or is not a valid ID of the item's type. Look at the result with `git diff` before committing; nothing is committed for you.
+
 ## `skein import doorstop DIR...`
 
 Turns Doorstop documents into skein items, where they are; see [importing](importing.md).
