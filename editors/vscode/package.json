@@ -55,6 +55,10 @@
         ]
       }
     ],
+    "markdown.markdownItPlugins": true,
+    "markdown.previewStyles": [
+      "./media/preview.css"
+    ],
     "mcpServerDefinitionProviders": [
       {
         "id": "skein.mcp",

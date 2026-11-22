@@ -2,14 +2,17 @@
 // (bin/), with the views the server feeds: the items in a tree, an item's
 // trace, the coverage page, and the coverage in the status bar. It also
 // puts the program on the PATH of VS Code's terminals, and gives VS Code's
-// AI agents skein's tools (agents.ts). The highlighting
-// needs none of this; it is the grammar's.
+// AI agents skein's tools (agents.ts), and renders skein's markers and
+// references in the Markdown preview (preview.ts). The highlighting needs
+// none of this; it is the grammar's.
 
 import * as path from "node:path";
 import * as vscode from "vscode";
 import * as agents from "./agents";
 import { Server } from "./client";
 import * as commands from "./commands";
+import { Preview } from "./preview";
+import { MarkdownIt } from "./previewplugin";
 import { findProgram } from "./program";
 import { Status } from "./status";
 import { ItemTree } from "./tree";
@@ -18,13 +21,19 @@ import { Views } from "./views";
 /** How long after a change to the files the views are read again */
 const settle_ms = 500;
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+/** What the extension gives other extensions: the Markdown preview's plugin */
+export interface Api {
+  extendMarkdownIt<T extends MarkdownIt>(md: T): T;
+}
+
+export async function activate(context: vscode.ExtensionContext): Promise<Api> {
   updateTerminals(context);
   const output = vscode.window.createOutputChannel("skein Language Server", { log: true });
   const server = new Server(context, output);
   const tree = new ItemTree(server);
   const views = new Views(server, (id) => commands.openItem(tree, id), context.extensionUri);
   const status = new Status(server);
+  const preview = new Preview(server);
   context.subscriptions.push(output, status, vscode.window.registerTreeDataProvider("skein.items", tree));
 
   let timer: NodeJS.Timeout | undefined;
@@ -35,6 +44,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       void tree.refresh();
       void status.refresh();
       void views.refresh();
+      preview.refresh();
     }, settle_ms);
   };
   commands.register(context, server, tree, views, refresh);
@@ -63,6 +73,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const project = await hasProject();
   await vscode.commands.executeCommand("setContext", "skein.project", project);
   if (project) await server.restart();
+  return { extendMarkdownIt: (md) => preview.extendMarkdownIt(md) };
 }
 
 let running: Server | undefined;

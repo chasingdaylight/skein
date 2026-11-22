@@ -5,6 +5,8 @@
 //! - `skein/trace` (`{ "id": ID }`): the item's trace as HTML
 //! - `skein/coverage` (`{ "profile": P }`, optional): the coverage page as
 //!   HTML, with what is covered of what is expected
+//! - `skein/render` (`{ "uri": URI }`): a file as `skein render` writes it,
+//!   for the editor's Markdown preview
 //!
 //! In the HTML, an item is linked as `skein:item/ID` and a place in a
 //! file as `skein:file/PATH#LINE`, which the view opens in the editor.
@@ -23,6 +25,8 @@ const generated = @import("../render/generated.zig");
 const html = @import("../html/blocks.zig");
 const protocol = @import("protocol.zig");
 const trace_page = @import("trace_page.zig");
+const context = @import("../render/context.zig");
+const markdown = @import("../render/markdown.zig");
 
 /// The longest title of an item in the tree
 const title_len = 80;
@@ -137,6 +141,29 @@ pub fn coverage(s: *Server, a: Allocator, id: json.Value, params: json.Value) Se
     }
     const page = try a.print("# Coverage of {s}\n\n{s}", .{ ws.project.name, md });
     try s.respond(a, id, .{ .html = try toHtml(a, page), .covered = covered, .total = total });
+}
+
+/// `skein/render` (`{ "uri": URI }`): the file as `skein render` writes it,
+/// with the text on disk it was rendered from (the graph is read from the
+/// files, so a change shows once it is saved)
+pub fn render(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server.Error!void {
+    const uri = Server.field(Server.field(params, "textDocument"), "uri");
+    const want = if (uri == .string) uri else Server.field(params, "uri");
+    if (want != .string) return s.respondError(a, id, protocol.error_codes.invalid_params, "skein/render: no uri");
+    var ws = s.open(a) orelse return s.respond(a, id, null);
+    defer ws.close();
+    if (!ws.items_read) return s.respond(a, id, null);
+    const file = try s.fileOf(a, &ws, want.string) orelse return s.respond(a, id, null);
+    // only a file of a source is rendered
+    const in_source = for (ws.project.sources) |src| {
+        if (std.mem.startsWith(u8, file, src.path) and file.len > src.path.len and file[src.path.len] == '/') break true;
+    } else false;
+    if (!in_source) return s.respond(a, id, null);
+    const source = ws.root.readFileAlloc(s.io, file, a, .limited(1 << 26)) catch return s.respond(a, id, null);
+    // what the forge said, from its cache only; no document control, which asks git
+    const ctx = try context.build(s.io, a, &ws, .{ .offline = true, .control = false });
+    const rendered = if (markdown.isItemFile(ctx, file)) try markdown.itemFile(ctx, file, source) else try markdown.document(ctx, file, source);
+    try s.respond(a, id, .{ .source = source, .rendered = rendered });
 }
 
 /// The project's test results; those that cannot be read are left out

@@ -9,6 +9,7 @@
 - **skein Items**, a tree in the Explorer of the items by source and file; the **Trace** and **Coverage** views, in the colors of the theme; the coverage in the status bar.
 - **Plan**: a Gantt chart and a board of the work items, whose bars and cards are dragged to change an item's dates or status, written into its file.
 - For VS Code's AI agents: `skein mcp` offered to VS Code's MCP support, the chat tool `#skeinItem`, and **Write Agent Instructions**; settings `skein.mcp.enabled`, `skein.agents.file`, `skein.agents.skill`.
+- VS Code's Markdown preview shows a saved document as `skein render` writes it.
 - Commands **Trace**, **Show Coverage**, **Show Plan**, **Go to Item...**, **Refresh Items** and **Restart the Language Server**; settings `skein.codeLens.enabled`, `skein.statusBar.coverage` and `skein.trace.server`.
 
 ## 0.1.0

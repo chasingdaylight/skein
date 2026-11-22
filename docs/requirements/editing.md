@@ -91,6 +91,9 @@ The request `skein/trace` shall give the trace of an item, found also by a forme
 %req[lsp.planning]
 The request `skein/schedule` shall give the work items as `skein schedule` schedules them, with their status, mode, slack, predecessors, parents and assignees, the statuses of the work types, and the calendar. `skein/plan` (`{ "id": ID }` with `start`, `finish` or `status`) shall write the change into the item's marker or front matter: a start moves the item, and makes a float item fixed; a finish sets its duration in working days (and its finish, where one is written); a status replaces its status. Then the stored schedule is written again, as `skein schedule` writes it. It is refused, with its reason, for an item that is no work or is in a read-only source, a status its type does not have, and while the item's file has changes the editor has not saved.
 
+%req[lsp.preview]
+The request `skein/render` (`{ "uri": URI }`) shall give a file of the project's sources as `skein render` writes it (markers as anchors and IDs, references as links, unresolved references marked, generated pages in place), with the text on disk it was rendered from; nothing for a file that is in no source.
+
 ## The VS Code extension
 
 %req[vscode.server]
@@ -107,6 +110,9 @@ The status bar shall show how much of what is expected is covered, and open the 
 
 %req[vscode.planning]
 "Show Plan" shall open the planning view: a Gantt chart of the schedule, with the critical path, the links between items, the milestones and the days off, whose bars are dragged to move an item or, by their right end, to change its length; and a board with a column for each status, whose cards are dragged from one to another. Each drag is written into the item's file (`lsp.planning`), and the view shows the schedule that follows; a change that is refused is said, and the view shows what is there. (Design, sections 9 and 10.3.)
+
+%req[vscode.preview]
+VS Code's Markdown preview shall show a saved document of the project as `skein render` writes it, from `skein/render`: markers as the item's anchor and ID with its category and status, references as links to the items (which open their files), unresolved references marked in the theme's error color, and generated pages in place. While a document has changes that are not saved, the preview shows it as written; it is rendered again when it is saved, and when the project changes. (emanspeaks, 2026-11-22, #158.)
 
 %req[vscode.commands]
 Every action of the extension shall be a command in the command palette, and on the context menus where it belongs; its settings are under `skein.*`, each with a description.
