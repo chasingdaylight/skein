@@ -60,6 +60,12 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Approve) !Workspace.Ou
             .text = try arena.print("skein: say in which role {s} approves '{s}': --as {s}\n", .{ by, id, try std.mem.join(arena, "|", roles) }),
             .status = .misuse,
         };
+        // the type may say who approves; an approval by anyone else would not count
+        const who = Approvals.approversOf(item_type, options.as);
+        if (who.len > 0 and !Schema.names.contains(who, by)) return .{
+            .text = try arena.print("skein: {s} may not approve '{s}'{s}{s}; those who may: {s}\n", .{ by, id, if (options.as != null) " as " else "", options.as orelse "", try std.mem.join(arena, ", ", who) }),
+            .status = .misuse,
+        };
         try approvals.put(arena, &ws.graph, &ws.project.schema, item, by, on, options.as);
         const file = try Approvals.fileOf(arena, item);
         if (!Schema.names.contains(files.items, file)) try files.append(arena, file);

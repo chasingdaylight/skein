@@ -100,8 +100,30 @@ Each approval is then given in a role:
 skein approve t.cost --as engineering-ta --by "A. Engineer"
 ```
 
-An item is approved only when every role has approved what it says now; `check` names the roles still missing, and `trace` shows who approved in which role. skein has no sign-in of its own, so who may act in a role is not checked: the records are in git, with their commits.
+An item is approved only when every role has approved what it says now; `check` names the roles still missing, and `trace` shows who approved in which role.
+
+### Who may approve
+
+skein has no sign-in of its own, so by default anyone can record an approval: the records are in git, with their commits. A type can say whose approval counts:
+
+```toml
+# .skein/types/proposal.toml
+[approval]
+statuses = ["accepted", "rejected"]
+approvers = ["emanspeaks"]
+
+# .skein/types/tailoring.toml: a list for each role
+[approval]
+statuses = ["approved"]
+roles = ["engineering-ta", "sma-ta"]
+
+[approval.approvers]
+engineering-ta = ["A. Engineer"]
+sma-ta = ["B. Assurance", "C. Assurance"]
+```
+
+The names are the ones an approval carries: `--by` (by default git's `user.name`), or a reviewer's login for `--from-pull-request`. `skein approve` refuses an approval that would not count, `check` reports an item whose only approval is by someone else, and `--from-pull-request` records a reviewer in the role they may act in, or not at all. The list is a file of the project, so who may change it is a matter of the project's own review of `.skein/types/` (a code owners file on that directory, say).
 
 ### From a merged pull request
 
-`skein approve --from-pull-request N` records the approvals a merged pull request had in review: see [the forge](forge.md).
+`skein approve --from-pull-request N` records the approvals a merged pull request had in review: see [the forge](forge.md). Where an item's type names who may approve, only those reviewers are recorded.
