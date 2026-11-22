@@ -1,4 +1,5 @@
-//! The problems a command found, each with the file (and place) it is in.
+//! The problems a command found, each with the file (and place) it is in,
+//! and the warnings: what could not be checked, which fails nothing.
 
 const std = @import("std");
 
@@ -6,6 +7,7 @@ const Report = @This();
 
 arena: std.mem.Allocator,
 problems: std.ArrayList(Problem) = .empty,
+warnings: std.ArrayList(Problem) = .empty,
 
 pub const Problem = struct {
     /// path from the project's root, with forward slashes
@@ -24,27 +26,47 @@ pub fn add(
     comptime fmt: []const u8,
     args: anytype,
 ) std.mem.Allocator.Error!void {
-    try self.problems.append(self.arena, .{
-        .file = try self.arena.dupe(u8, file),
-        .line = line,
-        .column = column,
-        .message = try self.arena.print(fmt, args),
-    });
+    try self.problems.append(self.arena, try make(self.arena, file, line, column, fmt, args));
 }
 
+/// Records a warning: something that was not checked, not a problem
+pub fn warn(
+    self: *Report,
+    file: []const u8,
+    line: u32,
+    column: u32,
+    comptime fmt: []const u8,
+    args: anytype,
+) std.mem.Allocator.Error!void {
+    try self.warnings.append(self.arena, try make(self.arena, file, line, column, fmt, args));
+}
+
+fn make(arena: std.mem.Allocator, file: []const u8, line: u32, column: u32, comptime fmt: []const u8, args: anytype) std.mem.Allocator.Error!Problem {
+    return .{ .file = try arena.dupe(u8, file), .line = line, .column = column, .message = try arena.print(fmt, args) };
+}
+
+/// Whether there are no problems; warnings do not count
 pub fn ok(self: *const Report) bool {
     return self.problems.items.len == 0;
 }
 
-/// The problems as text, one per line (`file:line:column: error: message`),
-/// ordered by file and place.
+/// The problems and warnings as text, one per line (`file:line:column:
+/// error: message`, or `warning:`), ordered by file and place.
 pub fn render(self: *Report, arena: std.mem.Allocator) std.mem.Allocator.Error![]const u8 {
-    std.mem.sort(Problem, self.problems.items, {}, before);
+    const Line = struct { p: Problem, kind: []const u8 };
+    var lines: std.ArrayList(Line) = .empty;
+    for (self.problems.items) |p| try lines.append(arena, .{ .p = p, .kind = "error" });
+    for (self.warnings.items) |p| try lines.append(arena, .{ .p = p, .kind = "warning" });
+    std.mem.sort(Line, lines.items, {}, struct {
+        fn lt(_: void, a: Line, b: Line) bool {
+            return before({}, a.p, b.p);
+        }
+    }.lt);
     var out: std.ArrayList(u8) = .empty;
-    for (self.problems.items) |p| {
-        try out.appendSlice(arena, p.file);
-        if (p.line > 0) try out.print(arena, ":{d}:{d}", .{ p.line, p.column });
-        try out.print(arena, ": error: {s}\n", .{p.message});
+    for (lines.items) |l| {
+        try out.appendSlice(arena, l.p.file);
+        if (l.p.line > 0) try out.print(arena, ":{d}:{d}", .{ l.p.line, l.p.column });
+        try out.print(arena, ": {s}: {s}\n", .{ l.kind, l.p.message });
     }
     return out.items;
 }
@@ -70,6 +92,21 @@ test "problems are rendered in order of file and place" {
         \\a.toml: error: whole file
         \\b.toml:1:4: error: first
         \\b.toml:3:1: error: second thing
+        \\
+    , try report.render(arena.allocator()));
+}
+
+// req: check.warnings
+test "warnings are rendered among the problems and fail nothing" {
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
+    defer arena.deinit();
+    var report: Report = .{ .arena = arena.allocator() };
+    try report.warn("a.toml", 2, 1, "not checked", .{});
+    try std.testing.expect(report.ok());
+    try report.add("a.toml", 1, 1, "wrong", .{});
+    try std.testing.expectEqualStrings(
+        \\a.toml:1:1: error: wrong
+        \\a.toml:2:1: warning: not checked
         \\
     , try report.render(arena.allocator()));
 }

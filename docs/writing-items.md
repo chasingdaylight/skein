@@ -110,7 +110,9 @@ A line comment is not a %[lex.token]; see %[lex.space white space].
 
 References work in narrative text as well as in items, so the introduction of a chapter, a heading or another document can point at a rule. `skein check` applies the same rules to them, and `skein trace` lists them under "Mentioned in". A reference inside an item is part of the content of that item. A reference in narrative text does not belong to any item, so it is not part of any fingerprint and does not make any link suspect.
 
-Nothing inside a code span or a code block is a reference, nor is a percent sign that follows a letter or a digit (`50%[1]`). The double brackets of wikis and site generators (`[[a page]]`) mean nothing to skein, so a document can use both. `skein check` reports a reference to an item that does not exist or is removed. A reference with a colon, `%[other:some.id]`, names an item of another repository; those are not checked yet.
+Nothing inside a code span or a code block is a reference, nor is a percent sign that follows a letter or a digit (`50%[1]`). The double brackets of wikis and site generators (`[[a page]]`) mean nothing to skein, so a document can use both. `skein check` reports a reference to an item that does not exist or is removed. A reference with a colon, `%[other:some.id]`, names an item of another repository, which the project declares: see [other repositories](repositories.md).
+
+To write a marker or a reference as plain text, as this page does in its examples, put a backslash before the percent sign: `\%rule[x]` and `\%[x]` are neither. Markdown itself reads `\%` as an escaped percent sign, so GitHub, site generators and skein's own rendering all show `%rule[x]` and `%[x]`.
 
 ## Citations in code and tests
 

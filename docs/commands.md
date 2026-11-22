@@ -12,9 +12,13 @@ Every command that works on a project finds it from the current directory: the n
 | 1 | The project has problems; they are on standard error, one per line, as `file:line:column: error: message`. |
 | 2 | The command was not used as it must be, or there is no project. |
 
+A command that reads other repositories (`check`, `trace`, `coverage`, `export`, `render`) reads each at the commit `.skein/network.toml` records. `--current` reads each at the commit its checkout has checked out, and `--working` reads its files as they are, committed or not: see [other repositories](repositories.md).
+
 ## `skein check`
 
 Reads the configuration, the schema, every item and every citation, and reports everything that is wrong. With no problems it prints one line that counts what it read. This is the command for continuous integration.
+
+What could not be checked, such as the items of another repository that is not at hand, is a warning: `file:line:column: warning: message`, shown with the problems. Warnings alone do not fail a check.
 
 What it reports is listed in [writing items](writing-items.md) and [reviewing](reviewing.md).
 
@@ -230,6 +234,10 @@ $ skein diff v1.0
 - Without a name, `skein baseline` lists the baselines, oldest first. Ordinary tags are not listed.
 
 The tag is only made locally; push it to share it.
+
+## `skein pin [NAME [REV]]`
+
+Records in `.skein/network.toml` the commit of each other repository that the items are checked against: the commit `REV`, or the one its checkout has checked out. With a name, only that repository is pinned. For a repository pinned before, it says what changed there and which of the changed items this project refers to, so that someone can look at them before committing the record. It refuses a checkout with changes that are not committed, unless the commit is named. See [other repositories](repositories.md).
 
 ## `skein import doorstop DIR...`
 

@@ -36,4 +36,7 @@ A citation of an item that does not exist, is removed, or has an item type the c
 A removed item shall not be required to have a category, required attributes, required links or text.
 
 %req[check.other-repositories]
-A link, reference or citation whose target has a colon (`name:id`) names an item of another repository. Until repositories are linked, it shall be accepted and not checked.
+A link, reference or citation whose target has a colon (`name:id`) names an item of another repository, and shall be checked against that repository's items in the state read (`network.states`): a repository that is not declared, an item it does not have, a removed item, and an item of a type the link type or citation set may not point to are reported. When the repository's items could not be read, its targets are not checked, and that is a warning.
+
+%req[check.warnings]
+A warning shall say what could not be checked. It is shown with the problems, as `warning:` where they have `error:`, and counted apart from them; warnings alone do not fail a check.

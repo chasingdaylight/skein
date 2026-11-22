@@ -6,6 +6,7 @@ const Io = std.Io;
 
 const cli = @import("../cli.zig");
 const Graph = @import("../graph/Graph.zig");
+const Network = @import("../network/Network.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 
@@ -34,6 +35,8 @@ root_path: []const u8,
 project: Project,
 graph: Graph,
 citations: Graph.Citations = .{},
+/// the other repositories, in the state the command asks for
+network: Network = .{},
 /// whether the configuration and schema were sound, so the items were read
 items_read: bool = false,
 report: Report,
@@ -71,6 +74,7 @@ pub fn open(io: Io, arena: std.mem.Allocator, common: cli.Common) !Opened {
         self.items_read = true;
         self.graph = try Graph.load(io, arena, self.root, &self.project, &self.report);
         self.citations = try Graph.Citations.load(io, arena, self.root, &self.project, &self.report);
+        self.network = try Network.load(io, arena, self.root, root_path, &self.project, common.state, &self.report);
     }
     return .{ .ok = self };
 }
@@ -89,7 +93,14 @@ pub fn problems(self: *Workspace) !Outcome {
     const text = try self.report.render(self.arena);
     const n = self.report.problems.items.len;
     return .{
-        .text = try self.arena.print("{s}skein: {d} problem{s}\n", .{ text, n, if (n == 1) "" else "s" }),
+        .text = try self.arena.print("{s}skein: {d} problem{s}{s}\n", .{ text, n, if (n == 1) "" else "s", try self.warningCount() }),
         .status = .problems,
     };
+}
+
+/// ", 2 warnings", or nothing when there are none
+pub fn warningCount(self: *const Workspace) ![]const u8 {
+    const w = self.report.warnings.items.len;
+    if (w == 0) return "";
+    return self.arena.print(", {d} warning{s}", .{ w, if (w == 1) "" else "s" });
 }

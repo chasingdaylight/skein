@@ -31,6 +31,7 @@ test {
     _ = @import("commands/new.zig");
     _ = @import("commands/link.zig");
     _ = @import("commands/baseline.zig");
+    _ = @import("network/Network.zig");
     _ = @import("commands/_test/read_only.zig");
     _ = @import("html/blocks.zig");
     _ = @import("commands/lsp.zig");

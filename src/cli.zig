@@ -2,6 +2,8 @@
 
 const std = @import("std");
 
+const Network = @import("network/Network.zig");
+
 pub const usage =
     \\Usage: skein <command> [options]
     \\
@@ -17,6 +19,8 @@ pub const usage =
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  link FROM TYPE TO Add a link of a type from one item to another
     \\  baseline [NAME]   Tag what is committed as a baseline; without NAME, list them
+    \\  pin [NAME [REV]]  Record the commits of the other repositories that the items
+    \\                    are checked against (default: what each has checked out)
     \\  import doorstop DIR...
     \\                    Turn Doorstop documents into skein items, in place
     \\  import csv FILE --type TYPE --to DIR
@@ -33,7 +37,11 @@ pub const usage =
     \\  --json            trace, coverage, diff, impact: as JSON
     \\  --markdown        coverage, diff, impact: as Markdown, for a pull request
     \\  --profile NAME    coverage, export, render: only the items of this profile
-    \\  --all             review, clear: every link, not those of the items named
+    \\  --current         check, trace, coverage, export, render: read the other
+    \\                    repositories at the commit each has checked out, not the
+    \\                    one pinned
+    \\  --working         the same, with their files as they are, committed or not
+    \\  --all            review, clear: every link, not those of the items named
     \\  --by NAME         approve: who approves (default: git's user.name)
     \\  --on DATE         approve: when, as 2027-03-01 (default: today)
     \\  --type TYPE       import csv: the item type of the rows
@@ -68,6 +76,7 @@ pub const Command = union(enum) {
     new: New,
     link: Link,
     baseline: Baseline,
+    pin: Pin,
     /// the language server
     lsp,
     import: Import,
@@ -84,6 +93,16 @@ pub const Command = union(enum) {
 pub const Common = struct {
     /// where to look for the project from
     root: []const u8 = ".",
+    /// which state of the other repositories to read
+    state: Network.State = .recorded,
+};
+
+pub const Pin = struct {
+    common: Common = .{},
+    /// the repository; all of them when null
+    name: ?[]const u8 = null,
+    /// the commit to record; what the checkout has checked out when null
+    revision: ?[]const u8 = null,
 };
 
 pub const Trace = struct {
@@ -232,6 +251,8 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--headings-as-text", .takes_value = false },
     .{ .name = "--status-from", .takes_value = true },
     .{ .name = "--verification-from", .takes_value = true },
+    .{ .name = "--current", .takes_value = false },
+    .{ .name = "--working", .takes_value = false },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -252,21 +273,30 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
 
     var p: Parsed = .{ .arena = arena, .command = name };
     if (try p.read(args[1..])) |problem| return .{ .misuse = problem };
-    const common: Common = .{ .root = p.value("--root") orelse "." };
+    if (p.flag("--current") and p.flag("--working")) return .{ .misuse = "give --current or --working, not both" };
+    const common: Common = .{
+        .root = p.value("--root") orelse ".",
+        .state = if (p.flag("--working")) .working else if (p.flag("--current")) .current else .recorded,
+    };
     const words = p.words.items;
 
     if (eql(name, "check")) {
-        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--current", "--working" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "check takes no items" };
         return .{ .check = common };
     }
+    if (eql(name, "pin")) {
+        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (words.len > 2) return .{ .misuse = "pin takes a repository, and a commit of it" };
+        return .{ .pin = .{ .common = common, .name = if (words.len > 0) words[0] else null, .revision = if (words.len == 2) words[1] else null } };
+    }
     if (eql(name, "trace")) {
-        if (try p.allow(&.{ "--root", "--json" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--current", "--working" })) |problem| return .{ .misuse = problem };
         if (words.len != 1) return .{ .misuse = "trace takes one item" };
         return .{ .trace = .{ .common = common, .id = words[0], .json = p.flag("--json") } };
     }
     if (eql(name, "coverage")) {
-        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working" })) |problem| return .{ .misuse = problem };
         if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
         return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown") } };
@@ -280,7 +310,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .diff = .{ .common = common, .revisions = words, .impact = impact, .json = p.flag("--json"), .markdown = p.flag("--markdown") } };
     }
     if (eql(name, "export")) {
-        if (try p.allow(&.{ "--root", "--profile" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--profile", "--current", "--working" })) |problem| return .{ .misuse = problem };
         if (words.len > 1) return .{ .misuse = "export takes one thing to export" };
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
             return .{ .misuse = "export: json, items, links or citations" };
@@ -308,7 +338,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .move = .{ .common = common, .old = words[0], .new = words[1] } };
     }
     if (eql(name, "render")) {
-        if (try p.allow(&.{ "--root", "--out", "--format", "--profile" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "render takes no items" };
         const format: Render.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Render.Format, f) orelse
             return .{ .misuse = "render: the formats are markdown, html and document" } else .markdown;
@@ -604,4 +634,20 @@ test "import takes a format and what to import" {
     try testing.expect(std.mem.startsWith(u8, (try f.run(&.{"import"})).misuse, "import: doorstop DIR..."));
     try testing.expect(std.mem.startsWith(u8, (try f.run(&.{ "import", "excel", "x" })).misuse, "import: doorstop DIR..."));
     try testing.expectEqualStrings("import doorstop: name the directories of the Doorstop documents", (try f.run(&.{ "import", "doorstop" })).misuse);
+}
+
+test "pin, and the state of the other repositories" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    const all = (try f.run(&.{"pin"})).pin;
+    try testing.expectEqual(null, all.name);
+    const one = (try f.run(&.{ "pin", "compiler", "v1.2" })).pin;
+    try testing.expectEqualStrings("compiler", one.name.?);
+    try testing.expectEqualStrings("v1.2", one.revision.?);
+    try testing.expectEqualStrings("pin takes a repository, and a commit of it", (try f.run(&.{ "pin", "a", "b", "c" })).misuse);
+    try testing.expectEqual(.recorded, (try f.run(&.{"check"})).check.state);
+    try testing.expectEqual(.current, (try f.run(&.{ "check", "--current" })).check.state);
+    try testing.expectEqual(.working, (try f.run(&.{ "trace", "x", "--working" })).trace.common.state);
+    try testing.expectEqualStrings("give --current or --working, not both", (try f.run(&.{ "check", "--current", "--working" })).misuse);
+    try testing.expectEqualStrings("--current does not go with pin", (try f.run(&.{ "pin", "--current" })).misuse);
 }

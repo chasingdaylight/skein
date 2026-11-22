@@ -4,6 +4,8 @@
 //! - `.skein/types/<name>.toml`: one item type each
 //! - `.skein/links/<name>.toml`: one link type each
 //! - `.skein/profiles/<name>.toml`: one profile each
+//! - `.skein/network.toml`: the recorded state of the other repositories
+//!   (`network/record.zig`)
 
 const std = @import("std");
 const Io = std.Io;
@@ -18,9 +20,15 @@ pub const dir_name = ".skein";
 pub const config_file = dir_name ++ "/config.toml";
 
 name: []const u8 = "",
+/// what other projects know this one by, whatever short name they give it
+id: ?[]const u8 = null,
 sources: []const Source = &.{},
 citations: []const CitationSet = &.{},
+/// the other repositories its items refer to (`name:id`)
+repositories: []const Repository = &.{},
 schema: Schema = .{},
+
+pub const Repository = @import("network/Repository.zig");
 
 /// A place whose files cite items in comments
 pub const CitationSet = struct {
@@ -94,11 +102,13 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources", "citations" });
+    try r.known(&.{ "project", "sources", "citations", "repositories" });
     if (try r.child("project")) |project| {
-        try project.known(&.{"name"});
+        try project.known(&.{ "name", "id" });
         self.name = try project.string("name") orelse "";
+        self.id = try project.string("id");
     }
+    self.repositories = try Repository.readAll(r);
     var sources: std.ArrayList(Source) = .empty;
     for (try r.children("sources")) |s| {
         try s.known(&.{ "path", "kind", "type", "read_only", "order_by" });
