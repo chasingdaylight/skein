@@ -20,9 +20,13 @@ pub const usage =
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  link FROM TYPE TO Add a link of a type from one item to another
     \\  baseline [NAME]   Tag what is committed as a baseline; without NAME, list them
+    \\  init [--template NAME]
+    \\                    Start a project here, from a template's document skeletons
     \\  template list     The templates built into skein
     \\  template show NAME
     \\                    What a template declares, and its options
+    \\  template eject NAME
+    \\                    Write a template's files into .skein/, to change them
     \\  examples --out DIR
     \\                    Write the tested examples as files, with an index, for
     \\                    the project's own test driver
@@ -107,6 +111,7 @@ pub const Command = union(enum) {
     pin: Pin,
     examples: Examples,
     template: TemplateCommand,
+    init: Init,
     /// the language server
     lsp,
     import: Import,
@@ -131,10 +136,17 @@ pub const Common = struct {
 };
 
 pub const TemplateCommand = struct {
+    common: Common = .{},
     what: What,
     name: ?[]const u8 = null,
 
-    pub const What = enum { list, show };
+    pub const What = enum { list, show, eject };
+};
+
+pub const Init = struct {
+    /// the directory to start the project in
+    root: []const u8 = ".",
+    template: ?[]const u8 = null,
 };
 
 pub const Check = struct {
@@ -347,6 +359,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--from-pull-request", .takes_value = true },
     .{ .name = "--evidence", .takes_value = true },
     .{ .name = "--as", .takes_value = true },
+    .{ .name = "--template", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -383,12 +396,17 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .check = .{ .common = common, .format = format } };
     }
     if (eql(name, "template")) {
-        if (try p.allow(&.{})) |problem| return .{ .misuse = problem };
-        const forms = "template: list, or show NAME";
+        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        const forms = "template: list, show NAME, or eject NAME";
         if (words.len == 0) return .{ .misuse = forms };
         const what = std.meta.stringToEnum(TemplateCommand.What, words[0]) orelse return .{ .misuse = forms };
-        if ((what == .show) != (words.len == 2) or words.len > 2) return .{ .misuse = forms };
-        return .{ .template = .{ .what = what, .name = if (words.len == 2) words[1] else null } };
+        if ((what != .list) != (words.len == 2) or words.len > 2) return .{ .misuse = forms };
+        return .{ .template = .{ .common = common, .what = what, .name = if (words.len == 2) words[1] else null } };
+    }
+    if (eql(name, "init")) {
+        if (try p.allow(&.{ "--root", "--template" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "init takes no items" };
+        return .{ .init = .{ .root = p.value("--root") orelse ".", .template = p.value("--template") } };
     }
     if (eql(name, "examples")) {
         if (try p.allow(&.{ "--root", "--out" })) |problem| return .{ .misuse = problem };

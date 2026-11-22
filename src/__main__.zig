@@ -15,6 +15,7 @@ const link = @import("commands/link.zig");
 const baseline = @import("commands/baseline.zig");
 const examples = @import("commands/examples.zig");
 const template = @import("commands/template.zig");
+const init_command = @import("commands/init.zig");
 const pin = @import("commands/pin.zig");
 const render = @import("commands/render.zig");
 const result = @import("commands/result.zig");
@@ -49,7 +50,8 @@ pub fn main(init: std.process.Init) !void {
         .baseline => |options| try baseline.run(io, arena, options),
         .pin => |options| try pin.run(io, arena, options),
         .examples => |options| try examples.run(io, arena, options),
-        .template => |options| try template.run(arena, options),
+        .template => |options| try template.run(io, arena, options),
+        .init => |options| try init_command.run(io, arena, options),
         .lsp => std.process.exit(try lsp.serve(io, init.gpa, version)),
         .import => |options| switch (options.format) {
             .doorstop => try import_doorstop.run(io, arena, options),

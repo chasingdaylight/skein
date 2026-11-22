@@ -19,6 +19,12 @@ langspec  The specification of a programming language: rules, terms, and example
 $ skein template show langspec
 ```
 
+## Starting from a template, and changing it
+
+`skein init --template langspec` starts a project in the current directory (or `--root DIR`): `.skein/config.toml` that uses the template, with its options at their defaults, and the template's document skeletons under `docs/`, ready for `skein check`. Without `--template`, `skein init` writes the configuration alone.
+
+`skein template eject langspec` writes the template's types, links and profiles into `.skein/`, as the project's options make them. They become the project's own files and replace the template's, to be changed as the project likes; a file the project has already is left as it is.
+
 ## Several templates, and options
 
 A project can use several, for what it is at once: `template = ["langspec", "npr7150.2d"]`. Two templates that declare the same name are reported, until the project declares that name itself.
@@ -44,7 +50,7 @@ More are planned: NASA NPR 7150.2D, and requirements as ISO/IEC/IEEE 29148 descr
 
 ## Writing one
 
-A template is a directory of `templates/` in skein's repository, laid out as `.skein/` is (`types/`, `links/`, `profiles/`), with a `template.toml`:
+A template is a directory of `templates/` in skein's repository, laid out as `.skein/` is (`types/`, `links/`, `profiles/`), with `documents/` for the skeletons `skein init` writes under `docs/`, and a `template.toml`:
 
 ```toml
 description = "What it is for, in one line"
