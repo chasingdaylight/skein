@@ -99,6 +99,12 @@ test "a project under NPR 7150.2D: its class chooses the requirements and the tr
     try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = safety });
     try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies links to swe items: 0 of 92");
 
+    // the handbook's product maturity and review checklists, read-only
+    const maturity = try tmp.dir.readFileAlloc(testing.io, "standards/npr7150.2d/maturity.md", a, .limited(1 << 20));
+    try testing.expectEqual(54, std.mem.count(u8, maturity, "\n%product[PRD-"));
+    const checklists = try tmp.dir.readFileAlloc(testing.io, "standards/npr7150.2d/review-checklists.md", a, .limited(1 << 20));
+    try testing.expectEqual(13, std.mem.count(u8, checklists, "\n%sw-check[SWR-"));
+
     // class D does not trace to design
     const d = try std.mem.replaceOwned(u8, a, given, "\"class\" = \"C\"", "\"class\" = \"D\"");
     try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = d });

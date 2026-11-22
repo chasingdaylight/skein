@@ -1,0 +1,11 @@
+description = "The handbook's software entrance and success criteria for a life-cycle review (topic 7.09), its groups as parts (SWR-PDR.a); read-only, from skein's template"
+id = "numbered"
+prefix = "SWR"
+names = true
+
+[attributes.review]
+normative = false
+
+# the handbook's checklist (PAT-066 to PAT-078)
+[attributes.checklist]
+normative = false
