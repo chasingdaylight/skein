@@ -1,0 +1,2 @@
+# A template of skein's: see docs/templates.md.
+description = "AI risk management under the NIST AI RMF (NIST AI 100-1): its 72 subcategories and the twelve risks of the generative AI profile (NIST AI 600-1), read-only; the project's AI systems, and the rows of its profile that say how each system addresses each subcategory"

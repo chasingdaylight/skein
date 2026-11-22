@@ -1,0 +1,20 @@
+description = "An AI system of the project, as its inventory holds it (AI RMF GOVERN 1.6): what it is for, what kind it is, and how risky"
+id = "numbered"
+prefix = "AIS"
+statuses = ["planned", "in-development", "deployed", "retired"]
+tombstone = "retired"
+
+# what it is for (MAP 1.1)
+[attributes.purpose]
+normative = false
+
+[attributes.ai_kind]
+values = ["classifier", "predictor", "recommender", "generative", "agentic", "other"]
+
+# whether a third party supplies the model, its data or the service (GOVERN 6, MAP 4)
+[attributes.third_party]
+values = ["yes", "no"]
+
+# the organization's own judgment of the risk, against its risk tolerance (MAP 1.5)
+[attributes.risk_tier]
+values = ["low", "moderate", "high"]
