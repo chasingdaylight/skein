@@ -22,6 +22,9 @@ const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Workspace = @import("../commands/Workspace.zig");
 const check = @import("../commands/check.zig");
+const complete = @import("complete.zig");
+const move = @import("../commands/move.zig");
+const Schema = @import("../schema/Schema.zig");
 const jsonrpc = @import("jsonrpc.zig");
 const protocol = @import("protocol.zig");
 const query = @import("query.zig");
@@ -92,6 +95,9 @@ fn request(s: *Server, a: Allocator, id: json.Value, method: []const u8, params:
     if (std.mem.eql(u8, method, "textDocument/definition")) return s.definition(a, id, params);
     if (std.mem.eql(u8, method, "textDocument/references")) return s.references(a, id, params);
     if (std.mem.eql(u8, method, "textDocument/hover")) return s.hover(a, id, params);
+    if (std.mem.eql(u8, method, "textDocument/completion")) return s.completion(a, id, params);
+    if (std.mem.eql(u8, method, "textDocument/prepareRename")) return s.prepareRename(a, id, params);
+    if (std.mem.eql(u8, method, "textDocument/rename")) return s.rename(a, id, params);
     return s.respondError(a, id, protocol.error_codes.method_not_found, method);
 }
 
@@ -289,6 +295,138 @@ fn references(s: *Server, a: Allocator, id: json.Value, params: json.Value) Erro
     try s.respond(a, id, out.items);
 }
 
+/// What can be written where the cursor is: an item type, an ID, or a
+/// word or value of a marker
+fn completion(s: *Server, a: Allocator, id: json.Value, params: json.Value) Error!void {
+    const p = parse(protocol.PositionParams, a, params) orelse return s.respond(a, id, null);
+    var ws = s.open(a) orelse return s.respond(a, id, null);
+    defer ws.close();
+    if (!ws.items_read) return s.respond(a, id, null);
+    const file = try s.fileOf(a, &ws, p.textDocument.uri) orelse return s.respond(a, id, null);
+    const text = s.docs.get(p.textDocument.uri) orelse ws.root.readFileAlloc(s.io, file, a, .limited(1 << 26)) catch return s.respond(a, id, null);
+    const line = query.lineOf(text, p.position.line) orelse return s.respond(a, id, null);
+    const before = line[0..@min(p.position.character, line.len)];
+
+    var list: Completions = .{ .a = a, .line = p.position.line, .end = before.len };
+    const schema = &ws.project.schema;
+    switch (complete.context(before)) {
+        .none => {
+            // in code and tests: the IDs after a citation marker
+            for (ws.project.citations) |set| {
+                const word = complete.citation(before, set.marker) orelse continue;
+                try list.ids(&ws, word, set.to);
+                break;
+            }
+        },
+        .item_type => |word| {
+            for (schema.types) |t| try list.add(word, try a.print("{s}[", .{t.name}), t.name, 7, null);
+        },
+        .id => |word| try list.ids(&ws, word, &.{}),
+        .word => |w| if (schema.itemType(w.type_name)) |t| {
+            for (t.categories) |c| try list.add(w.at, c, c, 20, "category");
+            for (t.statuses) |status| try list.add(w.at, status, status, 20, "status");
+            for (t.attributes) |attr| try list.add(w.at, try a.print("{s}=", .{attr.name}), attr.name, 5, "attribute");
+            for (schema.links) |link| {
+                if (link.from.len > 0 and !Schema.names.contains(link.from, t.name)) continue;
+                try list.add(w.at, try a.print("{s}=", .{link.name}), link.name, 5, "link");
+            }
+            if (t.verification.len > 0) try list.add(w.at, "verification=", "verification", 5, null);
+        },
+        .value => |v| if (schema.itemType(v.type_name)) |t| {
+            if (schema.linkType(v.key)) |link| {
+                try list.ids(&ws, v.at, link.to);
+            } else if (std.mem.eql(u8, v.key, "status")) {
+                for (t.statuses) |status| try list.add(v.at, status, status, 20, null);
+            } else if (std.mem.eql(u8, v.key, "verification")) {
+                for (t.verification) |method| try list.add(v.at, method, method, 20, null);
+            } else if (t.attribute(v.key)) |attr| {
+                for (attr.values) |value| try list.add(v.at, value, value, 20, null);
+            }
+        },
+    }
+    try s.respond(a, id, list.items.items);
+}
+
+/// The completions of one request: each replaces the word being written
+const Completions = struct {
+    a: Allocator,
+    line: usize,
+    /// where the cursor is in the line
+    end: usize,
+    items: std.ArrayList(protocol.CompletionItem) = .empty,
+
+    fn add(self: *Completions, word: complete.Context.Word, text: []const u8, label: []const u8, kind: u8, detail: ?[]const u8) Allocator.Error!void {
+        try self.items.append(self.a, .{
+            .label = label,
+            .kind = kind,
+            .detail = detail,
+            .textEdit = .{
+                .range = .{ .start = .{ .line = self.line, .character = word.start }, .end = .{ .line = self.line, .character = self.end } },
+                .newText = text,
+            },
+        });
+    }
+
+    /// The items that are not removed, of the types `of` when it names any
+    fn ids(self: *Completions, ws: *const Workspace, word: complete.Context.Word, of: []const []const u8) Allocator.Error!void {
+        for (ws.graph.items) |*item| {
+            if (of.len > 0 and !Schema.names.contains(of, item.type_name)) continue;
+            const item_type = ws.project.schema.itemType(item.type_name) orelse continue;
+            if (item.isTombstone(item_type)) continue;
+            const detail = if (item.category) |c| try self.a.print("{s}, {s}", .{ item.type_name, c }) else item.type_name;
+            try self.add(word, item.id, item.id, 18, detail);
+        }
+    }
+};
+
+/// The ID under the cursor, with where it is in its line; null when the
+/// cursor is on no ID of an item
+fn idAt(s: *Server, a: Allocator, params: json.Value) Allocator.Error!?struct { id: []const u8, range: protocol.Range } {
+    const p = parse(protocol.PositionParams, a, params) orelse return null;
+    var found = try s.find(a, params) orelse return null;
+    defer found.ws.close();
+    const text = s.docs.get(p.textDocument.uri) orelse return .{ .id = try a.dupe(u8, found.item.id), .range = .{ .start = p.position, .end = p.position } };
+    const line = query.lineOf(text, p.position.line) orelse return null;
+    const word = query.wordAt(line, p.position.character) orelse return .{ .id = try a.dupe(u8, found.item.id), .range = .{ .start = p.position, .end = p.position } };
+    const start = @intFromPtr(word.ptr) - @intFromPtr(line.ptr);
+    return .{
+        .id = try a.dupe(u8, found.item.id),
+        .range = .{ .start = .{ .line = p.position.line, .character = start }, .end = .{ .line = p.position.line, .character = start + word.len } },
+    };
+}
+
+fn prepareRename(s: *Server, a: Allocator, id: json.Value, params: json.Value) Error!void {
+    const at = try s.idAt(a, params) orelse return s.respond(a, id, null);
+    try s.respond(a, id, protocol.PrepareRename{ .range = at.range, .placeholder = at.id });
+}
+
+/// Renames the item under the cursor everywhere, on disk, as `skein move`
+/// does. The open documents must be saved first: the rename is made in
+/// the files, and the editor shows them again from there.
+fn rename(s: *Server, a: Allocator, id: json.Value, params: json.Value) Error!void {
+    const p = parse(protocol.RenameParams, a, params) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "rename: no new name");
+    var ws = s.open(a) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
+    defer ws.close();
+    var docs = s.docs.iterator();
+    while (docs.next()) |doc| {
+        const file = try s.fileOf(a, &ws, doc.key_ptr.*) orelse continue;
+        const on_disk = ws.root.readFileAlloc(s.io, file, a, .limited(1 << 26)) catch continue;
+        if (!std.mem.eql(u8, on_disk, doc.value_ptr.*)) {
+            return s.respondError(a, id, protocol.error_codes.invalid_params, try a.print("skein: save {s} first: the rename is made in the files", .{file}));
+        }
+    }
+    const at = try s.idAt(a, params) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: the cursor is on no item");
+    const outcome = move.run(s.io, a, .{ .common = .{ .root = ws.root_path }, .old = at.id, .new = p.newName }) catch |e| switch (e) {
+        error.OutOfMemory => return error.OutOfMemory,
+        else => return s.respondError(a, id, protocol.error_codes.invalid_params, try a.print("skein: the rename failed ({t})", .{e})),
+    };
+    if (outcome.status != .ok) {
+        return s.respondError(a, id, protocol.error_codes.invalid_params, std.mem.trimEnd(u8, outcome.text, "\n"));
+    }
+    try s.respond(a, id, protocol.WorkspaceEdit{});
+    try s.publish(a);
+}
+
 fn hover(s: *Server, a: Allocator, id: json.Value, params: json.Value) Error!void {
     var found = try s.find(a, params) orelse return s.respond(a, id, null);
     defer found.ws.close();
@@ -340,6 +478,7 @@ test {
     _ = jsonrpc;
     _ = query;
     _ = uri_paths;
+    _ = complete;
     _ = Graph;
     _ = @import("_test/server.zig");
 }

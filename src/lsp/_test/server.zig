@@ -1,7 +1,7 @@
 //! The language server, given messages as an editor sends them, on a
 //! project on disk.
 
-// req: lsp.lifecycle, lsp.diagnostics, lsp.definition, lsp.references, lsp.hover
+// req: lsp.lifecycle, lsp.diagnostics, lsp.definition, lsp.references, lsp.hover, lsp.completion, lsp.rename
 const std = @import("std");
 const testing = std.testing;
 const Io = std.Io;
@@ -190,7 +190,7 @@ test "the lifecycle: nothing before initialize, and a clean end" {
     const early = try s.send("{{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"textDocument/hover\",\"params\":{{}}}}", .{});
     try testing.expectEqual(-32002, early[0].object.get("error").?.object.get("code").?.integer);
     try s.start();
-    const unknown = try s.send("{{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"textDocument/rename\",\"params\":{{}}}}", .{});
+    const unknown = try s.send("{{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"textDocument/formatting\",\"params\":{{}}}}", .{});
     try testing.expectEqual(-32601, unknown[0].object.get("error").?.object.get("code").?.integer);
     try testing.expectEqual(1, (try s.send("not json", .{})).len);
 
@@ -199,4 +199,110 @@ test "the lifecycle: nothing before initialize, and a clean end" {
     _ = try s.send("{{\"jsonrpc\":\"2.0\",\"method\":\"exit\"}}", .{});
     try testing.expect(!s.server.running);
     try testing.expectEqual(0, s.server.exitCode());
+}
+
+/// The labels a completion offers at the end of `text`, written as the
+/// first line of what the editor shows of `file`
+fn labels(s: *Session, file: []const u8, text: []const u8) ![]const []const u8 {
+    const a = s.arena.allocator();
+    _ = try s.send(
+        "{{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didChange\",\"params\":{{\"textDocument\":{{\"uri\":\"{s}\"}},\"contentChanges\":[{{\"text\":{f}}}]}}}}",
+        .{ try s.uri(file), json.fmt(text, .{}) },
+    );
+    s.next_id += 1;
+    const answer = try s.send(
+        "{{\"jsonrpc\":\"2.0\",\"id\":{d},\"method\":\"textDocument/completion\",\"params\":{{\"textDocument\":{{\"uri\":\"{s}\"}},\"position\":{{\"line\":0,\"character\":{d}}}}}}}",
+        .{ s.next_id, try s.uri(file), text.len },
+    );
+    var out: std.ArrayList([]const u8) = .empty;
+    const result = answer[0].object.get("result").?;
+    if (result != .array) return out.items;
+    for (result.array.items) |item| try out.append(a, item.object.get("label").?.string);
+    return out.items;
+}
+
+fn expectLabels(expected: []const []const u8, got: []const []const u8) !void {
+    try testing.expectEqual(expected.len, got.len);
+    for (expected, got) |e, g| try testing.expectEqualStrings(e, g);
+}
+
+test "completion: item types, IDs, and the words and values of a marker" {
+    var s: Session = undefined;
+    try s.init();
+    defer s.deinit();
+    try s.start();
+    try write(s.tmp.dir, ".skein/types/rule.toml", "categories = [\"syntax\"]\nverification = [\"test\"]\n[attributes.stage]\nvalues = [\"s0\", \"s1\"]\n");
+    try write(s.tmp.dir, ".skein/links/verifies.toml", "from = [\"case\"]\nto = [\"rule\"]\n");
+
+    try expectLabels(&.{ "case", "rule" }, try labels(&s, "spec/lex.md", "- %ru"));
+    // every item that is there, for a reference
+    try expectLabels(&.{ "lex.token", "lex.keywords", "lex.keywords.as", "c.one" }, try labels(&s, "spec/lex.md", "See %[lex."));
+    // a rule: its category, its statuses, its attribute, and no link a rule cannot have
+    try expectLabels(&.{ "syntax", "draft", "approved", "deprecated", "removed", "stage", "verification" }, try labels(&s, "spec/lex.md", "%rule[lex.new "));
+    try expectLabels(&.{ "s0", "s1" }, try labels(&s, "spec/lex.md", "%rule[lex.new stage="));
+    try expectLabels(&.{"test"}, try labels(&s, "spec/lex.md", "%rule[lex.new verification="));
+    // a link of a case: the rules it may point to, not other cases
+    try expectLabels(&.{ "lex.token", "lex.keywords", "lex.keywords.as" }, try labels(&s, "spec/lex.md", "%case[c.two verifies=lex.token,"));
+    // in a test: the IDs after the citation marker
+    try expectLabels(&.{ "lex.token", "lex.keywords", "lex.keywords.as", "c.one" }, try labels(&s, "tests/a.zig", "// spec: lex.token, "));
+    // and nothing where nothing of skein's is being written
+    try expectLabels(&.{}, try labels(&s, "spec/lex.md", "Plain text"));
+    try expectLabels(&.{}, try labels(&s, "spec/lex.md", "%rule[lex.new"));
+}
+
+test "a completion replaces the word being written" {
+    var s: Session = undefined;
+    try s.init();
+    defer s.deinit();
+    try s.start();
+    _ = try s.send("{{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didChange\",\"params\":{{\"textDocument\":{{\"uri\":\"{s}\"}},\"contentChanges\":[{{\"text\":\"See %[lex.to\"}}]}}}}", .{try s.uri("spec/lex.md")});
+    const answer = try s.send("{{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"textDocument/completion\",\"params\":{{\"textDocument\":{{\"uri\":\"{s}\"}},\"position\":{{\"line\":0,\"character\":12}}}}}}", .{try s.uri("spec/lex.md")});
+    const first = answer[0].object.get("result").?.array.items[0].object;
+    try testing.expectEqualStrings("rule, syntax", first.get("detail").?.string);
+    const edit = first.get("textEdit").?.object;
+    try testing.expectEqualStrings("lex.token", edit.get("newText").?.string);
+    const range = edit.get("range").?.object;
+    try testing.expectEqual(6, range.get("start").?.object.get("character").?.integer);
+    try testing.expectEqual(12, range.get("end").?.object.get("character").?.integer);
+}
+
+fn renameAt(s: *Session, line: usize, character: usize, new_name: []const u8) !json.Value {
+    s.next_id += 1;
+    const answer = try s.send(
+        "{{\"jsonrpc\":\"2.0\",\"id\":{d},\"method\":\"textDocument/rename\",\"params\":{{\"textDocument\":{{\"uri\":\"{s}\"}},\"position\":{{\"line\":{d},\"character\":{d}}},\"newName\":\"{s}\"}}}}",
+        .{ s.next_id, try s.uri("spec/lex.md"), line, character, new_name },
+    );
+    return answer[0];
+}
+
+fn errorMessage(answer: json.Value) []const u8 {
+    return answer.object.get("error").?.object.get("message").?.string;
+}
+
+test "rename from the editor: the item is moved everywhere, once the files are saved" {
+    var s: Session = undefined;
+    try s.init();
+    defer s.deinit();
+    try s.start();
+    const a = s.arena.allocator();
+
+    // on %[lex.token the token] in the narrative
+    const prepared = try s.at("prepareRename", 2, 20);
+    try testing.expectEqualStrings("lex.token", prepared.object.get("placeholder").?.string);
+
+    // an unsaved document stops it
+    _ = try s.send("{{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{{\"textDocument\":{{\"uri\":\"{s}\",\"text\":\"changed\"}}}}}}", .{try s.uri("spec/lex.md")});
+    try testing.expectEqualStrings("skein: save spec/lex.md first: the rename is made in the files", errorMessage(try renameAt(&s, 2, 20, "lex.lexeme")));
+
+    // saved: the rename is made
+    _ = try s.send("{{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didClose\",\"params\":{{\"textDocument\":{{\"uri\":\"{s}\"}}}}}}", .{try s.uri("spec/lex.md")});
+    const done = try renameAt(&s, 2, 20, "lex.lexeme");
+    try testing.expect(done.object.get("result") != null);
+    const spec = try s.tmp.dir.readFileAlloc(testing.io, "spec/lex.md", a, .limited(1 << 20));
+    try testing.expect(std.mem.find(u8, spec, "%rule[lex.lexeme syntax] A token.") != null);
+    try testing.expect(std.mem.find(u8, spec, "verifies=lex.lexeme]") != null);
+    try testing.expectEqualStrings("// spec: lex.lexeme\n", try s.tmp.dir.readFileAlloc(testing.io, "tests/a.zig", a, .limited(1 << 20)));
+
+    // a name that cannot be is refused with the reason skein gives
+    try testing.expectEqualStrings("skein: the ID 'lex.keywords' is taken", errorMessage(try renameAt(&s, 4, 8, "lex.keywords")));
 }
