@@ -1,0 +1,7 @@
+/* skein in VS Code's Markdown preview: as rendered pages show it */
+
+/* a reference skein could not resolve */
+.skein-unresolved {
+  color: var(--vscode-errorForeground, #e51400);
+  text-decoration: underline wavy;
+}

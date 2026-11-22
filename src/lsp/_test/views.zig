@@ -145,6 +145,22 @@ test "skein/itemAt, skein/trace and skein/coverage" {
     try testing.expect(std.mem.find(u8, get(covered, "html").string, "href=\"skein:item/lex.keywords\"") != null);
 }
 
+// req: lsp.preview
+test "skein/render: a document as skein render writes it, for the preview" {
+    var s: Session = undefined;
+    try s.init();
+    defer s.deinit();
+    const a = s.arena.allocator();
+    const result = try s.request("skein/render", try a.print("{{\"uri\":\"{s}\"}}", .{try s.uri("spec/old.md")}));
+    try testing.expectEqualStrings("%rule[lex.renamed syntax aliases=lex.old] Renamed.\n", get(result, "source").string);
+    try testing.expectEqualStrings("<a id=\"lex.renamed\"></a>**[lex.renamed](#lex.renamed)** *(syntax)* Renamed.\n", get(result, "rendered").string);
+    const page = get(try s.request("skein/render", try a.print("{{\"uri\":\"{s}\"}}", .{try s.uri("spec/lex.md")})), "rendered").string;
+    // a reference to an item there is not, marked as on the site
+    try testing.expect(std.mem.find(u8, page, "<span class=\"skein-unresolved\" title=\"unresolved: lex.tokn\">lex.tokn</span>") != null);
+    // a file that is no source's
+    try testing.expect(try s.request("skein/render", try a.print("{{\"uri\":\"{s}\"}}", .{try s.uri(".skein/config.toml")})) == .null);
+}
+
 test "code lenses: an item's links, and Trace" {
     var s: Session = undefined;
     try s.init();
