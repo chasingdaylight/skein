@@ -7,15 +7,12 @@ const std = @import("std");
 const Io = std.Io;
 
 const Forge = @import("../forge/Forge.zig");
+const ForgeMap = @import("../forge/Map.zig");
 const Mirror = @import("../forge/Mirror.zig");
 const Workspace = @import("Workspace.zig");
 const cli = @import("../cli.zig");
 const history = @import("../history.zig");
 const publisher = @import("../forge/mirror_publish.zig");
-const toml = @import("../toml.zig");
-const write = @import("../toml/write.zig");
-
-pub const map_file = ".skein/forge-map.toml";
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Publish) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options.common)) {
@@ -31,7 +28,11 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Publish) !Workspace.Ou
     const body_path = try Io.Dir.path.join(arena, &.{ git_dir, "skein", "forge", "publish.json" });
 
     const done = try publisher.publish(io, arena, data, &target, body_path, options.dry_run);
-    if (!options.dry_run and done.map.len > 0) try saveMap(io, arena, ws.root, done.map);
+    if (!options.dry_run and done.map.len > 0) {
+        const moved = try arena.alloc(Forge.Moved, done.map.len);
+        for (done.map, moved) |m, *out| out.* = .{ .from = m.from, .to = m.to };
+        try ForgeMap.save(io, arena, ws.root, moved);
+    }
     var out: std.ArrayList(u8) = .empty;
     try out.print(arena, "skein: {s} {d} label{s}, {d} milestone{s}, {d} issue{s} and {d} comment{s} on {s}:{s}", .{
         if (options.dry_run) "would create" else "created",
@@ -63,29 +64,6 @@ fn parseTarget(text: []const u8, url: ?[]const u8) ?Forge {
     const repository = text[colon + 1 ..];
     if (std.mem.findScalar(u8, repository, '/') == null) return null;
     return .{ .kind = kind, .repository = repository, .url = if (url) |u| std.mem.trimEnd(u8, u, "/") else null };
-}
-
-/// Adds `new` to the map, which keeps every earlier move, in order
-fn saveMap(io: Io, arena: std.mem.Allocator, root: Io.Dir, new: []const publisher.Mapped) !void {
-    var all: std.array_hash_map.String([]const u8) = .empty;
-    if (root.readFileAlloc(io, map_file, arena, .limited(1 << 24))) |text| {
-        var diag: toml.Diagnostic = .{};
-        if (toml.parse(arena, text, &diag)) |table| {
-            for (table.keys()) |k| if (table.get(k)) |v| if (v == .string) try all.put(arena, k, v.string);
-        } else |_| {}
-    } else |_| {}
-    for (new) |m| try all.put(arena, m.from, m.to);
-    const Order = struct {
-        keys: []const []const u8,
-        pub fn lessThan(self: @This(), a: usize, b: usize) bool {
-            return std.mem.lessThan(u8, self.keys[a], self.keys[b]);
-        }
-    };
-    all.sort(Order{ .keys = all.keys() });
-    var text: std.ArrayList(u8) = .empty;
-    try text.appendSlice(arena, "# Where the issues of a former forge are now: written by skein publish, committed.\n");
-    for (all.keys(), all.values()) |k, v| try text.print(arena, "{s} = {s}\n", .{ try write.string(arena, k), try write.string(arena, v) });
-    try root.writeFile(io, .{ .sub_path = map_file, .data = text.items });
 }
 
 fn plural(n: usize) []const u8 {

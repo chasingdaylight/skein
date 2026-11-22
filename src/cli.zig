@@ -51,6 +51,7 @@ pub const usage =
     \\  sync              Write the overlay to the forge, then refresh the mirror
     \\  publish --to KIND:OWNER/REPO
     \\                    Re-create the mirror on another forge (--url, --dry-run)
+    \\  rewrite-refs      Write the new numbers into references to a former forge's issues (--dry-run)
     \\  load              Each person's work, week by week, beside the time they have
     \\  lsp              Serve editors as a language server, on standard input and output
     \\  mcp               Serve AI agents skein's tools (Model Context Protocol), on
@@ -121,6 +122,7 @@ pub const Command = union(enum) {
     mirror: Mirror,
     sync: Sync,
     publish: Publish,
+    rewrite_refs: RewriteRefs,
     /// `diff`, and `impact`
     diff: Diff,
     /// `export`
@@ -257,6 +259,11 @@ pub const Publish = struct {
     to: ?[]const u8 = null,
     /// the address of a server other than the public one
     url: ?[]const u8 = null,
+    dry_run: bool = false,
+};
+
+pub const RewriteRefs = struct {
+    common: Common = .{},
     dry_run: bool = false,
 };
 
@@ -567,6 +574,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (try p.allow(&.{ "--root", "--offline", "--to", "--url", "--dry-run" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "publish takes no items" };
         return .{ .publish = .{ .common = common, .to = p.value("--to"), .url = p.value("--url"), .dry_run = p.flag("--dry-run") } };
+    }
+    if (eql(name, "rewrite-refs")) {
+        if (try p.allow(&.{ "--root", "--offline", "--dry-run" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "rewrite-refs takes no items" };
+        return .{ .rewrite_refs = .{ .common = common, .dry_run = p.flag("--dry-run") } };
     }
     if (eql(name, "time")) {
         if (try p.allow(&.{ "--root", "--by", "--on", "--note", "--json", "--offline" })) |problem| return .{ .misuse = problem };

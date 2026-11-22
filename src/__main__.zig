@@ -17,6 +17,7 @@ const overlay = @import("commands/overlay.zig");
 const apply = @import("commands/apply.zig");
 const mirror = @import("commands/mirror.zig");
 const publish = @import("commands/publish.zig");
+const rewrite_refs = @import("commands/rewrite_refs.zig");
 const sync = @import("commands/sync.zig");
 const cli = @import("cli.zig");
 const move = @import("commands/move.zig");
@@ -79,6 +80,7 @@ pub fn main(init: std.process.Init) !void {
         .mirror => |options| try mirror.run(io, arena, options),
         .sync => |options| try sync.run(io, arena, options),
         .publish => |options| try publish.run(io, arena, options),
+        .rewrite_refs => |options| try rewrite_refs.run(io, arena, options),
         .unknown => |name| .{
             .text = try arena.print("skein: unknown command '{s}'\n\n{s}", .{ name, cli.usage }),
             .status = .misuse,

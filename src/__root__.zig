@@ -53,6 +53,7 @@ test {
     _ = @import("template/_test/start.zig");
     _ = @import("graph/_test/maturity.zig");
     _ = @import("commands/new.zig");
+    _ = @import("commands/rewrite_refs.zig");
     _ = @import("commands/link.zig");
     _ = @import("commands/baseline.zig");
     _ = @import("network/Network.zig");

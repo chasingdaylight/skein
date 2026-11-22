@@ -6,6 +6,7 @@
 const std = @import("std");
 const Io = std.Io;
 
+const Forge = @import("../forge/Forge.zig");
 const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Project = @import("../Project.zig");
@@ -69,6 +70,8 @@ pub const Found = union(enum) {
 /// The repository's name and the ID in it, of a target `name:id`; null
 /// for a target of this repository
 pub fn split(target: []const u8) ?struct { repository: []const u8, id: []const u8 } {
+    // `github:example/spec#24` names an issue of a forge, not an item of a repository
+    if (Forge.isRef(target)) return null;
     const colon = std.mem.findScalar(u8, target, ':') orelse return null;
     return .{ .repository = target[0..colon], .id = target[colon + 1 ..] };
 }

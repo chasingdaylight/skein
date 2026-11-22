@@ -15,13 +15,21 @@ repository: []const u8,
 url: ?[]const u8 = null,
 /// whether the full mirror (`skein mirror`) is committed; by default it is per checkout
 mirror_committed: bool = false,
+/// the forges the project was on before, `kind:owner/repo`: a reference written
+/// for one of them resolves through the map of where its issues went
+formerly: []const []const u8 = &.{},
+/// where the issues of a former forge went (`.skein/forge-map.toml`); set when the project is read
+moved: []const Moved = &.{},
 
 pub const Kind = enum { github, gitlab, forgejo };
+
+/// An issue that moved: `github:example/spec#24` to `gitlab:group/project#7`
+pub const Moved = struct { from: []const u8, to: []const u8 };
 
 /// The `[forge]` table of the configuration `r`; null when it has none
 pub fn read(r: Schema.Reader) Schema.Reader.Error!?Forge {
     const f = try r.child("forge") orelse return null;
-    try f.known(&.{ "kind", "repository", "url", "mirror" });
+    try f.known(&.{ "kind", "repository", "url", "mirror", "formerly" });
     const kind_name = try f.string("kind") orelse "github";
     const kind = std.meta.stringToEnum(Kind, kind_name) orelse {
         try f.complain("kind", "expected \"github\", \"gitlab\" or \"forgejo\"", .{});
@@ -40,11 +48,19 @@ pub fn read(r: Schema.Reader) Schema.Reader.Error!?Forge {
         try f.complain("mirror", "expected \"local\" or \"committed\"", .{});
         return null;
     }
+    const formerly = try f.strings("formerly");
+    for (formerly) |name| {
+        const colon = std.mem.findScalar(u8, name, ':') orelse 0;
+        if (std.meta.stringToEnum(Kind, name[0..colon]) == null or std.mem.findScalar(u8, name[colon..], '/') == null) {
+            try f.complain("formerly", "'{s}' is no forge: write it kind:owner/repo, as \"github:example/spec\"", .{name});
+        }
+    }
     return .{
         .kind = kind,
         .repository = repository,
         .url = if (try f.string("url")) |u| std.mem.trimEnd(u8, u, "/") else null,
         .mirror_committed = std.mem.eql(u8, mirror, "committed"),
+        .formerly = formerly,
     };
 }
 
@@ -53,6 +69,12 @@ pub const Ref = struct {
     /// `owner/repo`
     repository: []const u8,
     number: u64,
+    /// the former forge, `kind:owner/repo`, whose number the reference was written with,
+    /// and that number, when it was resolved through the map
+    former: ?[]const u8 = null,
+    former_number: u64 = 0,
+    /// a reference to a former forge that the map does not have
+    unmapped: bool = false,
 };
 
 /// Whether `target` names an issue or a pull request: `#97`, `o/r#12`
@@ -65,12 +87,47 @@ pub fn isRef(target: []const u8) bool {
 }
 
 /// The issue or pull request `target` names, in `self.repository` when it
-/// names no repository
+/// names no repository. After a move between forges, `#24` is the former
+/// forge's number when the project declares one (`formerly`) whose map has it,
+/// and `kind:owner/repo#24` always names an issue of that former forge.
 pub fn ref(self: *const Forge, target: []const u8) ?Ref {
     if (!isRef(target)) return null;
     const hash = std.mem.findScalar(u8, target, '#').?;
     const number = std.fmt.parseInt(u64, target[hash + 1 ..], 10) catch return null;
-    return .{ .repository = if (hash == 0) self.repository else target[0..hash], .number = number };
+    if (hash == 0) {
+        for (self.formerly) |former| {
+            if (self.movedTo(former, number)) |r| return r;
+        }
+        return .{ .repository = self.repository, .number = number };
+    }
+    const named = target[0..hash];
+    if (std.mem.findScalar(u8, named, ':') != null) {
+        if (self.movedTo(named, number)) |r| return r;
+        if (self.isOwn(named)) return .{ .repository = self.repository, .number = number };
+        return .{ .repository = named, .number = number, .unmapped = true };
+    }
+    return .{ .repository = named, .number = number };
+}
+
+/// Whether `kind_repository` (`gitlab:group/project`) is this forge
+fn isOwn(self: *const Forge, kind_repository: []const u8) bool {
+    const colon = std.mem.findScalar(u8, kind_repository, ':') orelse return false;
+    return std.mem.eql(u8, kind_repository[0..colon], @tagName(self.kind)) and std.mem.eql(u8, kind_repository[colon + 1 ..], self.repository);
+}
+
+/// Where issue `number` of the former forge went, when it went to this forge
+fn movedTo(self: *const Forge, former: []const u8, number: u64) ?Ref {
+    for (self.moved) |m| {
+        const from_hash = std.mem.findScalarLast(u8, m.from, '#') orelse continue;
+        if (!std.mem.eql(u8, m.from[0..from_hash], former)) continue;
+        const old = std.fmt.parseInt(u64, m.from[from_hash + 1 ..], 10) catch continue;
+        if (old != number) continue;
+        const to_hash = std.mem.findScalarLast(u8, m.to, '#') orelse continue;
+        if (!self.isOwn(m.to[0..to_hash])) continue;
+        const now = std.fmt.parseInt(u64, m.to[to_hash + 1 ..], 10) catch continue;
+        return .{ .repository = self.repository, .number = now, .former = former, .former_number = number };
+    }
+    return null;
 }
 
 /// The host name of the forge: `github.com`, or that of `url`

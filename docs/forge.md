@@ -84,4 +84,17 @@ skein publish --to gitlab:group/project --dry-run
 skein publish --to gitlab:group/project
 ```
 
-`skein publish` creates the labels, milestones and issues with their comments, and closes the ones that were closed. Each issue says where it came from and who opened it. Pull and merge requests are not re-created, since a forge cannot make one without its branches, and nobody is assigned, as the new forge may not know the people. `.skein/forge-map.toml`, which the project commits, records where each issue went (`"github:example/spec#24" = "gitlab:group/project#7"`). Reading references through that map, so that `#24` in older items and commits finds the new issue, is not done yet.
+`skein publish` creates the labels, milestones and issues with their comments, and closes the ones that were closed. Each issue says where it came from and who opened it. Pull and merge requests are not re-created, since a forge cannot make one without its branches, and nobody is assigned, as the new forge may not know the people. `.skein/forge-map.toml`, which the project commits, records where each issue went (`"github:example/spec#24" = "gitlab:group/project#7"`). ### References after a move
+
+Older items and commits say `#24`, which is now the new forge's issue 24, or, written for the old forge, what became issue 7 there. Name the old forge once, and skein reads the map:
+
+```toml
+[forge]
+kind = "gitlab"
+repository = "group/project"
+formerly = ["github:example/spec"]
+```
+
+A bare `#24` is looked up in `.skein/forge-map.toml` first; when the map has it, the reference is the new issue 7, and `skein check` warns that it is the old number, so the pages and checks are right at once. A number the map does not have is the new forge's own. `github:example/spec#24` always names the issue of the old forge, resolved the same way; one the map does not have is reported as not found.
+
+`skein rewrite-refs` ends the transition: it writes the new number into those references (`%[#24]`, `tracked-by=#24` in a marker, `"#24"` in front matter) and nowhere else, never in prose, a code block or a color, and never in a read-only source. `--dry-run` says what it would write.
