@@ -39,4 +39,4 @@ What a forge holds about an issue shall stay there and be read through the adapt
 %req[edit.lsp removed]
 
 %req[edit.vscode planned]
-A VS Code extension on the language server shall be skein's graphical interface, with the item tree, trace and coverage views, forms for items, and interactive planning views. (Design, section 9.)
+A VS Code extension on the language server shall be skein's graphical interface, with the item tree, trace and coverage views, forms for items, and interactive planning views. (Design, section 9.) Built: the tree, the views, code lenses and quick fixes (`vscode.*` in `docs/requirements/editing.md`); forms and planning views are to come.

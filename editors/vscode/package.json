@@ -1,7 +1,7 @@
 {
   "name": "skein",
   "displayName": "skein",
-  "description": "Highlights skein's item markers and references in Markdown, and brings the skein program.",
+  "description": "Requirements and traceability in Markdown: skein's language server, the items in a tree, trace and coverage views, and the skein program.",
   "version": "0.1.1",
   "publisher": "chasingdaylight",
   "license": "MIT",
@@ -19,9 +19,10 @@
   "engines": {
     "vscode": "^1.147.0"
   },
-  "main": "./extension.js",
+  "main": "./dist/extension.js",
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "workspaceContains:.skein/config.toml"
   ],
   "categories": [
     "Programming Languages",
@@ -34,6 +35,16 @@
     "markdown",
     "skein"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "In an untrusted workspace, skein.path is taken only from the user's settings, and the language server is not started.",
+      "restrictedConfigurations": [
+        "skein.path"
+      ]
+    },
+    "virtualWorkspaces": false
+  },
   "contributes": {
     "grammars": [
       {
@@ -44,13 +55,124 @@
         ]
       }
     ],
+    "views": {
+      "explorer": [
+        {
+          "id": "skein.items",
+          "name": "skein Items",
+          "when": "skein.project"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "skein.showVersion",
         "title": "Show Version",
         "category": "skein"
+      },
+      {
+        "command": "skein.restartServer",
+        "title": "Restart the Language Server",
+        "category": "skein"
+      },
+      {
+        "command": "skein.refreshItems",
+        "title": "Refresh Items",
+        "category": "skein",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "skein.openItem",
+        "title": "Go to Item...",
+        "category": "skein"
+      },
+      {
+        "command": "skein.trace",
+        "title": "Trace",
+        "category": "skein",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "skein.showCoverage",
+        "title": "Show Coverage",
+        "category": "skein",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "skein.copyId",
+        "title": "Copy ID",
+        "category": "skein"
+      },
+      {
+        "command": "skein.pickLinked",
+        "title": "Go to a Linked Item...",
+        "category": "skein"
       }
     ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "skein.trace",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.showCoverage",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.openItem",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.refreshItems",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.copyId",
+          "when": "false"
+        },
+        {
+          "command": "skein.pickLinked",
+          "when": "false"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "skein.trace",
+          "when": "skein.project && resourceScheme == file",
+          "group": "navigation@90"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "skein.refreshItems",
+          "when": "view == skein.items",
+          "group": "navigation@1"
+        },
+        {
+          "command": "skein.showCoverage",
+          "when": "view == skein.items",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "skein.trace",
+          "when": "view == skein.items && viewItem == item",
+          "group": "inline"
+        },
+        {
+          "command": "skein.trace",
+          "when": "view == skein.items && viewItem == item",
+          "group": "1_skein@1"
+        },
+        {
+          "command": "skein.copyId",
+          "when": "view == skein.items && viewItem == item",
+          "group": "1_skein@2"
+        }
+      ]
+    },
     "configuration": {
       "title": "skein",
       "properties": {
@@ -58,9 +180,47 @@
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "markdownDescription": "The `skein` program to use in place of the one this extension carries: the full path of the file. Its directory is put first on the `PATH` of new terminals."
+          "markdownDescription": "The `skein` program to use in place of the one this extension carries: the full path of the file. It is the language server, and its directory is put first on the `PATH` of new terminals."
+        },
+        "skein.codeLens.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show a code lens above each item: its links, which open a choice of the items they lead to, and **Trace**."
+        },
+        "skein.statusBar.coverage": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show in the status bar how much of what is expected is covered (`skein coverage`); clicking it opens the coverage view."
+        },
+        "skein.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "markdownDescription": "Log the messages between VS Code and the language server in the output channel **skein Language Server**: none, each message, or each with its content."
         }
       }
     }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node24 --minify --sourcemap",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p test",
+    "unit": "esbuild test/unit/*.test.ts --bundle --outdir=out/unit --platform=node --target=node24 --format=cjs && node --test out/unit/*.test.js"
+  },
+  "overrides": {
+    "minimatch": "11.0.9"
+  },
+  "dependencies": {
+    "vscode-languageclient": "11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/vscode": "1.146.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
   }
 }

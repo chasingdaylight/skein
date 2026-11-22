@@ -2,6 +2,8 @@
 //! what it uses. Requests are parsed with unknown fields ignored; responses
 //! are written without the optional fields that are null.
 
+const json = @import("std").json;
+
 pub const Position = struct { line: usize, character: usize };
 
 pub const Range = struct { start: Position, end: Position };
@@ -14,7 +16,11 @@ pub const Diagnostic = struct {
     severity: u8 = 1,
     source: []const u8 = "skein",
     message: []const u8,
+    /// what would mend it, which the editor gives back for a quick fix
+    data: ?Fix = null,
 };
+
+pub const Fix = struct { old: []const u8, new: []const u8 };
 
 pub const PublishDiagnosticsParams = struct {
     uri: []const u8,
@@ -36,6 +42,8 @@ pub const ServerCapabilities = struct {
     hoverProvider: bool = true,
     completionProvider: CompletionOptions = .{},
     renameProvider: RenameOptions = .{},
+    codeLensProvider: struct { resolveProvider: bool = false } = .{},
+    codeActionProvider: struct { codeActionKinds: []const []const u8 = &.{"quickfix"} } = .{},
 };
 
 pub const InitializeResult = struct {
@@ -107,4 +115,26 @@ pub const PrepareRename = struct { range: Range, placeholder: []const u8 };
 /// reloads the files.
 pub const WorkspaceEdit = struct {
     changes: struct {} = .{},
+};
+
+/// A lens above a line: its title, and the client's command it runs
+pub const CodeLens = struct {
+    range: Range,
+    command: Command,
+};
+
+pub const Command = struct {
+    title: []const u8,
+    /// empty: the lens is only shown
+    command: []const u8,
+    arguments: ?[]const json.Value = null,
+};
+
+/// A quick fix: the edit, and the problems it mends as the editor gave them
+pub const CodeAction = struct {
+    title: []const u8,
+    kind: []const u8 = "quickfix",
+    diagnostics: []const json.Value,
+    isPreferred: bool = true,
+    edit: struct { changes: json.ArrayHashMap([]const TextEdit) },
 };

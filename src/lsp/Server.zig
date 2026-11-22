@@ -7,7 +7,9 @@
 //!   project is read from the files on disk, so a change shows when it is
 //!   saved.
 //! - `textDocument/definition`, `references` and `hover` on the ID of an
-//!   item, wherever it is written
+//!   item, wherever it is written; completion and rename
+//! - code lenses above items (lens.zig) and quick fixes (fixes.zig)
+//! - skein's own requests for the editor's views (views.zig)
 //!
 //! The project is read again for each of these; nothing is kept between
 //! messages but the text of the open documents.
@@ -25,7 +27,10 @@ const Report = @import("../Report.zig");
 const Workspace = @import("../commands/Workspace.zig");
 const check = @import("../commands/check.zig");
 const complete = @import("complete.zig");
+const fixes = @import("fixes.zig");
+const lens = @import("lens.zig");
 const move = @import("../commands/move.zig");
+const views = @import("views.zig");
 const Schema = @import("../schema/Schema.zig");
 const jsonrpc = @import("jsonrpc.zig");
 const protocol = @import("protocol.zig");
@@ -100,6 +105,12 @@ fn request(s: *Server, a: Allocator, id: json.Value, method: []const u8, params:
     if (std.mem.eql(u8, method, "textDocument/completion")) return s.completion(a, id, params);
     if (std.mem.eql(u8, method, "textDocument/prepareRename")) return s.prepareRename(a, id, params);
     if (std.mem.eql(u8, method, "textDocument/rename")) return s.rename(a, id, params);
+    if (std.mem.eql(u8, method, "textDocument/codeLens")) return lens.codeLens(s, a, id, params);
+    if (std.mem.eql(u8, method, "textDocument/codeAction")) return fixes.codeAction(s, a, id, params);
+    if (std.mem.eql(u8, method, "skein/items")) return views.items(s, a, id);
+    if (std.mem.eql(u8, method, "skein/itemAt")) return views.itemAt(s, a, id, params);
+    if (std.mem.eql(u8, method, "skein/trace")) return views.trace(s, a, id, params);
+    if (std.mem.eql(u8, method, "skein/coverage")) return views.coverage(s, a, id, params);
     return s.respondError(a, id, protocol.error_codes.method_not_found, method);
 }
 
@@ -166,7 +177,7 @@ fn setText(s: *Server, uri: []const u8, text: []const u8) Allocator.Error!void {
 
 /// The project the editor has open, read from its files; null when the
 /// editor has no directory open or there is no project in it
-fn open(s: *Server, a: Allocator) ?Workspace {
+pub fn open(s: *Server, a: Allocator) ?Workspace {
     const root = s.root orelse return null;
     const opened = Workspace.open(s.io, a, .{ .root = root }) catch return null;
     return switch (opened) {
@@ -176,14 +187,14 @@ fn open(s: *Server, a: Allocator) ?Workspace {
 }
 
 /// The URI of a file of the project
-fn uriOf(s: *Server, a: Allocator, ws: *const Workspace, file: []const u8) Allocator.Error![]const u8 {
+pub fn uriOf(s: *Server, a: Allocator, ws: *const Workspace, file: []const u8) Allocator.Error![]const u8 {
     const path = try Io.Dir.path.join(a, &.{ ws.root_path, file });
     return uri_paths.fromPath(a, path, s.style);
 }
 
 /// The path from the project's root, with forward slashes, of the file
 /// `uri` names; null when it is not a file of the project
-fn fileOf(s: *Server, a: Allocator, ws: *const Workspace, uri: []const u8) Allocator.Error!?[]const u8 {
+pub fn fileOf(s: *Server, a: Allocator, ws: *const Workspace, uri: []const u8) Allocator.Error!?[]const u8 {
     const path = try uri_paths.toPath(a, uri, s.style) orelse return null;
     const root = ws.root_path;
     if (path.len <= root.len + 1 or !uri_paths.samePath(s.style, path[0..root.len], root)) return null;
@@ -191,6 +202,12 @@ fn fileOf(s: *Server, a: Allocator, ws: *const Workspace, uri: []const u8) Alloc
     const file = try a.dupe(u8, path[root.len + 1 ..]);
     std.mem.replaceScalar(u8, file, '\\', '/');
     return file;
+}
+
+/// What the editor shows of `uri` (the file `file` of the project), which
+/// may not be saved yet; null when it cannot be read
+pub fn textOf(s: *Server, a: Allocator, ws: *const Workspace, uri: []const u8, file: []const u8) ?[]const u8 {
+    return s.docs.get(uri) orelse ws.root.readFileAlloc(s.io, file, a, .limited(1 << 26)) catch null;
 }
 
 /// Checks the project and publishes its problems, file by file; a file
@@ -215,6 +232,7 @@ fn publish(s: *Server, a: Allocator) Error!void {
                 .range = .{ .start = .{ .line = line, .character = column }, .end = .{ .line = line, .character = 10_000 } },
                 .severity = kind.severity,
                 .message = p.message,
+                .data = if (p.fix) |f| .{ .old = f.old, .new = f.new } else null,
             });
         };
         // the files that had problems and have none now
@@ -239,9 +257,9 @@ fn publish(s: *Server, a: Allocator) Error!void {
 }
 
 /// The item the cursor is on, with the project it is in
-const Found = struct { ws: Workspace, item: *const Item };
+pub const Found = struct { ws: Workspace, item: *const Item };
 
-fn find(s: *Server, a: Allocator, params: json.Value) Allocator.Error!?Found {
+pub fn find(s: *Server, a: Allocator, params: json.Value) Allocator.Error!?Found {
     const p = parse(protocol.PositionParams, a, params) orelse return null;
     var ws = s.open(a) orelse return null;
     if (!ws.items_read) {
@@ -479,19 +497,19 @@ fn notify(s: *Server, a: Allocator, method: []const u8, params: anytype) Error!v
     try jsonrpc.writeMessage(s.out, body);
 }
 
-fn respond(s: *Server, a: Allocator, id: json.Value, result: anytype) Error!void {
+pub fn respond(s: *Server, a: Allocator, id: json.Value, result: anytype) Error!void {
     const body = try a.print("{{\"jsonrpc\":\"2.0\",\"id\":{f},\"result\":{f}}}", .{ fmtJson(id), fmtJson(result) });
     try jsonrpc.writeMessage(s.out, body);
 }
 
-fn respondError(s: *Server, a: Allocator, id: json.Value, code: i64, message: []const u8) Error!void {
+pub fn respondError(s: *Server, a: Allocator, id: json.Value, code: i64, message: []const u8) Error!void {
     const e: protocol.ResponseError = .{ .code = code, .message = message };
     const body = try a.print("{{\"jsonrpc\":\"2.0\",\"id\":{f},\"error\":{f}}}", .{ fmtJson(id), fmtJson(e) });
     try jsonrpc.writeMessage(s.out, body);
 }
 
 /// The member `name` of `v`, null when there is none
-fn field(v: json.Value, name: []const u8) json.Value {
+pub fn field(v: json.Value, name: []const u8) json.Value {
     if (v != .object) return .null;
     return v.object.get(name) orelse .null;
 }
@@ -501,7 +519,7 @@ fn fmtJson(v: anytype) json.Formatter(@TypeOf(v)) {
 }
 
 /// `params` as a `T`, or null when they do not fit
-fn parse(comptime T: type, a: Allocator, params: json.Value) ?T {
+pub fn parse(comptime T: type, a: Allocator, params: json.Value) ?T {
     return json.parseFromValueLeaky(T, a, params, .{ .ignore_unknown_fields = true }) catch null;
 }
 
@@ -512,4 +530,5 @@ test {
     _ = complete;
     _ = Graph;
     _ = @import("_test/server.zig");
+    _ = @import("_test/views.zig");
 }

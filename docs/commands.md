@@ -369,6 +369,9 @@ A language server for editors, on standard input and output. It works in the Mar
 - **Hover:** the item's type, category and status, its text and its parts.
 - **Completion:** item types after `%`, IDs in references and after a citation marker, and after the ID of a marker its categories, statuses, attributes and link types, then their values.
 - **Rename:** renaming an item does what `skein move` does. Save your files first; the rename is made in them, and the editor shows them again.
+- **Quick fixes:** a problem whose mending skein knows is offered as a fix: the ID an item has now in place of a former one, and the closest ID, category, status, attribute, link type or verification method in place of a misspelled one.
+- **Code lenses:** above each item, its links, those it has and those that point to it, and "Trace". The commands they run (`skein.pickLinked`, `skein.trace`) are the VS Code extension's; another editor shows them as text.
+- **skein's own requests**, for an editor's views: `skein/items` (every item with its place), `skein/itemAt` (the item under a position), `skein/trace` (`{ "id": ID }`, the item's trace as HTML) and `skein/coverage` (the coverage page as HTML, with how much is covered). Their links are `skein:item/ID` and `skein:file/PATH#LINE`.
 
 Any editor with a Language Server Protocol client can use it. Tell the editor to start `skein lsp` for Markdown files (and for the source files that hold citations) with the project's directory as the root. For example, in Neovim:
 
@@ -389,7 +392,7 @@ name = "markdown"
 language-servers = ["skein"]
 ```
 
-The VS Code extension does not start the server yet.
+The VS Code extension starts the server itself, and adds the item tree, the trace and coverage views and the coverage in the status bar (`editors/vscode/readme.md`).
 
 ## `skein help`, `skein version`
 

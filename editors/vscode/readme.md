@@ -8,29 +8,34 @@
 - %rule[.block syntax] A block comment starts with `/*`.
 ```
 
-This extension highlights those markers and references in Markdown files, so that the item type, the ID, the category and status, and `key=value` words stand out from the prose. It also brings the `skein` program, so installing the extension is all a project's contributors need.
+This extension brings the `skein` program and its language server into VS Code: the problems of `skein check` as you save, go to definition, references, completion and rename of IDs, the items in a tree, an item's trace, and the project's coverage. Installing the extension is all a project's contributors need.
 
 ## What it does
 
+- **The language server:** in a folder with a skein project (`.skein/config.toml`), the extension starts `skein lsp`. The problems of `skein check` are in the Problems panel, updated when a file is saved, with quick fixes where skein knows what was meant: the ID an item has now for a former one, and the word closest to a misspelled ID, category, status, attribute or link type. Go to definition, find references, hover, completion and rename (which does what `skein move` does) work on IDs wherever they are written.
+- **Code lenses:** above each item, its links (those it has and those that point to it), which offer the items they lead to, and **Trace**.
+- **skein Items:** a tree in the Explorer of every item, by source and file, with its type, category and status, and its parts under it. Choosing one opens it at its marker; **Trace** and **Copy ID** are on its context menu.
+- **Trace:** an item's trace in a view beside the editor: its links both ways, what it refers to and what refers to it, citations, approvals, test results, and all above and below it. Its links open the items and places in the editor. Open it from a code lens, the tree, the editor's context menu, or **skein: Trace** in the Command Palette (the item under the cursor, or one you choose).
+- **Coverage:** the coverage page, in a view, and the share of what is expected that is covered in the status bar, which opens the view.
 - **The `skein` program:** the extension carries it for Windows, Linux, Alpine and macOS (x86_64 and arm64) and puts it on the `PATH` of new terminals in VS Code, so `skein check` works there with nothing else installed. Open a new terminal after installing.
-- **Markers** (`%type[id words key=value]`): the item type, the ID, bare words and attributes each get their own color.
-- **References** (`%[id]` and `%[id words]`): the ID is shown as a link target, the words as a link title.
-- Nothing inside a code span or a code block is highlighted, as skein reads nothing there.
+- **Highlighting:** in Markdown, markers (`%type[id words key=value]`) and references (`%[id]`, `%[id words]`) stand out from the prose; nothing inside a code span or a code block is highlighted, as skein reads nothing there.
 
-The colors come from your color theme. To change them, use `editor.tokenColorCustomizations` with the scopes `keyword.other.item-type.skein`, `entity.name.tag.item-id.skein`, `constant.language.item-word.skein`, `entity.other.attribute-name.skein` and `string.other.link.title.skein`.
+The colors and fonts of the views come from your color theme. To change those of the highlighting, use `editor.tokenColorCustomizations` with the scopes `keyword.other.item-type.skein`, `entity.name.tag.item-id.skein`, `constant.language.item-word.skein`, `entity.other.attribute-name.skein` and `string.other.link.title.skein`.
 
-## What it does not do yet
+## Commands
 
-This is an early version, published as a pre-release. It does not check anything: `skein check` on the command line does. Go to definition, completion of IDs, diagnostics while typing and the views of the item graph come with the language server, which is planned.
+In the Command Palette, under **skein**: **Trace**, **Show Coverage**, **Go to Item...**, **Refresh Items**, **Restart the Language Server** and **Show Version**.
 
-## Settings and commands
+## Settings
 
-- `skein.path`: the full path of another `skein` to use in place of the one the extension carries, for a project that pins a version of its own.
-- **skein: Show Version** (Command Palette): which `skein` is in use, and its version.
+- `skein.path`: the full path of another `skein` to use in place of the one the extension carries, for a project that pins a version of its own. A change restarts the language server.
+- `skein.codeLens.enabled`: the code lenses above items (on by default).
+- `skein.statusBar.coverage`: the coverage in the status bar (on by default).
+- `skein.trace.server`: log the messages to and from the language server in the output channel **skein Language Server**.
 
 ## Requirements
 
-None. On a platform the extension has no program for, install skein from its [releases](https://github.com/chasingdaylight/skein/releases) and set `skein.path`, or put it on your `PATH`; the highlighting works either way.
+None. On a platform the extension has no program for, install skein from its [releases](https://github.com/chasingdaylight/skein/releases) and set `skein.path`; the highlighting works either way. In an untrusted workspace, the language server is not started.
 
 ## Issues
 

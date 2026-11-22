@@ -21,7 +21,15 @@ branch=$(git branch --show-current)
 "$Z" build test
 ./zig-out/bin/skein check
 npx --no-install markdownlint-cli2 "**/*.md" 2>&1 | tail -1
-npx --no-install cspell --no-progress "**/*.md" ".github/**" "src/**" "build/**" "templates/**" "tools/**" 2>&1 | tail -1
+npx --no-install cspell --no-progress "**/*.md" ".github/**" "src/**" "build/**" "templates/**" "tools/**" "editors/vscode/src/**" "editors/vscode/test/**" 2>&1 | tail -1
+# the VS Code extension's checks, when it is among what lands
+for path in "$@"; do
+  case "$path" in
+    editors/vscode/*)
+      (cd editors/vscode && npm ci --no-fund --no-audit > /dev/null && npm audit && npm run -s typecheck && npm run -s unit 2>&1 | grep -E '^# (pass|fail)' && npm run -s build)
+      break ;;
+  esac
+done
 
 # .claude/ may be in the checkout's own ignore file: its paths are added past it
 for path in "$@"; do

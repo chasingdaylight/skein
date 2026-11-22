@@ -5,11 +5,12 @@ name = "skein"
 [[sources]]
 path = "docs/requirements"
 
-# the tests say which requirements they check
+# the tests say which requirements they check: skein's, and the VS Code
+# extension's (editors/vscode/test)
 [[citations]]
 name = "test"
-path = "src"
-files = [".zig"]
+path = "."
+files = [".zig", ".ts"]
 marker = "// req:"
 to = ["req"]
 expected = true

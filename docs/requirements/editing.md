@@ -75,3 +75,32 @@ The server shall complete what is being written where skein reads it: the item t
 
 %req[lsp.rename]
 Renaming an item from the editor shall do what `skein move` does, and be refused with its reason when `skein move` would refuse. It is refused while an open document of the project has changes that are not saved, since the rename is made in the files.
+
+%req[lsp.lens]
+Above each item declared in a file, the server shall give a code lens "Trace", which opens the item's trace, and, when the item has links or is linked to, one with those links, which opens a choice of the items they lead to.
+
+%req[lsp.fixes]
+A problem that names what would mend it shall be offered as a quick fix that writes that word in place of the other: the ID an item has now for a former one, and, for a word that is misspelled, the one it is closest to (within two edits, and closer than any other) among the IDs of the items, the categories and statuses of the item's type, its attributes and link types, and its verification methods.
+
+%req[lsp.items]
+The request `skein/items` shall give every item of the project with its type, category, status, file, line, the item it is a part of, the first line of its text, its source and whether it is removed, and the project's name and sources; `skein/itemAt` gives the ID of the item under a position.
+
+%req[lsp.views]
+The request `skein/trace` shall give the trace of an item, found also by a former ID, as HTML: what `skein trace` prints, with each item and place a link that the editor opens (`skein:item/ID`, `skein:file/PATH#LINE`). `skein/coverage` shall give the coverage page that a document's `coverage` request renders, as HTML with the same links, and how many items of all that are expected are covered.
+
+## The VS Code extension
+
+%req[vscode.server]
+The VS Code extension shall start `skein lsp` itself, the program it carries or the one `skein.path` names, and restart it when that setting changes or on the command; diagnostics, go to definition, references, hover, completion and rename then work with nothing to configure.
+
+%req[vscode.tree]
+The extension shall show the items in a tree in the side bar, by source and file, with each item's ID, type and status and its parts under it; choosing an item opens it at its marker. The tree is read again when a file of the project is saved, created or deleted.
+
+%req[vscode.views]
+"Trace" on an item (a code lens, the editor's or the tree's context menu, or the command palette) shall open its trace in a view; "Show Coverage" opens the coverage page. The views take their colors and fonts from VS Code's theme, and their links open the items and places in the editor.
+
+%req[vscode.status]
+The status bar shall show how much of what is expected is covered, and open the coverage view when it is clicked.
+
+%req[vscode.commands]
+Every action of the extension shall be a command in the command palette, and on the context menus where it belongs; its settings are under `skein.*`, each with a description.
