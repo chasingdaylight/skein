@@ -37,6 +37,7 @@ skein coverage
 | [`docs/repositories.md`](docs/repositories.md) | Referring to the items of other repositories. |
 | [`docs/results.md`](docs/results.md) | Test results. |
 | [`docs/forge.md`](docs/forge.md) | Issues and pull requests on the forge. |
+| [`docs/templates.md`](docs/templates.md) | Templates built into skein. |
 | [`docs/importing.md`](docs/importing.md) | Coming from Doorstop, or from a spreadsheet. |
 | [`docs/requirements/`](docs/requirements/readme.md) | What skein is required to do, in its own format, traced to its tests. |
 | [`docs/design.md`](docs/design.md) | What skein is to be. |
