@@ -290,7 +290,7 @@ fn parseToml(arena: std.mem.Allocator, path: []const u8, text: []const u8, repor
 
 /// The root table of the TOML file at `path`; null, with the reason
 /// reported, when it cannot be read
-fn readToml(io: Io, arena: std.mem.Allocator, root: Io.Dir, path: []const u8, report: *Report) std.mem.Allocator.Error!?*toml.Table {
+pub fn readToml(io: Io, arena: std.mem.Allocator, root: Io.Dir, path: []const u8, report: *Report) std.mem.Allocator.Error!?*toml.Table {
     const text = root.readFileAlloc(io, path, arena, .limited(1 << 24)) catch |e| switch (e) {
         error.OutOfMemory => return error.OutOfMemory,
         else => {

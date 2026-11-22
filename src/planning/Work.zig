@@ -7,6 +7,7 @@ const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Schema = @import("../schema/Schema.zig");
 const Planning = @import("../schema/Planning.zig");
+const Calendar = @import("Calendar.zig");
 const day = @import("day.zig");
 
 const Work = @This();
@@ -15,7 +16,11 @@ item: *const Item,
 start: ?day.Day = null,
 finish: ?day.Day = null,
 duration: ?u32 = null,
+/// the effort expected, in days
+estimate: ?u32 = null,
 lag: u32 = 0,
+/// handles of the people who do it
+assignees: []const []const u8 = &.{},
 /// as written; null when the item names none (`mode`)
 written_mode: ?[]const u8 = null,
 /// the items it follows (its predecessors), by ID
@@ -34,6 +39,14 @@ pub fn hasLength(self: *const Work) bool {
     return self.duration != null or (self.start != null and self.finish != null);
 }
 
+/// Its last day: as written, else from its start and duration; null when
+/// neither is known
+pub fn lastDay(self: *const Work, calendar: *const Calendar) ?day.Day {
+    if (self.finish) |f| return f;
+    const start = self.start orelse return null;
+    return calendar.finishOf(start, self.duration orelse return null);
+}
+
 /// The work items of `graph`, in its order, with their planning links
 pub fn collect(arena: std.mem.Allocator, schema: *const Schema, graph: *const Graph) std.mem.Allocator.Error![]Work {
     var out: std.ArrayList(Work) = .empty;
@@ -45,7 +58,12 @@ pub fn collect(arena: std.mem.Allocator, schema: *const Schema, graph: *const Gr
         if (p.attribute(.start)) |a| w.start = if (item.attribute(a)) |v| day.parse(v) else null;
         if (p.attribute(.finish)) |a| w.finish = if (item.attribute(a)) |v| day.parse(v) else null;
         if (p.attribute(.duration)) |a| w.duration = if (item.attribute(a)) |v| std.fmt.parseInt(u32, v, 10) catch null else null;
+        if (p.attribute(.estimate)) |a| w.estimate = if (item.attribute(a)) |v| std.fmt.parseInt(u32, v, 10) catch null else null;
         if (p.attribute(.lag)) |a| w.lag = if (item.attribute(a)) |v| std.fmt.parseInt(u32, v, 10) catch 0 else 0;
+        if (p.attribute(.assignees)) |a| for (item.attributes) |attr| {
+            if (!std.mem.eql(u8, attr.name, a)) continue;
+            w.assignees = if (attr.values.len > 0) attr.values else try arena.dupe([]const u8, &.{attr.value});
+        };
         if (p.attribute(.mode)) |a| w.written_mode = item.attribute(a);
         try out.append(arena, w);
     }

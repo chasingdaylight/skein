@@ -42,13 +42,14 @@ pub const usage =
     \\  result ID pass|fail|skip
     \\                    Record a result a person obtained, such as a procedure
     \\                    carried out by hand, in the results the project keeps
+    \\  load              Each person's work, week by week, beside the time they have
     \\  lsp               Serve editors as a language server, on standard input and output
     \\  help              Show this text
     \\  version           Show skein's version
     \\
     \\Options:
     \\  --root DIR        The project, or a directory inside it (default: here)
-    \\  --json            trace, coverage, diff, impact: as JSON
+    \\  --json            trace, coverage, diff, impact, load: as JSON
     \\  --markdown        coverage, diff, impact: as Markdown, for a pull request
     \\  --profile NAME    coverage, export, render: only the items of this profile
     \\  --current         check, trace, coverage, export, render: read the other
@@ -99,6 +100,7 @@ pub const Command = union(enum) {
     check: Check,
     trace: Trace,
     coverage: Coverage,
+    load: Load,
     /// `diff`, and `impact`
     diff: Diff,
     /// `export`
@@ -188,6 +190,11 @@ pub const Coverage = struct {
     markdown: bool = false,
     /// results files besides the project's own
     results: []const []const u8 = &.{},
+};
+
+pub const Load = struct {
+    common: Common = .{},
+    json: bool = false,
 };
 
 pub const Diff = struct {
@@ -430,6 +437,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
         return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.values("--results") } };
+    }
+    if (eql(name, "load")) {
+        if (try p.allow(&.{ "--root", "--json" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "load takes no items" };
+        return .{ .load = .{ .common = common, .json = p.flag("--json") } };
     }
     if (eql(name, "diff") or eql(name, "impact")) {
         const impact = eql(name, "impact");
