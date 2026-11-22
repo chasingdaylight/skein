@@ -13,6 +13,7 @@ const Workspace = @import("Workspace.zig");
 const files = @import("../files.zig");
 const markdown = @import("../render/markdown.zig");
 const order = @import("../render/order.zig");
+const plan = @import("../render/plan.zig");
 const site = @import("../render/site.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Outcome {
@@ -56,6 +57,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
         .results = if (results.all.len > 0) .{ .results = &results, .index = &idx } else null,
         .issues = if (known) |*k| k else null,
         .control = &control,
+        .planning = try plan.load(io, arena, &ws),
     };
 
     var out = Io.Dir.cwd().createDirPathOpen(io, options.out, .{}) catch |e| return .{

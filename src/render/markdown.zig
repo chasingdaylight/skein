@@ -14,6 +14,7 @@ const Control = @import("control.zig");
 const Project = @import("../Project.zig");
 const Schema = @import("../schema/Schema.zig");
 const coverage = @import("../graph/coverage.zig");
+const gantt = @import("gantt.zig");
 const generated = @import("generated.zig");
 const html = @import("../html/inline.zig");
 const markdown = @import("../markdown.zig");
@@ -40,6 +41,8 @@ pub const Context = struct {
     issues: ?*const forge.Known = null,
     /// document control, from git; null without it
     control: ?*const Control = null,
+    /// the schedule, for Gantt charts; null without work items
+    planning: ?*const gantt.Plan = null,
 };
 
 /// The document `file`, whose text is `source`, rendered.
@@ -178,6 +181,7 @@ const Page = struct {
                 .href_ctx = self,
                 .results = self.ctx.results,
                 .control = self.ctx.control,
+                .planning = self.ctx.planning,
             }, request);
             try self.generated.put(self.ctx.arena, b.first_line, .{ .last_line = b.last_line, .text = std.mem.trimEnd(u8, text, "\n") });
         }

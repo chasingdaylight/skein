@@ -193,6 +193,7 @@ list term
 | `matrix LINKTYPE [conditions]` | Each item the link type may point to, with the items that link to it; the gaps marked **none**. A traceability matrix. With `columns=text,classes` and `from.columns=status,evidence`, those columns of the item and of each item linking to it, one row per linking item: a compliance matrix. |
 | `coverage [profile=P]` | The coverage table, with links to the items that are not covered. |
 | `documents` | The register of documents: each document that gives its identifier, with its title, revision and last change. |
+| `gantt [TYPE...] [conditions] [by=parent\|assignee] [baseline=NAME]` | The schedule as a Gantt chart (a Mermaid diagram): bars, milestones and the critical path, by parent or by assignee, with a baseline's bars under today's to show slippage; and a table of the dates, slack and predecessors. See `skein schedule`. |
 
 ### Document control
 

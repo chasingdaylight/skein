@@ -145,6 +145,9 @@ A fenced code block of the language `skein` in a document shall be a request for
 %req[render.generated.coverage]
 `coverage [profile=P]` shall give what `skein coverage` counts, as a table, with links to the items that are not covered.
 
+%req[render.gantt]
+`gantt [TYPE...] [conditions] [by=parent|assignee] [baseline=NAME]` shall give the schedule of the work items that pass the conditions as a Gantt chart, a `mermaid` block drawn as `render.mermaid` says, as `skein schedule` computes it: a bar for each scheduled item, marked critical on the critical path, a milestone for work of no duration, the days that are not working days left out, in a section for each item with parts (with its parts) or, `by=assignee`, for each assignee; with `baseline=NAME`, each item's bar in the schedule stored at that baseline (a tag) drawn under its bar now, to show slippage. Under the chart, a table of each item with its start, finish, slack and predecessors, linked, and the items that cannot be scheduled. (Design, section 10.3.)
+
 %req[control.maturity]
 A controlled document's front matter may name the item it is (`item`) and the maturity it is at (`maturity`). With `[maturity]` in the configuration, giving the maturities lowest first (`order`) and the milestone the project is at (`milestone`), `skein check` shall warn of a document below the value its item has for the attribute the milestone names, of a document that gives no maturity or one outside the order, and of one that names no item there is; a value outside the order (complete, per schedule) expects nothing.
 
