@@ -1,0 +1,3 @@
+description = "The tasks of the standard assure a requirement of NPR 7150.2D (Table 1)"
+from = ["satask"]
+to = ["swe"]

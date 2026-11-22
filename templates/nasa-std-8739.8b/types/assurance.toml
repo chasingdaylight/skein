@@ -1,0 +1,17 @@
+description = "A row of the software assurance requirements mapping matrix (handbook topic 8.51): how the assurance organization carries out tasks of the standard, or the IV&V Provider a requirement of section 4.4.2"
+# fully compliant, tailored, partially compliant, not compliant, not applicable
+categories = ["FC", "T", "PC", "NC", "NA"]
+
+# the software component the row is for
+[attributes.component]
+
+# where the products or the objective evidence are
+[attributes.evidence]
+normative = false
+
+# why, for a row that is PC, NC or NA, and its risk
+[attributes.rationale]
+normative = false
+
+[attributes.risk]
+normative = false

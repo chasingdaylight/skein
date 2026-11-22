@@ -29,11 +29,11 @@ test "init with a template starts a project that checks clean" {
     defer tmp.cleanup();
     const root = try rootOf(a, tmp);
 
-    const started = try init_command.run(testing.io, a, .{ .root = root, .template = "langspec" });
+    const started = try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"langspec"} });
     try testing.expectEqual(.ok, started.status);
     try expectContains(started.text, "from the template langspec, with 4 documents");
     const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
-    try expectContains(config, "template = \"langspec\"");
+    try expectContains(config, "template = [\"langspec\"]");
     // the template's own config.toml, after the configuration init writes
     try expectContains(config, "path = \"docs\"\n\n# Conformance tests cite the rules");
     for ([_][]const u8{ "charter", "introduction", "glossary", "coverage" }) |doc| {
@@ -56,7 +56,7 @@ test "init without a template, and with one skein does not have" {
     defer tmp.cleanup();
     const root = try rootOf(a, tmp);
 
-    const unknown = try init_command.run(testing.io, a, .{ .root = root, .template = "nope" });
+    const unknown = try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"nope"} });
     try testing.expectEqual(.misuse, unknown.status);
     try testing.expectError(error.FileNotFound, tmp.dir.access(testing.io, ".skein", .{}));
 
@@ -76,7 +76,7 @@ test "a project under NPR 7150.2D: its class chooses the requirements and the tr
     defer tmp.cleanup();
     const root = try rootOf(a, tmp);
 
-    const started = try init_command.run(testing.io, a, .{ .root = root, .template = "npr7150.2d" });
+    const started = try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7150.2d"} });
     try testing.expectEqual(.ok, started.status);
     // the standard, read-only, where the template's configuration says
     _ = try tmp.dir.readFileAlloc(testing.io, "standards/npr7150.2d/chapter-3.md", a, .limited(1 << 20));
@@ -105,6 +105,30 @@ test "a project under NPR 7150.2D: its class chooses the requirements and the tr
     try testing.expect(std.mem.find(u8, class_d, "satisfies links") == null);
 }
 
+// req: templates.nasa-std-8739.8b
+test "software assurance under NASA-STD-8739.8B, with the NPR 7150.2D template" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    const started = try init_command.run(testing.io, a, .{ .root = root, .templates = &.{ "npr7150.2d", "nasa-std-8739.8b" } });
+    try expectContains(started.text, "from the templates npr7150.2d and nasa-std-8739.8b");
+    _ = try tmp.dir.readFileAlloc(testing.io, "standards/nasa-std-8739.8b/tasks.md", a, .limited(1 << 20));
+    _ = try tmp.dir.readFileAlloc(testing.io, "docs/sa-rmm.md", a, .limited(1 << 20));
+    // the class, given once for each template
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    const given = try std.mem.replaceOwned(u8, a, config, "# \"class\" = \"\"", "\"class\" = \"C\"");
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = given });
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    const coverage = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text;
+    // a group of tasks for each requirement of the class, and no IV&V without the option
+    try expectContains(coverage, "performs links to satask items: 0 of 88");
+    try testing.expect(std.mem.find(u8, coverage, "ivv-performs") == null);
+}
+
 // req: templates.iso29148
 test "a project with requirements as ISO/IEC/IEEE 29148 describes them" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);
@@ -114,7 +138,7 @@ test "a project with requirements as ISO/IEC/IEEE 29148 describes them" {
     defer tmp.cleanup();
     const root = try rootOf(a, tmp);
 
-    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .template = "iso29148" })).status);
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"iso29148"} })).status);
     try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems (5 items of 5 types, 4 link types");
     const coverage = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text;
     // the examples trace from business needs down to a verification
@@ -130,7 +154,7 @@ test "eject writes the template's files into .skein/ and keeps the project's own
     var tmp = testing.tmpDir(.{});
     defer tmp.cleanup();
     const root = try rootOf(a, tmp);
-    _ = try init_command.run(testing.io, a, .{ .root = root, .template = "langspec" });
+    _ = try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"langspec"} });
     try tmp.dir.createDirPath(testing.io, ".skein/types");
     try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/types/rule.toml", .data = "description = \"Ours\"\ncategories = [\"syntax\"]\n" });
 

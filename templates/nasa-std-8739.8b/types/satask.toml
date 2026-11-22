@@ -1,0 +1,12 @@
+description = "The software assurance and software safety tasks of NASA-STD-8739.8B (Table 1) for a requirement of NPR 7150.2D, each task a part; read-only, from skein's template"
+id = "numbered"
+prefix = "SA"
+
+# those of the requirement it assures (NPR 7150.2D, Appendix C)
+[attributes.classes]
+list = true
+values = ["A", "B", "C", "D", "E", "F"]
+
+[attributes.applies]
+values = ["always", "safety-critical"]
+normative = false
