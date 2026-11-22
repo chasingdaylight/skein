@@ -10,6 +10,10 @@
 //!
 //! An ID that starts with a dot is a part's name within its whole:
 //! `%rule[.as]` inside `lex.keywords` is `lex.keywords.as`.
+//!
+//! A writer may wrap the marker in bold, `**%rule[lex.comment]** Text.`, to
+//! make it stand out where skein does not render it (emanspeaks,
+//! 2026-11-22, #163); the `**` on both sides are then part of the marker.
 
 const std = @import("std");
 
@@ -30,8 +34,12 @@ pub const Field = struct {
     values: []const []const u8,
 };
 
-/// Whether `line` starts as a marker does: `%`, a name, `[`
+const bold = "**";
+
+/// Whether `line` starts as a marker does: `%`, a name, `[`, after `**`
+/// when the marker is wrapped in bold
 pub fn startsOne(line: []const u8) bool {
+    if (std.mem.startsWith(u8, line, bold ++ "%")) return startsOne(line[bold.len..]);
     if (line.len < 3 or line[0] != '%' or !std.ascii.isLower(line[1])) return false;
     var i: usize = 1;
     while (i < line.len and (std.ascii.isLower(line[i]) or std.ascii.isDigit(line[i]) or line[i] == '-' or line[i] == '_')) i += 1;
@@ -50,16 +58,38 @@ pub fn startIn(line: []const u8) ?usize {
 }
 
 /// How much of `line`, which starts a marker, the marker takes: up to its
-/// closing bracket, or all of it when it has none
+/// closing bracket, or all of it when it has none. A line that starts
+/// with `**` takes the `**` after the bracket too.
 pub fn extent(line: []const u8) usize {
+    if (std.mem.startsWith(u8, line, bold ++ "%")) return bold.len + extent(line[bold.len..]) + closingBold(line[bold.len..]);
     const open = std.mem.findScalar(u8, line, '[') orelse return line.len;
     return if (closingBracket(line, open)) |close| close + 1 else line.len;
+}
+
+/// Whether the marker that starts at `start` of `line` (its `%`) is wrapped
+/// in bold: `**` before it and right after its closing bracket
+pub fn isBold(line: []const u8, start: usize) bool {
+    return start >= bold.len and std.mem.eql(u8, line[start - bold.len .. start], bold) and closingBold(line[start..]) > 0;
+}
+
+/// The length of the `**` that closes the bold around the marker `line`
+/// starts with; 0 when there is none
+fn closingBold(line: []const u8) usize {
+    const end = extent(line);
+    return if (end > 0 and line[end - 1] == ']' and std.mem.startsWith(u8, line[end..], bold)) bold.len else 0;
 }
 
 /// The marker that `line` starts with; null when it starts with none.
 /// A marker with a mistake in it is still a marker, with its `problem`.
 pub fn parse(arena: std.mem.Allocator, line: []const u8) std.mem.Allocator.Error!?Marker {
     if (!startsOne(line)) return null;
+    if (std.mem.startsWith(u8, line, bold)) {
+        var inner = (try parse(arena, line[bold.len..])).?;
+        const closing = closingBold(line[bold.len..]);
+        if (closing == 0 and inner.problem == null) inner.problem = "the '**' before the marker is to be closed right after its ']'";
+        inner.len += bold.len + closing;
+        return inner;
+    }
     const open = std.mem.findScalar(u8, line, '[').?;
     var out: Marker = .{ .type_name = line[1..open], .id = "", .len = line.len };
     const close = closingBracket(line, open) orelse {
@@ -189,6 +219,29 @@ test "a part's name starts with a dot" {
     const m = (try parse(arena.allocator(), "%rule[.as final] `as`")).?;
     try testing.expectEqualStrings(".as", m.id);
     try testing.expectEqual(null, m.problem);
+}
+
+// req: items.marker.bold
+test "a marker wrapped in bold" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const line = "**%rule[lex.comment legality]** A comment.";
+    try testing.expect(startsOne(line));
+    const m = (try parse(arena.allocator(), line)).?;
+    try testing.expectEqualStrings("lex.comment", m.id);
+    try testing.expectEqualStrings("legality", m.words[0]);
+    try testing.expectEqual(null, m.problem);
+    try testing.expectEqualStrings(" A comment.", line[m.len..]);
+    try testing.expectEqual(m.len, extent(line));
+    // from its `%`, as the commands that edit a marker see it
+    try testing.expectEqual(2, startIn(line).?);
+    try testing.expectEqualStrings("%rule[lex.comment legality]", line[2 .. 2 + extent(line[2..])]);
+    try testing.expect(isBold(line, 2));
+    try testing.expect(!isBold("%rule[a] b", 0));
+    try testing.expect(!isBold("- **%rule[a] b**", 4));
+
+    const open = (try parse(arena.allocator(), "**%rule[lex.comment] A comment.**")).?;
+    try testing.expect(open.problem != null);
 }
 
 test "lines that do not start a marker" {

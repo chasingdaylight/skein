@@ -218,9 +218,11 @@ const Page = struct {
             var at: usize = 0;
             if (self.markers.get(number)) |item| {
                 if (Marker.startIn(line)) |start| {
-                    try out.appendSlice(a, line[0..start]);
+                    // the label is bold already: the writer's `**` around the marker go
+                    const wrapped = Marker.isBold(line, start);
+                    try out.appendSlice(a, line[0..if (wrapped) start - 2 else start]);
                     try self.label(&out, item);
-                    at = start + Marker.extent(line[start..]);
+                    at = start + Marker.extent(line[start..]) + @as(usize, if (wrapped) 2 else 0);
                 }
             }
             while (at < line.len) {
@@ -367,6 +369,7 @@ pub fn relative(arena: std.mem.Allocator, from: []const u8, to: []const u8) Erro
 
 test {
     _ = @import("_test/markdown.zig");
+    _ = @import("_test/bold_markers.zig");
 }
 
 test relative {
