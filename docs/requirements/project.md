@@ -13,6 +13,9 @@ A project is a directory that contains a `.skein/` directory. A command that wor
 %req[project.paths]
 A path in the configuration shall be relative to the project root, written with forward slashes, and shall not lead outside the project. A path that does is reported.
 
+%req[standards.read-only]
+A source with `read_only = true` shall be read and checked as any other, and `skein move`, `skein link` and `skein new` shall refuse, changing nothing, to write to a file of it; a rename that would change such a file is refused whole. This is for an external standard, which is imported again, not edited.
+
 %req[project.files-by-name]
 Each item type, link type and profile shall be declared by one TOML file, in `.skein/types/`, `.skein/links/` and `.skein/profiles/`, and takes its name from the file name. A name is lowercase letters, digits, `-` and `_`, starting with a letter.
 
