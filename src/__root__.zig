@@ -24,6 +24,8 @@ test {
     _ = stdio;
     _ = toml;
     _ = @import("graph/walk.zig");
+    _ = @import("planning/day.zig");
+    _ = @import("planning/_test/work.zig");
     _ = @import("graph/coverage.zig");
     _ = @import("commands/diff.zig");
     _ = @import("commands/export.zig");

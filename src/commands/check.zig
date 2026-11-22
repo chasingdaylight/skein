@@ -11,6 +11,7 @@ const Workspace = @import("Workspace.zig");
 const forge_checks = @import("../forge/checks.zig");
 const maturity = @import("../graph/maturity.zig");
 const network_checks = @import("../network/checks.zig");
+const planning_checks = @import("../planning/checks.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options)) {
@@ -65,6 +66,7 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     try maturity.check(io, arena, ws.root, &ws.project, &ws.graph, &ws.report);
+    try planning_checks.run(arena, &ws.project.schema, &ws.graph, &ws.report);
     // the results the project keeps: a result that belongs to no item is to be looked at
     const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, &.{}, &ws.report);
     const idx = try results.index(arena, &ws.graph, &ws.citations);

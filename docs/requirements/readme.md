@@ -1,6 +1,6 @@
 # The requirements of skein
 
-What skein is required to do, written in skein's own format: each paragraph with a `%req[...]` marker is a requirement, and the rest is narrative. skein's tests cite the requirements they check (`// req:` and the IDs, in the test files under `src/`), so that
+What skein is required to do, written in skein's own format: each paragraph with a `%req[...]` marker is a requirement, and the rest is narrative. skein's tests cite the requirements they check (`// req:` and the IDs, in the test files under `src/` and those of the VS Code extension), so that
 
 ```text
 skein check
@@ -20,7 +20,8 @@ A requirement that names no status is implemented. One marked `planned` describe
 | [checking](checking.md) | What `skein check` reports. |
 | [reviewing](reviewing.md) | Fingerprints, reviewed links, approvals. |
 | [views](views.md) | `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `baseline`. |
-| [editing](editing.md) | `move`, `new`, `link`, and the language server `lsp`. |
+| [editing](editing.md) | `move`, `new`, `link`, the language server `lsp`, and the VS Code extension. |
+| [planning](planning.md) | Work items and their schedule. |
 | [repositories](repositories.md) | Other repositories, `pin`, and the state of the network. |
 | [results](results.md) | Test results, and what they say of the items. |
 | [forge](forge.md) | Issues and pull requests on the forge. |
