@@ -15,6 +15,7 @@
 //!   that are not covered
 //! - `documents`: the register of controlled documents
 //! - `gantt [...]`: the schedule as a Gantt chart (gantt.zig)
+//! - `burndown MILESTONE`, `burnup MILESTONE`: a milestone's charts (burnchart.zig)
 
 const std = @import("std");
 
@@ -27,6 +28,7 @@ const Results = @import("../results/Results.zig");
 const summary = @import("../results/summary.zig");
 const matrix_columns = @import("matrix_columns.zig");
 const Control = @import("control.zig");
+const burnchart = @import("burnchart.zig");
 const gantt = @import("gantt.zig");
 const walk = @import("../graph/walk.zig");
 
@@ -74,7 +76,7 @@ pub fn render(ctx: Context, text: []const u8) Error![]const u8 {
     var words: std.ArrayList([]const u8) = .empty;
     var it = std.mem.tokenizeAny(u8, text, " \t\r\n");
     while (it.next()) |w| try words.append(a, w);
-    if (words.items.len == 0) return problem(a, "the request is empty: list, matrix, coverage, documents or gantt", .{});
+    if (words.items.len == 0) return problem(a, "the request is empty: list, matrix, coverage, documents, gantt, burndown or burnup", .{});
     const what = words.items[0];
     const args = words.items[1..];
     if (std.mem.eql(u8, what, "list")) return list(ctx, args);
@@ -82,7 +84,9 @@ pub fn render(ctx: Context, text: []const u8) Error![]const u8 {
     if (std.mem.eql(u8, what, "coverage")) return coverageTable(ctx, args);
     if (std.mem.eql(u8, what, "documents")) return register(ctx, args);
     if (std.mem.eql(u8, what, "gantt")) return gantt.render(ctx, args);
-    return problem(a, "'{s}' is no request skein knows: list, matrix, coverage, documents or gantt", .{what});
+    if (std.mem.eql(u8, what, "burndown")) return burnchart.render(ctx, .burndown, args);
+    if (std.mem.eql(u8, what, "burnup")) return burnchart.render(ctx, .burnup, args);
+    return problem(a, "'{s}' is no request skein knows: list, matrix, coverage, documents, gantt, burndown or burnup", .{what});
 }
 
 fn problem(a: std.mem.Allocator, comptime fmt: []const u8, args: anytype) Error![]const u8 {

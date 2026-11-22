@@ -21,6 +21,8 @@ estimate: ?u32 = null,
 lag: u32 = 0,
 /// handles of the people who do it
 assignees: []const []const u8 = &.{},
+/// what it belongs to: the value of its `milestone` role
+milestone: ?[]const u8 = null,
 /// as written; null when the item names none (`mode`)
 written_mode: ?[]const u8 = null,
 /// the items it follows (its predecessors), by ID
@@ -65,6 +67,7 @@ pub fn collect(arena: std.mem.Allocator, schema: *const Schema, graph: *const Gr
             w.assignees = if (attr.values.len > 0) attr.values else try arena.dupe([]const u8, &.{attr.value});
         };
         if (p.attribute(.mode)) |a| w.written_mode = item.attribute(a);
+        if (p.attribute(.milestone)) |a| w.milestone = item.attribute(a);
         try out.append(arena, w);
     }
     // links: `a precedes b` makes a a predecessor of b; `a parent b` makes b a parent of a

@@ -13,6 +13,7 @@
 const std = @import("std");
 
 const Calendar = @import("../planning/Calendar.zig");
+const burn_points = @import("../planning/burn.zig");
 const day = @import("../planning/day.zig");
 const generated = @import("generated.zig");
 const schedule = @import("../planning/schedule.zig");
@@ -27,7 +28,12 @@ pub const Plan = struct {
     /// The bars of the schedule stored at a baseline; null when the baseline
     /// or its schedule is not there
     baseline: *const fn (ctx: *const anyopaque, name: []const u8) Error!?[]const Bar,
+    /// The days of a milestone's burndown and burnup, read from git
+    burn: *const fn (ctx: *const anyopaque, milestone: []const u8, first: day.Day, last: day.Day, count: burn_points.Count) Error![]const burn_points.Point,
+    /// what `baseline` and `burn` draw on
     baseline_ctx: *const anyopaque,
+    /// the day it is, for what is drawn up to today
+    today: day.Day,
 };
 
 pub const Bar = struct { id: []const u8, start: day.Day, finish: day.Day };

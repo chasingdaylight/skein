@@ -126,7 +126,10 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
         out.example = try Example.read(e);
         if (out.categories.len > 0 and !names.contains(out.categories, out.example.?.rejects)) try e.complain("rejects", "'{s}' is not one of the categories", .{out.example.?.rejects});
     }
-    if (try r.child("planning")) |p| out.planning = try Planning.read(p, out.attributes);
+    if (try r.child("planning")) |p| {
+        out.planning = try Planning.read(p, out.attributes);
+        for (out.planning.?.done) |d| if (!names.contains(out.statuses, d)) try p.complain("done", "'{s}' is not one of the statuses", .{d});
+    }
     return out;
 }
 

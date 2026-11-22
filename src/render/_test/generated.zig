@@ -115,7 +115,7 @@ test "a document's requests are replaced by the pages they ask for" {
         \\
         \\## Wrong
         \\
-        \\> **skein:** 'table' is no request skein knows: list, matrix, coverage, documents or gantt
+        \\> **skein:** 'table' is no request skein knows: list, matrix, coverage, documents, gantt, burndown or burnup
         \\
         \\```zig
         \\list rule

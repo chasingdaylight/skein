@@ -20,6 +20,20 @@ const Planning = @This();
 
 /// The attribute of each role; null for a role the type does not have
 roles: std.EnumArray(Role, ?[]const u8) = .initFill(null),
+/// the statuses of finished work (`done = [...]`); empty for the type's
+/// last status before its tombstone (`doneStatuses`)
+done: []const []const u8 = &.{},
+
+/// The statuses that count work as done, for burndown and burnup charts
+pub fn doneStatuses(self: *const Planning, statuses: []const []const u8, tombstone: ?[]const u8) []const []const u8 {
+    if (self.done.len > 0) return self.done;
+    var i = statuses.len;
+    while (i > 0) : (i -= 1) {
+        const s = statuses[i - 1];
+        if (tombstone == null or !std.mem.eql(u8, s, tombstone.?)) return statuses[i - 1 .. i];
+    }
+    return &.{};
+}
 
 pub const Role = enum {
     start,
@@ -70,7 +84,8 @@ pub fn attribute(self: *const Planning, role: Role) ?[]const u8 {
 pub fn read(r: Reader, attributes: []const Attribute) Reader.Error!Planning {
     var out: Planning = .{};
     const fields = @typeInfo(Role).@"enum".field_names;
-    try r.known(fields);
+    try r.known(fields ++ .{"done"});
+    out.done = try r.strings("done");
     inline for (fields) |name| {
         const role = @field(Role, name);
         if (try r.string(name)) |attr_name| {
