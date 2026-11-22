@@ -34,6 +34,10 @@ test "a controlled document, its change record, and the register of documents" {
     var tmp = testing.tmpDir(.{});
     defer tmp.cleanup();
     _ = try git_program.output(testing.io, a, tmp.dir, &.{ "init", "--quiet" });
+    // baselines are annotated tags, which need a tagger where git has no identity (CI)
+    _ = try git_program.output(testing.io, a, tmp.dir, &.{ "config", "user.name", "A. Author" });
+    _ = try git_program.output(testing.io, a, tmp.dir, &.{ "config", "user.email", "a@example.invalid" });
+    _ = try git_program.output(testing.io, a, tmp.dir, &.{ "config", "tag.gpgSign", "false" });
     try write(tmp.dir, ".skein/config.toml", "[[sources]]\npath = \"spec\"\n\n[[sources]]\npath = \"requirements\"\nkind = \"items\"\ntype = \"rule\"\n");
     try write(tmp.dir, ".skein/types/rule.toml", "");
     try write(tmp.dir, "spec/sdp.md", "+++\ndocument = \"EX-SDP\"\nrevision = \"A\"\n+++\n\n# Development plan\n\n%rule[sdp.one] One.\n");
@@ -41,10 +45,10 @@ test "a controlled document, its change record, and the register of documents" {
     try write(tmp.dir, "requirements/r.one.md", "+++\nid = \"r.one\"\n+++\n\nA rule in a file.\n");
     try commit(a, tmp.dir);
     const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
-    _ = try baseline_command.run(testing.io, a, .{ .common = .{ .root = root }, .name = "v1", .message = "First issue" });
+    try testing.expectEqual(.ok, (try baseline_command.run(testing.io, a, .{ .common = .{ .root = root }, .name = "v1", .message = "First issue" })).status);
     try write(tmp.dir, "spec/sdp.md", "+++\ndocument = \"EX-SDP\"\nrevision = \"B\"\n+++\n\n# Development plan\n\n%rule[sdp.one] One, changed.\n\n%rule[sdp.two] Two.\n");
     try commit(a, tmp.dir);
-    _ = try baseline_command.run(testing.io, a, .{ .common = .{ .root = root }, .name = "v2", .message = "Second issue" });
+    try testing.expectEqual(.ok, (try baseline_command.run(testing.io, a, .{ .common = .{ .root = root }, .name = "v2", .message = "Second issue" })).status);
 
     const out_dir = try std.Io.Dir.path.join(a, &.{ root, "out" });
     const done = try render_command.run(testing.io, a, .{ .common = .{ .root = root }, .out = out_dir });
