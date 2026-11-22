@@ -9,6 +9,7 @@ const cli = @import("../cli.zig");
 const Workspace = @import("Workspace.zig");
 const files = @import("../files.zig");
 const markdown = @import("../render/markdown.zig");
+const order = @import("../render/order.zig");
 const site = @import("../render/site.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Outcome {
@@ -56,7 +57,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
     var count: usize = 0;
     for (ws.project.sources) |source| {
         // a source that cannot be read was reported when the items were
-        const paths = files.list(io, arena, ws.root, source.path, &.{".md"}) catch continue;
+        const listed = files.list(io, arena, ws.root, source.path, &.{".md"}) catch continue;
+        const paths = if (source.order_by) |attribute| try order.sortFiles(arena, &ws.graph, listed, attribute) else listed;
         for (paths) |file| {
             if (source.kind == .items and !markdown.fileIncluded(ctx, file)) continue;
             const text = ws.root.readFileAlloc(io, file, arena, .limited(1 << 26)) catch continue;

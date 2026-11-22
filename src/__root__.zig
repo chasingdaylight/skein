@@ -37,6 +37,7 @@ test {
     _ = @import("render/markdown.zig");
     _ = @import("render/site.zig");
     _ = @import("render/generated.zig");
+    _ = @import("render/order.zig");
     _ = @import("render/_test/documents.zig");
     _ = @import("import/doorstop/convert.zig");
     _ = @import("commands/import_doorstop.zig");
