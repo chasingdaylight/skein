@@ -22,6 +22,7 @@ const Workspace = @import("../commands/Workspace.zig");
 const attribute = @import("../edit/attribute.zig");
 const day = @import("../planning/day.zig");
 const generated = @import("../render/generated.zig");
+const planning_forge = @import("../planning/forge.zig");
 const protocol = @import("protocol.zig");
 const schedule = @import("../planning/schedule.zig");
 const schedule_command = @import("../commands/schedule.zig");
@@ -58,7 +59,8 @@ pub fn scheduleOf(s: *Server, a: Allocator, id: json.Value) Server.Error!void {
     defer ws.close();
     if (!ws.items_read) return s.respond(a, id, null);
     const calendar = try calendarOf(s, a, &ws);
-    const works = try Work.collect(a, &ws.project.schema, &ws.graph);
+    // what the forge last said, from its cache: no request for each drag
+    const works = (try planning_forge.collect(s.io, a, ws.root, &ws.project, &ws.graph, true)).works;
     var out: std.ArrayList(Entry) = .empty;
     var statuses: std.ArrayList([]const u8) = .empty;
     for (try schedule.compute(a, works, calendar)) |*e| {
@@ -119,7 +121,7 @@ pub fn plan(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server
         if (!std.mem.eql(u8, on_disk, shown)) return s.respondError(a, id, protocol.error_codes.invalid_params, try a.print("skein: save {s} first: the change is made in the file", .{item.file}));
     }
     const calendar = try calendarOf(s, a, &ws);
-    const works = try Work.collect(a, &ws.project.schema, &ws.graph);
+    const works = (try planning_forge.collect(s.io, a, ws.root, &ws.project, &ws.graph, true)).works;
     const w = Work.find(works, item.id) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, try a.print("skein: {s} is removed", .{item.id}));
     var edit: Edit = .{ .s = s, .a = a, .ws = &ws, .item = item };
 

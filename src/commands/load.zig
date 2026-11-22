@@ -9,6 +9,7 @@ const Json = @import("../output/Json.zig");
 const Resources = @import("../planning/Resources.zig");
 const Workspace = @import("Workspace.zig");
 const day = @import("../planning/day.zig");
+const planning_forge = @import("../planning/forge.zig");
 const planning_load = @import("../planning/load.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Load) !Workspace.Outcome {
@@ -24,7 +25,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Load) !Workspace.Outco
         .status = .misuse,
     };
     if (ws.report.problems.items.len > before) return ws.problems();
-    const loads = try planning_load.compute(arena, &ws.project.schema, &ws.graph, &resources);
+    const works = (try planning_forge.collect(io, arena, ws.root, &ws.project, &ws.graph, options.common.offline)).works;
+    const loads = try planning_load.compute(arena, works, &resources);
 
     if (options.json) {
         var j: Json = .{ .arena = arena };

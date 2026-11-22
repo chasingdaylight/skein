@@ -73,8 +73,8 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     const resources = try Resources.load(io, arena, ws.root, &ws.report);
     const calendar: *const Calendar = if (resources) |*r| &r.calendar else &Calendar.every_day;
     try planning_checks.run(arena, &ws.project.schema, &ws.graph, calendar, &ws.report);
-    if (resources) |*r| try load.check(arena, &ws.project.schema, &ws.graph, r, &ws.report);
-    try schedule_checks.run(io, arena, ws.root, &ws.project, &ws.graph, calendar, &ws.report);
+    if (resources) |*r| try load.check(io, arena, ws.root, &ws.project, &ws.graph, r, ws.common.offline, &ws.report);
+    try schedule_checks.run(io, arena, ws.root, &ws.project, &ws.graph, calendar, ws.common.offline, &ws.report);
     // the results the project keeps: a result that belongs to no item is to be looked at
     const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, &.{}, &ws.report);
     const idx = try results.index(arena, &ws.graph, &ws.citations);

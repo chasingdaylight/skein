@@ -9,6 +9,7 @@ const testing = std.testing;
 const Graph = @import("../../graph/Graph.zig");
 const Project = @import("../../Project.zig");
 const Report = @import("../../Report.zig");
+const Work = @import("../Work.zig");
 const burn = @import("../burn.zig");
 const day = @import("../day.zig");
 const git = @import("../../git.zig");
@@ -64,7 +65,8 @@ test "a milestone's scope and work done, from each day's commit and from today's
     const graph = try Graph.load(testing.io, a, dir, &project, &ignored);
     const first = day.parse("2027-02-28").?;
     const today = day.parse("2027-03-05").?;
-    const points = try burn.compute(testing.io, a, dir, .{ .project = &project, .graph = &graph }, "v1", first, day.parse("2027-03-12").?, today, .items);
+    const works = try Work.collect(a, &project.schema, &graph);
+    const points = try burn.compute(testing.io, a, dir, .{ .works = works }, "v1", first, day.parse("2027-03-12").?, today, .items);
     // the day before the first commit, then each day to today
     try testing.expectEqual(6, points.len);
     const want = [_][2]f64{ .{ 0, 0 }, .{ 3, 0 }, .{ 3, 0 }, .{ 4, 1 }, .{ 4, 1 }, .{ 4, 2 } };
@@ -73,7 +75,7 @@ test "a milestone's scope and work done, from each day's commit and from today's
         try testing.expectEqual(w[1], p.done);
     }
     // by weight: the durations
-    const weighed = try burn.compute(testing.io, a, dir, .{ .project = &project, .graph = &graph }, "v1", today, today, today, .weight);
+    const weighed = try burn.compute(testing.io, a, dir, .{ .works = works }, "v1", today, today, today, .weight);
     try testing.expectEqual(10, weighed[0].total);
     try testing.expectEqual(5, weighed[0].done);
 }

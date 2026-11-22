@@ -17,6 +17,11 @@ pub const Issue = struct {
     open: bool,
     /// whether it is a pull request
     pull: bool,
+    /// the logins it is assigned to
+    assignees: []const []const u8 = &.{},
+    /// the title of its milestone, and when it is due (`YYYY-MM-DD`)
+    milestone: ?[]const u8 = null,
+    due: ?[]const u8 = null,
 };
 
 pub const Answer = union(enum) {
@@ -106,7 +111,25 @@ pub fn parse(arena: std.mem.Allocator, json: []const u8) ?Issue {
     const title = v.object.get("title") orelse return null;
     const state = v.object.get("state") orelse return null;
     if (title != .string or state != .string) return null;
-    return .{ .title = title.string, .open = std.mem.eql(u8, state.string, "open"), .pull = v.object.get("pull_request") != null };
+    var out: Issue = .{ .title = title.string, .open = std.mem.eql(u8, state.string, "open"), .pull = v.object.get("pull_request") != null };
+    if (v.object.get("assignees")) |list| if (list == .array) {
+        var logins: std.ArrayList([]const u8) = .empty;
+        for (list.array.items) |a| {
+            const login = if (a == .object) a.object.get("login") else null;
+            if (login != null and login.? == .string) logins.append(arena, login.?.string) catch return null;
+        }
+        out.assignees = logins.items;
+    };
+    if (v.object.get("milestone")) |m| if (m == .object) {
+        if (m.object.get("title")) |t| if (t == .string) {
+            out.milestone = t.string;
+        };
+        // `2027-03-12T07:00:00Z`: its day
+        if (m.object.get("due_on")) |d| if (d == .string and d.string.len >= 10) {
+            out.due = d.string[0..10];
+        };
+    };
+    return out;
 }
 
 test "an issue as GitHub's API gives it" {
@@ -117,4 +140,17 @@ test "an issue as GitHub's API gives it" {
     try std.testing.expect(!issue.open);
     try std.testing.expect(issue.pull);
     try std.testing.expectEqual(null, parse(arena.allocator(), "not json"));
+}
+
+test "the planning fields of an issue: assignees, milestone and its due day" {
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
+    defer arena.deinit();
+    const issue = parse(arena.allocator(), "{\"title\": \"T\", \"state\": \"open\", \"assignees\": [{\"login\": \"ann\"}, {\"login\": \"bob\"}], \"milestone\": {\"title\": \"v1\", \"due_on\": \"2027-03-12T07:00:00Z\"}}").?;
+    try std.testing.expectEqual(2, issue.assignees.len);
+    try std.testing.expectEqualStrings("bob", issue.assignees[1]);
+    try std.testing.expectEqualStrings("v1", issue.milestone.?);
+    try std.testing.expectEqualStrings("2027-03-12", issue.due.?);
+    const bare = parse(arena.allocator(), "{\"title\": \"T\", \"state\": \"open\", \"milestone\": null}").?;
+    try std.testing.expectEqual(0, bare.assignees.len);
+    try std.testing.expectEqual(null, bare.milestone);
 }

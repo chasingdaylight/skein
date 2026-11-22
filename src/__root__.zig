@@ -30,6 +30,7 @@ test {
     _ = @import("planning/Calendar.zig");
     _ = @import("planning/_test/schedule.zig");
     _ = @import("planning/_test/burn.zig");
+    _ = @import("planning/_test/forge.zig");
     _ = @import("edit/attribute.zig");
     _ = @import("graph/coverage.zig");
     _ = @import("commands/diff.zig");

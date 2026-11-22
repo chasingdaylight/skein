@@ -74,6 +74,17 @@ pub fn learn(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Pro
     return learnOf(io, arena, root, project, try placesOf(arena, project, graph), offline);
 }
 
+/// What can be learned of the issues and pull requests `targets` name
+/// (`#12`); null when the project names no forge
+pub fn learnRefs(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, targets: []const []const u8, offline: bool) !?Known {
+    var places: std.ArrayList(Place) = .empty;
+    for (targets) |t| {
+        if (!Forge.isRef(t)) continue;
+        try places.append(arena, .{ .file = "", .line = 0, .column = 0, .what = "", .target = t });
+    }
+    return learnOf(io, arena, root, project, places.items, offline);
+}
+
 fn learnOf(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, places: []const Place, offline: bool) !?Known {
     var known: Known = .{ .forge = project.forge orelse return null };
     if (places.len == 0) return known;

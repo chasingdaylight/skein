@@ -154,7 +154,7 @@ pub fn roadmap(ctx: generated.Context, args: []const []const u8) Error![]const u
             };
         }
         try out.print(a, " | {s} | {s} | ", .{ if (first) |d| try a.dupe(u8, &day.format(d)) else "", if (last) |d| try a.dupe(u8, &day.format(d)) else "" });
-        const m = try burn.measure(a, ctx.project, ctx.graph, r.name, .items);
+        const m = burn.measure(plan.works, r.name, .items);
         const percent: u64 = if (m.total == 0) 0 else @intFromFloat(@round(m.done * 100 / m.total));
         try out.print(a, "{d} of {d} ({d}%) {s} | ", .{ @as(u64, @intFromFloat(m.done)), @as(u64, @intFromFloat(m.total)), percent, try bar(a, percent) });
         for (work.items, 0..) |e, i| {

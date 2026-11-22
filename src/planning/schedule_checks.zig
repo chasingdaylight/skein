@@ -12,15 +12,20 @@ const Graph = @import("../graph/Graph.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 const Work = @import("Work.zig");
+const planning_forge = @import("forge.zig");
 const day = @import("day.zig");
 const schedule = @import("schedule.zig");
 const stored = @import("stored.zig");
 
 const Error = std.mem.Allocator.Error;
 
-pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, calendar: *const Calendar, report: *Report) Error!void {
-    const works = try Work.collect(arena, &project.schema, graph);
+pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, calendar: *const Calendar, offline: bool, report: *Report) !void {
+    const collected = try planning_forge.collect(io, arena, root, project, graph, offline);
+    const works = collected.works;
     if (works.len == 0) return;
+    for (works) |w| if (w.conflict) |what| {
+        try report.warn(w.item.file, w.item.line, 1, "{s}: it writes {s} that its issue {s} on the forge says otherwise of; the forge's are the truth, so leave them out", .{ w.item.id, what, w.issue.? });
+    };
     const entries = try schedule.compute(arena, works, calendar);
     for (entries) |*e| {
         const item = e.work.item;
@@ -51,6 +56,11 @@ pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proje
             const due = milestone.finish orelse continue;
             if (finish > due) try report.add(item.file, item.line, 1, "{s}: it finishes on {s}, after its milestone {s} ({s})", .{ item.id, &day.format(finish), target.id, &day.format(due) });
         }
+    }
+    // what the forge says is part of the schedule: without it, the stored one is not compared
+    if (collected.unlearned > 0) {
+        try report.warn(stored.toml_file, 0, 0, "the stored schedule is not checked: {d} issue{s} of work items could not be learned from the forge ({s})", .{ collected.unlearned, if (collected.unlearned == 1) "" else "s", collected.why });
+        return;
     }
     try checkStored(io, arena, root, project, entries, report);
 }

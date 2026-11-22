@@ -39,7 +39,7 @@ for path in "$@"; do
   esac
 done
 git status --short
-bash /c/scratch/github-apps/app-git.sh chasingdaylight commit -q -m "$message" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+bash /c/scratch/github-apps/app-git.sh chasingdaylight commit -q -m "$message" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 bash /c/scratch/github-apps/app-git.sh chasingdaylight push -q -u origin "$branch" 2>&1 | tail -1 || true
 url=$(gh pr create --base dev --head "$branch" --title "$title" --body-file "$body" --label "$label" < /dev/null | tail -1)
 echo "$url"

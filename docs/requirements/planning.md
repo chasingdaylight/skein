@@ -33,6 +33,11 @@ The schedule shall give each scheduled item its slack, the working days it can f
 %req[planning.schedule-checks]
 `skein check` shall report a fixed item that starts before its predecessors let it, an item that runs outside its parent's dates (a parent that spans its children excepted), an item that finishes after its milestone (the work item its milestone names), and a stored schedule, in any of its formats, that is missing or not the one the work items give now.
 
+## Issues on the forge
+
+%req[planning.forge-fields]
+A work item whose type has the planning role `issue` and whose `issue` attribute names an issue (`#12`, `owner/repo#12`) of the forge in `[forge]` shall take from the forge what the forge holds, as the adapter declares it; GitHub's are the issue's assignees, its milestone with the day it is due, and whether it is closed (not a start, a duration or effort, which stay in the item). An assignee or milestone the item does not write is the issue's; assignees the item writes that differ from the issue's are a warning of `skein check`; a closed issue is finished work (burndown, roadmap); and work with nothing else to place it, whose issue's milestone is due, finishes on that day and starts as many working days before as it lasts (source `forge` in the stored schedule). The forge is asked unless `--offline`; what it last said is kept and used when it cannot be reached, and the stored schedule is not compared while an issue cannot be learned. (Design, section 10.4; emanspeaks, 2026-11-21, on #85.)
+
 ## Progress
 
 %req[planning.views]

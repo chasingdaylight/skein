@@ -21,7 +21,7 @@ Items, code and tests of another repository shall be citable by a qualified refe
 ## Planning
 
 %req[planning.forge planned]
-What a forge holds about an issue shall stay there and be read through the adapter; `.skein/` holds only what the forge lacks. A what-if plan is a branch whose deviations from the forge are kept as an overlay, and a full mirror is an option. (Design, section 10.4.)
+What a forge holds about an issue shall stay there and be read through the adapter; `.skein/` holds only what the forge lacks. A what-if plan is a branch whose deviations from the forge are kept as an overlay, and a full mirror is an option. (Design, section 10.4.) Built: GitHub's planning fields of issues (`planning.forge-fields`).
 
 ## Editing
 

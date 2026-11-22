@@ -51,13 +51,17 @@ pub const Role = enum {
     mode,
     /// days to wait after the predecessors finish
     lag,
+    /// the issue on the forge (`#12`) that is this work: its assignees, its
+    /// milestone and when that is due, and whether it is closed are the
+    /// forge's, read through the adapter
+    issue,
 
     /// The kind of attribute the role takes; null when any
     pub fn kind(role: Role) ?Attribute.Kind {
         return switch (role) {
             .start, .finish => .date,
             .duration, .estimate, .remaining, .lag => .integer,
-            .mode => .string,
+            .mode, .issue => .string,
             .assignees, .priority, .milestone => null,
         };
     }
