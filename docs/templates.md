@@ -56,7 +56,9 @@ safety-critical = false
 
 | `npr7123.1d` | Systems engineering under NPR 7123.1D: its 62 requirements (`SE-07`) with their rationale, and the entrance and success criteria of its 21 review tables (`G-6`, the PDR's, with `G-6.e1` and `G-6.s1`), read-only; the compliance matrix (`se-compliance`, FC, T or NA, linked by `complies-se`), the project's reviews (`REV-001`, with kind and date, `judged-by` a table) and the checks of their criteria (`review-check`, `fulfills`); skeletons of the matrix, the reviews and the systems engineering management plan. With `npr7150.2d` or alone. |
 
-More are planned: the life cycle of NPR 7120.5, and the software products' maturity at each review, to go with `npr7150.2d`.
+| `npr7120.5f` | Space flight program and project management under NPR 7120.5F (with NID 7120.148): its 51 requirements as Table C-1 lists them (`PM-2.2.5`, with owner, delegation and the approvers of tailoring), read-only; the compliance matrix (`pm-compliance`, `complies-pm`); the key decision points (`KDP-B`, with phase and date); skeletons of the matrix, the life cycle and the project plan. With `npr7123.1d`, whose reviews fall between its key decision points. |
+
+More are planned: the software products' maturity at each review, to go with `npr7150.2d`.
 
 ## NPR 7150.2D
 
