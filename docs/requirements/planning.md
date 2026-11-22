@@ -35,6 +35,9 @@ The schedule shall give each scheduled item its slack, the working days it can f
 
 ## Progress
 
+%req[planning.views]
+skein shall draw Gantt charts, burndown and burnup charts, boards and a roadmap, as static pages: `render.gantt`, `render.burn`, `render.board` and `render.roadmap` in `docs/requirements/views.md`. (Design, section 10.3.)
+
 %req[planning.burn]
 skein shall count, for a milestone (the work item a work item's `milestone` role names) and each day of a span, the work in it (its scope) and the work done: in items, or in weight (an item's estimate, else its duration). Work is done when its status is one of `[planning] done` of its type, by default the type's last status before its tombstone. Each past day is the project as committed at the end of that day on the first-parent history of the checkout; today is the files as they are; so work added to or taken out of the milestone is a change of scope, and nothing is recorded by hand. (Design, section 10.3; emanspeaks, 2026-11-21.)
 

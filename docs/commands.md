@@ -194,6 +194,8 @@ list term
 | `coverage [profile=P]` | The coverage table, with links to the items that are not covered. |
 | `documents` | The register of documents: each document that gives its identifier, with its title, revision and last change. |
 | `burndown MILESTONE [weight] [from=DATE] [to=DATE]`, `burnup ...` | A milestone's burndown (what remains, beside a guideline to none) or burnup (scope and done), day by day up to today, from the project as committed each day; `weight` counts estimates in place of items. Work is done in the statuses of `[planning] done`, by default the type's last status. |
+| `board [TYPE...] [conditions] [by=status\|assignee\|milestone]` | A board of the work items: a column for each status (or assignee, or milestone), a card for each item. |
+| `roadmap [MILESTONE...]` | The milestones by finish, each with its dates, how much of its work is done, and its work. |
 | `gantt [TYPE...] [conditions] [by=parent\|assignee] [baseline=NAME]` | The schedule as a Gantt chart (a Mermaid diagram): bars, milestones and the critical path, by parent or by assignee, with a baseline's bars under today's to show slippage; and a table of the dates, slack and predecessors. See `skein schedule`. |
 
 ### Document control
