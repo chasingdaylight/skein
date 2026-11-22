@@ -151,6 +151,9 @@ A controlled document's front matter may name the item it is (`item`) and the ma
 %req[render.control]
 A document that gives `document` (its identifier) and `revision` in TOML front matter shall be rendered with, under its first heading of level 1, a table of its identifier, its revision and its last change (the date, the author and the commit, linked on the forge when the project names one), and at its end a change record: each baseline in which its items changed, oldest first, with its date, the message given to `skein baseline`, and how many of its items were added, changed and removed since the baseline before. A rendered item file gives the date, author and commit of its last change in its front matter. A generated `documents` page lists the controlled documents with their identifier, title, revision and last change. All of it is read from git; outside a git repository there is none.
 
+%req[render.mermaid]
+A fenced code block of the language `mermaid` shall be drawn as a diagram in the pages of `--format html` and `--format document`, by mermaid.js built into skein (`vendor/mermaid`): a site has one copy of it, at its root, which only the pages with a diagram load; a standalone document with a diagram has it inside. Pages without a diagram are as they were. Markdown output leaves the block as it is, for a site generator to draw.
+
 %req[render.documents]
 `skein render --format document --out DIR` shall write each document and item file as one HTML file of its own, under its own path: the same page as in the site, without the navigation, with its images put in it as `data:` addresses, and with a style sheet for printing. Nothing else is written.
 

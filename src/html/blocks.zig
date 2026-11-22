@@ -173,6 +173,16 @@ pub const Document = struct {
                 if (last.len >= n and last[0] == fence and std.mem.trim(u8, last, &.{fence}).len == 0) body = body[0 .. body.len - 1];
             }
         }
+        // a diagram, which mermaid.js draws where the page loads it (render/layout.zig)
+        if (std.mem.eql(u8, language, "mermaid")) {
+            try self.out.appendSlice(a, "<pre class=\"mermaid\">");
+            for (body) |line| {
+                try inline_html.escape(a, &self.out, line);
+                try self.out.append(a, '\n');
+            }
+            try self.out.appendSlice(a, "</pre>\n");
+            return;
+        }
         if (language.len > 0) {
             try self.out.appendSlice(a, "<pre><code class=\"language-");
             try inline_html.attribute(a, &self.out, language);

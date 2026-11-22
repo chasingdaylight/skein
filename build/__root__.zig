@@ -22,6 +22,8 @@ pub fn build(b: *std.Build) void {
     });
     mod.addOptions("build_options", options);
     mod.addImport("templates", templates);
+    // code of other projects built into skein: mermaid.js
+    mod.addImport("vendor", b.createModule(.{ .root_source_file = b.path("vendor/__root__.zig") }));
 
     const exe = b.addExecutable(.{
         .name = "skein",

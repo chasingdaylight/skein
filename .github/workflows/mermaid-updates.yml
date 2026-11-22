@@ -1,0 +1,139 @@
+name: Mermaid updates
+
+# When npm has a release of mermaid newer than vendor/mermaid/VERSION, opens a
+# pull request into main that is a release of its own, as a dependency bot
+# would: from main, on a branch named mermaid-updates-<version>, mermaid.js
+# taken by tools/mermaid/fetch.sh (checked against the registry's integrity
+# hash) and the version of skein the next unreleased patch version.
+#
+# The pull request then goes the way of every release: CI runs for it (it is
+# a pull request into main); merging it makes the release, and CI merges main
+# back into dev and begins the next version there (ci.yml).
+#
+# An update pull request that a newer one replaces is closed and its branch
+# deleted. Nothing is done while the newest one is already open.
+#
+# The branch is pushed and the pull request opened as the Chasing Daylight
+# Agent app, because what the workflow's own token pushes or opens starts no
+# CI. Needs the secret CHASING_DAYLIGHT_AGENT_PRIVATE_KEY: a private key of
+# that app.
+
+on:
+  schedule:
+    - cron: '23 6 * * 1'   # Mondays 06:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # the branches of update pull requests: this, and mermaid's version
+  PREFIX: mermaid-updates-
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      # main, with its tags, to know which versions are released; without the
+      # workflow token's credentials, so the push goes as the app
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compare the version with npm's latest
+        id: compare
+        run: |
+          current=$(cat vendor/mermaid/VERSION)
+          latest=$(curl -sSf https://registry.npmjs.org/mermaid/latest | jq -er .version)
+          branch=$PREFIX$latest
+          echo "main has mermaid $current, npm's latest is $latest"
+          move=true
+          if [ "$latest" = "$current" ]; then
+            echo "mermaid is current"
+            move=false
+          elif [ -n "$(git ls-remote origin "refs/heads/$branch")" ]; then
+            echo "$branch is there already"
+            move=false
+          fi
+          { echo "current=$current"; echo "latest=$latest"; echo "branch=$branch"; echo "move=$move"; } >> "$GITHUB_OUTPUT"
+
+      - name: Is the app's key set?
+        if: steps.compare.outputs.move == 'true'
+        env:
+          KEY: ${{ secrets.CHASING_DAYLIGHT_AGENT_PRIVATE_KEY }}
+        run: '[ -n "$KEY" ] || { echo "::error::the secret CHASING_DAYLIGHT_AGENT_PRIVATE_KEY is not set"; exit 1; }'
+
+      - name: Get the app's token
+        if: steps.compare.outputs.move == 'true'
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: Iv23li8tDmXvCS2yIwN3
+          private-key: ${{ secrets.CHASING_DAYLIGHT_AGENT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Take the new mermaid, and the next version
+        if: steps.compare.outputs.move == 'true'
+        id: move
+        env:
+          LATEST: ${{ steps.compare.outputs.latest }}
+          BRANCH: ${{ steps.compare.outputs.branch }}
+          TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          got=$(bash tools/mermaid/fetch.sh "$LATEST")
+          [ "$got" = "$LATEST" ] || { echo "::error::fetched mermaid $got, not $LATEST"; exit 1; }
+
+          # the next patch version that has no release yet
+          tagged() { git rev-parse -q --verify "refs/tags/v$1" >/dev/null; }
+          version=$(sed -n -E 's/^    \.version = "([^"]+)",$/\1/p' build.zig.zon)
+          [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::cannot read a MAJOR.MINOR.PATCH version (got '$version')"; exit 1; }
+          next=$version
+          while tagged "$next"; do
+            IFS=. read -r ma mi pa <<< "$next"
+            next="$ma.$mi.$((pa + 1))"
+          done
+          # the version is the same in build.zig.zon and the extension's package.json (ci.yml checks it)
+          sed -i -E "s/^    \.version = \"[^\"]+\",$/    .version = \"$next\",/" build.zig.zon
+          sed -i -E "0,/^  \"version\": \"[^\"]+\"/ s//  \"version\": \"$next\"/" editors/vscode/package.json
+          grep -q "\.version = \"$next\"" build.zig.zon || { echo "::error::could not write the version"; exit 1; }
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+
+          git config user.name 'chasing-daylight-agent[bot]'
+          git config user.email '359672339+chasing-daylight-agent[bot]@users.noreply.github.com'
+          git switch --quiet -c "$BRANCH"
+          git add vendor/mermaid build.zig.zon editors/vscode/package.json
+          git commit --quiet -m "Take mermaid $LATEST: v$next"
+          git push "https://x-access-token:$TOKEN@github.com/$GITHUB_REPOSITORY.git" "$BRANCH"
+
+      - name: Open the pull request, and close the ones it replaces
+        if: steps.compare.outputs.move == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          CURRENT: ${{ steps.compare.outputs.current }}
+          LATEST: ${{ steps.compare.outputs.latest }}
+          BRANCH: ${{ steps.compare.outputs.branch }}
+          VERSION: ${{ steps.move.outputs.version }}
+        run: |
+          {
+            echo "A release of its own, opened by the **Mermaid updates** workflow: \`vendor/mermaid\` moves from mermaid $CURRENT to [$LATEST](https://github.com/mermaid-js/mermaid/releases/tag/mermaid%40$LATEST), checked against the npm registry's integrity hash, and the version becomes $VERSION."
+            echo
+            echo "CI runs for this pull request. Merging it publishes **v$VERSION**; CI then merges \`main\` back into \`dev\` and begins the next version there."
+          } > body.md
+          new=$(gh pr create --base main --head "$BRANCH" --title "Take mermaid $LATEST: v$VERSION" --label feature --body-file body.md)
+          echo "$new"
+          gh pr list --base main --state open --json number,headRefName \
+            --jq ".[] | select(.headRefName | startswith(\"$PREFIX\")) | select(.headRefName != \"$BRANCH\") | .number" |
+            while read -r old; do
+              gh pr close "$old" --delete-branch --comment "Replaced by $new, which carries a newer mermaid."
+            done

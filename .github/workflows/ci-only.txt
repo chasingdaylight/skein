@@ -13,3 +13,5 @@
 tools/npr7150/*
 # the PDF reader that took the text of standards into the templates: tested, not shipped
 tools/pdf/*
+# the script that takes mermaid.js into vendor/ (which is shipped)
+tools/mermaid/*

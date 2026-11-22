@@ -7,6 +7,32 @@ const std = @import("std");
 
 const inline_html = @import("../html/inline.zig");
 const markdown = @import("markdown.zig");
+const vendor = @import("vendor");
+
+/// The file a site's pages load mermaid.js from, at the site's root
+pub const mermaid_file = "mermaid.min.js";
+
+/// Whether `body` has a diagram for mermaid.js to draw
+pub fn hasDiagram(body: []const u8) bool {
+    return std.mem.find(u8, body, "<pre class=\"mermaid\">") != null;
+}
+
+/// Starts mermaid.js on a page, in the reader's light or dark
+const mermaid_start = "<script>mermaid.initialize({startOnLoad:true,theme:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'default'});</script>\n";
+
+/// mermaid.js inside a page: any `</script` in it is written so that it
+/// does not end the element
+fn inlineMermaid(arena: std.mem.Allocator, out: *std.ArrayList(u8)) Error!void {
+    try out.appendSlice(arena, "<script>\n");
+    var rest: []const u8 = vendor.mermaid;
+    while (std.mem.find(u8, rest, "</script")) |at| {
+        try out.appendSlice(arena, rest[0..at]);
+        try out.appendSlice(arena, "<\\/script");
+        rest = rest[at + "</script".len ..];
+    }
+    try out.appendSlice(arena, rest);
+    try out.appendSlice(arena, "\n</script>\n");
+}
 
 pub const Error = std.mem.Allocator.Error;
 
@@ -51,7 +77,13 @@ pub fn standalone(arena: std.mem.Allocator, title: []const u8, body: []const u8)
     try out.appendSlice(arena, style);
     try out.appendSlice(arena, "\n.page{display:block}main{padding:2rem 1.5rem}\n</style>\n</head>\n<body>\n<div class=\"page\">\n<main>\n<article>\n");
     try out.appendSlice(arena, body);
-    try out.appendSlice(arena, "</article>\n</main>\n</div>\n</body>\n</html>\n");
+    try out.appendSlice(arena, "</article>\n</main>\n</div>\n");
+    // a document stands alone: mermaid.js goes inside it, only when it has a diagram
+    if (hasDiagram(body)) {
+        try inlineMermaid(arena, &out);
+        try out.appendSlice(arena, mermaid_start);
+    }
+    try out.appendSlice(arena, "</body>\n</html>\n");
     return out.items;
 }
 
@@ -83,6 +115,14 @@ pub fn page(arena: std.mem.Allocator, project: []const u8, pages: []const Page, 
     }
     try out.appendSlice(arena, "</ul>\n</nav>\n<main>\n<article>\n");
     try out.appendSlice(arena, body);
-    try out.appendSlice(arena, "</article>\n<footer>Made with skein.</footer>\n</main>\n</div>\n</body>\n</html>\n");
+    try out.appendSlice(arena, "</article>\n<footer>Made with skein.</footer>\n</main>\n</div>\n");
+    // the site's copy of mermaid.js, only on the pages with a diagram
+    if (hasDiagram(body)) {
+        try out.appendSlice(arena, "<script src=\"");
+        try inline_html.attribute(arena, &out, try markdown.relative(arena, current.path, mermaid_file));
+        try out.appendSlice(arena, "\"></script>\n");
+        try out.appendSlice(arena, mermaid_start);
+    }
+    try out.appendSlice(arena, "</body>\n</html>\n");
     return out.items;
 }
