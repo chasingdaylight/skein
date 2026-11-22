@@ -100,4 +100,13 @@ Each reference, in the text of an item or in narrative text, shall be replaced b
 A rendered item file shall start with YAML front matter that gives the ID as the title, in place of the TOML front matter, followed by the category and status when the item has them, and the text. A file in a source of item files that is not an item is written unchanged.
 
 %req[render.markdown.output]
-`skein render` shall create `DIR` when it does not exist, shall not change any file of the project, and shall say how many files it wrote. Without `--out` it is refused. The only format is `markdown`.
+`skein render` shall create `DIR` when it does not exist, shall not change any file of the project, and shall say how many files or pages it wrote. Without `--out` it is refused. The formats are `markdown` (the default) and `html`.
+
+%req[render.site.pages]
+`skein render --format html --out DIR` shall write each document and item file of every source as an HTML page under its own path, with `.html` for `.md`: its markers and references rendered as `render.markdown` gives them, then as HTML, links to `.md` files made links to the pages, the first heading of level 1 (or the ID of an item file) as its title, and a navigation of all the pages. The images and other files of the sources (`.png`, `.svg`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.pdf`, `.css`) are copied beside them.
+
+%req[render.site.index]
+The site shall have a front page that lists its pages with their titles and files, and a page of all the items with, for each, its type, category and status, a link to where it is, the items that link to it with the link type, the items whose text refers to it, and how often narrative text mentions it.
+
+%req[render.site.relative]
+Every link and every reference to a file in the site shall be relative, and nothing shall be loaded from another address: the styles are in each page. So the site can be served under any address, or opened from disk.

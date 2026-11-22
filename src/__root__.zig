@@ -33,6 +33,7 @@ test {
     _ = @import("html/blocks.zig");
     _ = @import("commands/lsp.zig");
     _ = @import("render/markdown.zig");
+    _ = @import("render/site.zig");
     _ = @import("import/doorstop/convert.zig");
     _ = @import("commands/import_doorstop.zig");
     _ = @import("commands/import_csv.zig");

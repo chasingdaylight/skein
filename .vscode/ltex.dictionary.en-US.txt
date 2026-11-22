@@ -33,3 +33,10 @@ Dtarget
 OPENVSX
 OVSX
 ovsx
+Cascadia
+Consolas
+Menlo
+Roboto
+Segoe
+noframes
+webp

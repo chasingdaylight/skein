@@ -163,7 +163,13 @@ is written as
 - **Item files** get YAML front matter with the ID as the title, which site generators read, in place of the TOML front matter.
 - **Everything else** is written unchanged. Only Markdown files are written; images and other files stay where the generator already finds them.
 
-The project itself is not changed. `DIR` is created when needed and is best kept out of git. skein rendering HTML by itself is planned; this command is for projects that already publish with a generator.
+The project itself is not changed. `DIR` is created when needed and is best kept out of git.
+
+### `--format html`: the site itself
+
+`skein render --format html --out DIR` writes a static site that needs no site generator: each document and item file as an HTML page, with its markers as anchors and its references as links, the images beside them, a front page that lists the pages, and a page of all items with what links to each and what refers to it.
+
+Every link is relative and the styles are inside each page, so `DIR` can be served from any address (GitHub Pages, a file share) or opened straight from disk. The pages follow the reader's light or dark setting.
 
 ## `skein move OLD NEW`
 

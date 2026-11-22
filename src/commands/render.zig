@@ -1,5 +1,6 @@
 //! `skein render`: the project's documents and item files as Markdown
-//! for a site generator, written to a directory under their own paths.
+//! for a site generator, written to a directory under their own paths,
+//! or, with `--format html`, the static site itself (render/site.zig).
 
 const std = @import("std");
 const Io = std.Io;
@@ -8,6 +9,7 @@ const cli = @import("../cli.zig");
 const Workspace = @import("Workspace.zig");
 const files = @import("../files.zig");
 const markdown = @import("../render/markdown.zig");
+const site = @import("../render/site.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options.common)) {
@@ -34,6 +36,11 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
         .status = .misuse,
     };
     defer out.close(io);
+
+    if (options.format == .html) {
+        const pages = try site.build(io, arena, &ws, ctx, out);
+        return .{ .text = try arena.print("skein: {d} page{s} rendered to {s}\n", .{ pages, if (pages == 1) "" else "s", options.out }) };
+    }
 
     var count: usize = 0;
     for (ws.project.sources) |source| {
