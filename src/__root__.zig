@@ -51,6 +51,8 @@ test {
     _ = @import("commands/_test/read_only.zig");
     _ = @import("html/blocks.zig");
     _ = @import("commands/lsp.zig");
+    _ = @import("commands/mcp.zig");
+    _ = @import("commands/agents.zig");
     _ = @import("render/markdown.zig");
     _ = @import("render/site.zig");
     _ = @import("render/generated.zig");

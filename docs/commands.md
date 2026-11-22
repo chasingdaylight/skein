@@ -411,6 +411,24 @@ language-servers = ["skein"]
 
 The VS Code extension starts the server itself, and adds the item tree, the trace and coverage views and the coverage in the status bar (`editors/vscode/readme.md`).
 
+## `skein mcp`
+
+A Model Context Protocol server for AI agents, on standard input and output, on the project it is started in (or `--root DIR`). Its tools are skein's commands, answering in JSON: `items` (find items by type or words), `trace`, `check`, `coverage`, `impact`, and `new`, `link`, `move`, `result` and `approve`. An agent that speaks MCP is pointed at it with its own configuration, for example Claude Code's:
+
+```sh
+claude mcp add skein -- skein mcp
+```
+
+or a `.mcp.json` in the project:
+
+```json
+{ "mcpServers": { "skein": { "command": "skein", "args": ["mcp"] } } }
+```
+
+## `skein agents`
+
+Writes what a coding agent should know of the project's skein documents into its agent instructions: `AGENTS.md`, or `CLAUDE.md` where there is one and no `AGENTS.md`, or `--file PATH`. It says how markers and references are written, the project's item types, link types and citations, and to run `skein check` after editing. The section sits between two HTML comments, so running it again after a change to `.skein/` replaces it in place. `--skill` writes it as a skill file, `.claude/skills/skein/SKILL.md`, for agents that read skills. `skein init` writes the section too.
+
 ## `skein help`, `skein version`
 
 The usage text, and skein's version.
