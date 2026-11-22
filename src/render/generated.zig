@@ -92,7 +92,7 @@ const Filter = struct {
         if (self.status) |s| if (!std.mem.eql(u8, item.effectiveStatus(item_type), s)) return false;
         if (self.profile) |p| if (!inProfile(p, schema, graph, item)) return false;
         for (self.attributes.items) |want| {
-            if (!std.mem.eql(u8, item.attribute(want.name) orelse "", want.value)) return false;
+            if (!item.hasValue(want.name, want.value)) return false;
         }
         return true;
     }

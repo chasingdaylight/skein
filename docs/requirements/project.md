@@ -51,6 +51,9 @@ An item type may name one of its statuses as the status of a removed item. The I
 %req[schema.attributes]
 An item type shall declare its attributes. Each attribute has a kind (string, integer, boolean, date), optionally a fixed set of allowed values if it is a string, whether every item must have it, and whether it is normative, that is, part of the content of an item.
 
+%req[schema.attribute-lists]
+An attribute declared with `list = true` shall hold several values: given as `classes=A,B,C`, key by key (`classes=A classes=B`), or as a TOML array in front matter. Each value is held to what the attribute allows; a profile's or a generated list's condition on it is met when one of the values matches; `trace` shows the values joined by commas, and its JSON an array. An attribute without `list` takes one value, as before.
+
 %req[schema.verification]
 An item type may declare the verification methods an item of the type may name.
 

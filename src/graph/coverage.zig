@@ -46,7 +46,10 @@ pub fn inProfile(profile: *const Schema.Profile, item: *const Item, item_type: *
     if (profile.categories.len > 0 and !names.contains(profile.categories, item.category orelse "")) return false;
     if (profile.statuses.len > 0 and !names.contains(profile.statuses, item.effectiveStatus(item_type))) return false;
     for (profile.where) |condition| {
-        if (!names.contains(condition.values, item.attribute(condition.attribute) orelse "")) return false;
+        const has = for (condition.values) |v| {
+            if (item.hasValue(condition.attribute, v)) break true;
+        } else false;
+        if (!has) return false;
     }
     return true;
 }
@@ -197,4 +200,5 @@ fn hasCitation(citations: *const Graph.Citations, id: []const u8, set: []const u
 test {
     _ = @import("_test/coverage.zig");
     _ = @import("_test/waivers.zig");
+    _ = @import("_test/lists.zig");
 }

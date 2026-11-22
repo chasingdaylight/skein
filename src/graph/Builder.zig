@@ -48,6 +48,17 @@ pub fn set(self: *Builder, key: []const u8, values: []const []const u8, line: u3
         try self.aliases.appendSlice(self.arena, values);
         return;
     }
+    // an attribute declared with several values: given at once, or key by key
+    const declared = if (self.schema.itemType(self.item.type_name)) |t| t.attribute(key) else null;
+    if (declared != null and declared.?.list) {
+        for (self.attributes.items) |*a| {
+            if (!std.mem.eql(u8, a.name, key)) continue;
+            a.values = try std.mem.concat(self.arena, []const u8, &.{ a.values, values });
+            a.value = try std.mem.join(self.arena, ", ", a.values);
+            return;
+        }
+        return self.attributes.append(self.arena, .{ .name = key, .value = try std.mem.join(self.arena, ", ", values), .values = values, .line = line });
+    }
     if (values.len != 1) {
         return self.report.add(file, line, 1, "{s}: '{s}' takes one value", .{ self.item.id, key });
     }

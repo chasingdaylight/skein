@@ -98,6 +98,7 @@ normative = false
 | `attributes.<name>.values` | The values a string attribute may take. |
 | `attributes.<name>.required` | Whether every item of the type must have it. |
 | `attributes.<name>.normative` | Whether a change to it changes the item's fingerprint. |
+| `attributes.<name>.list` | Whether it holds several values: `classes=A,B,C`, or `classes = ["A", "B"]` in front matter. A profile's `where.classes = "C"` selects the items that have `C` among them. |
 
 An empty file is a valid type: hierarchical IDs, no categories, the default statuses, no attributes.
 
