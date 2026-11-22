@@ -57,6 +57,23 @@ skein: wrote .skein/network.toml
 
 Someone looks at those, and the record is committed with whatever the change needs here. `skein pin compiler v1.2` pins a named commit or tag instead. A checkout with changes that are not committed is refused: a state of the network is one of commits.
 
+## Networks that nest
+
+A repository can be the root of its own network and a member of others: a compiler's network, a website's that includes the compiler, a workspace's that includes both. Whichever project skein is run for decides what is read; the records of its members are not followed, only compared.
+
+Each repository says who it is, so that it is recognized whatever another project calls it:
+
+```toml
+[project]
+id = "example/compiler"
+```
+
+- **Reached repositories:** `skein pin` also records the repositories that the members' own records name and this project does not declare, by their identity, under `[reached]`, so the record holds the whole network. When two members record one of them at different commits, `pin` refuses and names them: pin one again so that they agree.
+- **Disagreements:** when a member's own record has a repository at another commit than this network has it (the website was last checked against an older compiler than the workspace pins), `check` warns. This network's commit is the one read.
+- **The same repository twice:** two declared repositories with one identity are a problem.
+
+A repository checked out as a git **submodule** of the project is recorded by git: in the recorded state it is read at the commit git has for the submodule, and `skein pin` leaves it alone.
+
 ## Other states
 
 The states between recorded ones can still be looked at, where links may be broken:

@@ -21,7 +21,7 @@ When a plan uses values the forge holds (dates, milestones), `skein baseline` sh
 %req[forge.adapter planned]
 An adapter per forge shall resolve references to issues and pull requests, report `check` and `coverage` in the forge's CI, and record the approvals of a merged change. (Design, section 7.)
 
-%req[links.repositories planned]
+%req[links.repositories]
 Items, code and tests of another repository shall be citable by a qualified reference, checked against a recorded commit of that repository. (Design, section 10.5.)
 
 ## Planning

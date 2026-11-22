@@ -16,7 +16,12 @@ const cli = @import("../cli.zig");
 const fetch = @import("../network/fetch.zig");
 const git = @import("../git.zig");
 const history = @import("../history.zig");
+const identity = @import("../network/identity.zig");
 const record = @import("../network/record.zig");
+const Report = @import("../Report.zig");
+
+/// What pinning one repository gives: its entry, and what it says of its own network
+const Pinned = struct { entry: record.Entry, source: identity.Source };
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Pin) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options.common)) {
@@ -38,22 +43,30 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Pin) !Workspace.Outcom
         else => return misuse(arena, "pinning needs the project to be in a git repository", .{}),
     };
 
-    const old = try record.read(io, arena, ws.root, &ws.report);
+    const old = (try record.read(io, arena, ws.root, &ws.report)).entries;
     var entries: std.ArrayList(record.Entry) = .empty;
-    try entries.appendSlice(arena, old);
+    var sources: std.ArrayList(identity.Source) = .empty;
     var out: std.ArrayList(u8) = .empty;
     for (repositories) |repository| {
-        if (options.name) |name| if (!std.mem.eql(u8, name, repository.name)) continue;
-        const entry = try pinOne(io, arena, &ws, repository, options.revision, git_dir, options.common.offline, record.find(old, repository.name), &out) orelse continue;
-        for (entries.items) |*e| {
-            if (std.mem.eql(u8, e.name, entry.name)) {
-                e.* = entry;
-                break;
-            }
-        } else try entries.append(arena, entry);
+        const named = if (options.name) |name| std.mem.eql(u8, name, repository.name) else true;
+        if (repository.path) |path| if (try Network.submoduleCommit(io, arena, ws.root, path)) |c| {
+            // git records it; what it says of its network still counts
+            if (named) try out.print(arena, "{s}: a submodule, recorded by git at {s}\n", .{ repository.name, c[0..@min(c.len, 12)] });
+            if (ws.network.member(repository.name)) |m| try sources.append(arena, .{ .name = m.repository.name, .id = m.project.id, .record = m.recorded });
+            continue;
+        };
+        if (!named) {
+            if (record.find(old, repository.name)) |e| try entries.append(arena, e);
+            if (ws.network.member(repository.name)) |m| if (m.unavailable == null) try sources.append(arena, .{ .name = m.repository.name, .id = m.project.id, .record = m.recorded });
+            continue;
+        }
+        const pinned = try pinOne(io, arena, &ws, repository, options.revision, git_dir, options.common.offline, record.find(old, repository.name), &out) orelse continue;
+        try entries.append(arena, pinned.entry);
+        try sources.append(arena, pinned.source);
     }
+    const reached = try identity.reached(arena, &ws.project, sources.items, &ws.report);
     if (!ws.report.ok()) return ws.problems();
-    ws.root.writeFile(io, .{ .sub_path = record.file, .data = try record.render(arena, entries.items) }) catch |e|
+    ws.root.writeFile(io, .{ .sub_path = record.file, .data = try record.render(arena, .{ .entries = entries.items, .reached = reached }) }) catch |e|
         return misuse(arena, "cannot write {s} ({s})", .{ record.file, @errorName(e) });
     try out.print(arena, "skein: wrote {s}\n", .{record.file});
     return .{ .text = out.items };
@@ -71,7 +84,7 @@ fn pinOne(
     offline: bool,
     before: ?record.Entry,
     out: *std.ArrayList(u8),
-) !?record.Entry {
+) !?Pinned {
     const name = repository.name;
     const where_from = repository.path orelse repository.url.?;
     var o = switch (try Network.origin(io, arena, ws.root_path, git_dir, repository)) {
@@ -112,7 +125,11 @@ fn pinOne(
         return null;
     };
     defer snap.deinit();
-    const entry: record.Entry = .{ .name = name, .commit = snap.commit, .fingerprint = try Network.ofProject(arena, &snap.graph, &snap.project.schema) };
+    var ignored: Report = .{ .arena = arena };
+    const entry: Pinned = .{
+        .entry = .{ .name = name, .commit = snap.commit, .fingerprint = try Network.ofProject(arena, &snap.graph, &snap.project.schema), .id = snap.project.id },
+        .source = .{ .name = name, .id = snap.project.id, .record = try record.read(io, arena, snap.dir, &ignored) },
+    };
     const short = snap.commit[0..12];
 
     const was = before orelse {

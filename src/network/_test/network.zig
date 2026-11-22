@@ -10,6 +10,9 @@ const pin_command = @import("../../commands/pin.zig");
 const render_command = @import("../../commands/render.zig");
 const review_command = @import("../../commands/review.zig");
 const trace_command = @import("../../commands/trace.zig");
+const Server = @import("../../lsp/Server.zig");
+const jsonrpc = @import("../../lsp/jsonrpc.zig");
+const uri_paths = @import("../../lsp/uri.zig");
 const git_program = @import("../../git.zig");
 const Network = @import("../Network.zig");
 
@@ -213,6 +216,155 @@ test "a record that does not match its commit is reported" {
     changed[at] = if (changed[at] == '0') '1' else '0';
     try f.write("site/.skein/network.toml", changed);
     try expectContains(try f.check(.recorded), ".skein/network.toml: error: other: its items at ");
+}
+
+/// Gives `other` an identity, and makes `mid`, a project that declares
+/// `other` and is pinned to its first commit
+fn nested(f: *Fixture) !void {
+    try f.write("other/.skein/config.toml",
+        \\[project]
+        \\id = "example/other"
+        \\
+        \\[[sources]]
+        \\path = "spec"
+        \\
+    );
+    try f.commit("other");
+    try f.tmp.dir.createDirPath(testing.io, "mid");
+    try f.git("mid", &.{ "init", "--quiet" });
+    try f.write("mid/.skein/config.toml",
+        \\[project]
+        \\id = "example/mid"
+        \\
+        \\[[sources]]
+        \\path = "notes"
+        \\
+        \\[[repositories]]
+        \\name = "spec"
+        \\path = "../other"
+        \\
+    );
+    try f.write("mid/.skein/types/note.toml", "");
+    try f.write("mid/notes/a.md", "%note[a.one] About %[spec:lex.token].\n");
+    const a = f.arena.allocator();
+    const mid = try f.tmp.dir.realPathFileAlloc(testing.io, "mid", a);
+    const pinned = try pin_command.run(testing.io, a, .{ .common = .{ .root = mid } });
+    try testing.expectEqual(.ok, pinned.status);
+    try f.commit("mid");
+}
+
+// req: network.identity
+test "one repository under two names is a problem" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    try nested(&f);
+    try f.write("site/.skein/config.toml",
+        \\[[sources]]
+        \\path = "pages"
+        \\
+        \\[[repositories]]
+        \\name = "other"
+        \\path = "../other"
+        \\
+        \\[[repositories]]
+        \\name = "again"
+        \\path = "../other"
+        \\
+    );
+    try expectContains(try f.check(.current), "error: repositories: other and again are the same repository (example/other)");
+}
+
+// req: network.identity, network.reached
+test "a member's own record: reached repositories, and where it disagrees" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    try nested(&f);
+    // the site declares only mid: other is reached through it
+    try f.write("site/.skein/config.toml",
+        \\[[sources]]
+        \\path = "pages"
+        \\
+        \\[[repositories]]
+        \\name = "mid"
+        \\path = "../mid"
+        \\
+    );
+    try f.write("site/pages/intro.md", "%page[intro] About %[mid:a.one].\n");
+    const pinned = try f.pin(null, null);
+    try testing.expectEqual(.ok, pinned.status);
+    const a = f.arena.allocator();
+    const text = try f.tmp.dir.readFileAlloc(testing.io, "site/.skein/network.toml", a, .limited(1 << 16));
+    try expectContains(text, "[repositories.mid]\nid = \"example/mid\"\n");
+    try expectContains(text, "[reached.\"example/other\"]\ncommit = ");
+    try expectContains(text, "through = [\"mid\"]");
+
+    // the site also declares other, at a newer commit than mid's record
+    try f.write("other/spec/new.md", "%rule[lex.new] New.\n");
+    try f.commit("other");
+    try f.write("site/.skein/config.toml",
+        \\[[sources]]
+        \\path = "pages"
+        \\
+        \\[[repositories]]
+        \\name = "mid"
+        \\path = "../mid"
+        \\
+        \\[[repositories]]
+        \\name = "other"
+        \\path = "../other"
+        \\
+    );
+    _ = try f.pin(null, null);
+    try expectContains(try f.check(.recorded), "warning: repositories: mid: its own record has example/other at ");
+}
+
+// req: network.submodules
+test "a submodule is recorded by git" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    try f.git("site", &.{ "-c", "protocol.file.allow=always", "submodule", "add", "--quiet", "../other", "other" });
+    try f.write("site/.skein/config.toml",
+        \\[[sources]]
+        \\path = "pages"
+        \\
+        \\[[repositories]]
+        \\name = "other"
+        \\path = "other"
+        \\
+    );
+    try f.commit("site");
+    try expectContains(try f.check(.recorded), "no problems (");
+    const pinned = try f.pin(null, null);
+    try expectContains(pinned.text, "other: a submodule, recorded by git at ");
+}
+
+// req: lsp.definition
+test "go to definition leads into the other repository's checkout" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    _ = try f.pin(null, null);
+    const a = f.arena.allocator();
+    var out: std.Io.Writer.Allocating = .init(testing.allocator);
+    defer out.deinit();
+    var server: Server = .{ .gpa = testing.allocator, .io = testing.io, .out = &out.writer, .version = "test" };
+    defer server.deinit();
+    const site_uri = try uri_paths.fromPath(a, f.site, server.style);
+    const page_uri = try uri_paths.fromPath(a, try std.Io.Dir.path.join(a, &.{ f.site, "pages", "intro.md" }), server.style);
+    try server.handle(a, try a.print("{{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{{\"rootUri\":\"{s}\"}}}}", .{site_uri}));
+    out.clearRetainingCapacity();
+    // line 3 of intro.md, on the reference `%[other:lex.token tokens]`
+    const column = std.mem.find(u8, "%page[intro explains=other:lex.token] About %[other:lex.token tokens].", "%[other").? + 4;
+    try server.handle(a, try a.print("{{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"textDocument/definition\",\"params\":{{\"textDocument\":{{\"uri\":\"{s}\"}},\"position\":{{\"line\":2,\"character\":{d}}}}}}}", .{ page_uri, column }));
+    var reader: std.Io.Reader = .fixed(out.written());
+    const body = (try jsonrpc.readMessage(a, &reader)).?;
+    const answer = try std.json.parseFromSliceLeaky(std.json.Value, a, body, .{});
+    const location = answer.object.get("result").?.object;
+    try testing.expect(std.mem.endsWith(u8, location.get("uri").?.string, "other/spec/lex.md"));
+    try testing.expectEqual(2, location.get("range").?.object.get("start").?.object.get("line").?.integer);
 }
 
 // req: network.reviews

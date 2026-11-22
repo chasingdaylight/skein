@@ -20,6 +20,19 @@ The recorded state shall be in `.skein/network.toml`, a file skein writes and th
 %req[pin.refusals]
 `skein pin` shall refuse, and write nothing, when the project declares no repository or none of that name, when the project is not in a git repository, when a checkout is not there or has no such commit, and, when no commit is named, when the checkout has changes that are not committed: a state of the network is one of commits.
 
+## Networks that nest
+
+A repository can be the root of its own network and a member of others: a compiler's, a website's that includes the compiler, a workspace's that includes both. The project skein is run for decides which commits are read.
+
+%req[network.identity]
+A repository shall be known by the `id` its own configuration declares, not by the short names others give it. Two declared repositories with the same identity, and a declared repository that is the project itself, are reported. When a member's own record has a repository at another commit than this network has it, that is a warning, and this network's commit is the one read.
+
+%req[network.reached]
+`skein pin` shall record, besides the declared repositories, each repository reached only through their records, by its identity, once, at the commit those records give, with the declared repositories it is reached through. When two of them record one at different commits, `pin` refuses and names them.
+
+%req[network.submodules]
+A declared repository whose path is a git submodule of the project shall be read, in the recorded state, at the commit git records for the submodule, and `skein pin` records nothing for it.
+
 ## Reviews, trace and rendering
 
 %req[network.reviews]
