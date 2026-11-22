@@ -25,6 +25,12 @@ skein shall carry a template for software assurance and software safety under NA
 %req[templates.nasa-std-7009b]
 skein shall carry a template for models and simulations under NASA-STD-7009B, `nasa-std-7009b`: its 42 requirements as a read-only source written into the project, a type for each model with its intended use, its criticality (Appendix D) and its credibility factors (Appendix E), the rows of the Requirements Identification Matrix (Appendix A), and skeletons of the model register, the credibility assessments, the matrix, the plan and the results report.
 
+%req[templates.nist-ai-rmf]
+skein shall carry a template for AI risk management under the NIST AI RMF, `nist-ai-rmf`: the 72 subcategories of the core of NIST AI 100-1 (version 1.0, the latest published) and the twelve risks of the generative AI profile (NIST AI 600-1) as a read-only source written into the project, a type for each AI system with its purpose, kind, third-party supply and risk tier, the rows of the project's profile that say how each system addresses each subcategory, and skeletons of the AI inventory and the profile.
+
+%req[templates.npr7150.2d-ai]
+skein shall carry a template for AI in software projects under NPR 7150.2D, `npr7150.2d-ai`, to be used with `npr7150.2d`: what topics 7.25 (engineering) and 8.25 (assurance) of the NASA Software Engineering Handbook say bears on each requirement of the NPR, in skein's words, linked to the requirements, the six principles of NASA's framework for the ethical use of AI (NASA/TM-20210012886), and a skeleton of the assurance documents the handbook expects.
+
 %req[templates.npr7123.1d]
 skein shall carry a template for systems engineering under NASA's NPR 7123.1D, `npr7123.1d`: its 62 requirements and the entrance and success criteria of its 21 review tables (Appendix G) as a read-only source written into the project, the rows of its compliance matrix (Appendix H), the project's reviews with their kind and date, the checks of their criteria, and skeletons of the compliance matrix, the reviews and the systems engineering management plan.
 

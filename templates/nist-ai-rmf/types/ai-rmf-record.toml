@@ -1,0 +1,15 @@
+description = "A row of the project's AI RMF profile: how an AI system addresses a subcategory, with the record that shows it"
+# fully addressed, tailored, partially addressed, not addressed, not applicable
+categories = ["FC", "T", "PC", "NC", "NA"]
+
+# the AI system the row is for (its ID)
+[attributes.system]
+required = true
+
+# where the record is: a document and section, an item, a file
+[attributes.evidence]
+normative = false
+
+# why, for a row that is PC, NC or NA
+[attributes.rationale]
+normative = false

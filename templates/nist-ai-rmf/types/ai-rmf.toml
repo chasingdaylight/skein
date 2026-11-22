@@ -1,0 +1,9 @@
+description = "A subcategory of the NIST AI RMF core (govern.1.1 is GOVERN 1.1); read-only, from skein's template"
+
+# the function it is under, and its category within it (GOVERN 1 is group 1)
+[attributes.function]
+values = ["govern", "map", "measure", "manage"]
+normative = false
+
+[attributes.group]
+normative = false

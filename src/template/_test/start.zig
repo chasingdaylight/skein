@@ -163,6 +163,48 @@ test "models and simulations under NASA-STD-7009B, with their factors in a list"
     try expectContains(page, "[`MDL-001`](#MDL-001) | planned | III | 4 | red | Predict the peak load on the bracket during ascent |");
 }
 
+// req: templates.nist-ai-rmf, render.generated.list
+test "AI risk management under the NIST AI RMF, with its inventory in a list" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"nist-ai-rmf"} })).status);
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    // the 72 subcategories, each expected to be addressed by a row of the profile
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "ai-rmf-addresses links to ai-rmf items: 0 of 72");
+
+    const out_dir = try std.Io.Dir.path.join(a, &.{ root, "out" });
+    try testing.expectEqual(.ok, (try render_command.run(testing.io, a, .{ .common = .{ .root = root }, .out = out_dir })).status);
+    const page = try tmp.dir.readFileAlloc(testing.io, "out/docs/ai-inventory.md", a, .limited(1 << 20));
+    try expectContains(page, "| Item | Status | Ai_kind | Third_party | Risk_tier | Purpose |\n");
+    try expectContains(page, "[`AIS-001`](#AIS-001) | planned | generative | yes | moderate | Summarize anomaly reports for the review board |");
+}
+
+// req: templates.npr7150.2d-ai
+test "AI in a software project under NPR 7150.2D: the handbook's notes link to its requirements" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    const started = try init_command.run(testing.io, a, .{ .root = root, .templates = &.{ "npr7150.2d", "npr7150.2d-ai" } });
+    try expectContains(started.text, "from the templates npr7150.2d and npr7150.2d-ai");
+    // the class, given once
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    const given = try std.mem.replaceOwned(u8, a, config, "# \"class\" = \"\"", "\"class\" = \"C\"");
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = given });
+    // the notes' links name requirements of the NPR, so the project checks clean only with it
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    const notes = try tmp.dir.readFileAlloc(testing.io, "standards/npr7150.2d-ai/handbook-ai.md", a, .limited(1 << 20));
+    try expectContains(notes, "%ai-note[AIN-003 topic=7.25 section=7.2 bears-on=SWE-219]");
+}
+
 // req: templates.npr7123.1d
 test "systems engineering under NPR 7123.1D: its requirements and its reviews" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);

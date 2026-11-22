@@ -1,0 +1,11 @@
+description = "What the NASA Software Engineering Handbook's AI topics (7.25 for engineering, 8.25 for assurance) say bears on a requirement of NPR 7150.2D, in skein's words; read-only, from skein's template"
+id = "numbered"
+prefix = "AIN"
+
+# the handbook topic, and its section
+[attributes.topic]
+values = ["7.25", "8.25"]
+normative = false
+
+[attributes.section]
+normative = false
