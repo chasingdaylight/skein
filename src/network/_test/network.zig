@@ -341,6 +341,19 @@ test "a submodule is recorded by git" {
     try expectContains(pinned.text, "other: a submodule, recorded by git at ");
 }
 
+// req: check.aliases
+test "a former ID in another repository still names the item" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    try f.write("other/spec/lex.md", "%rule[lex.unit aliases=lex.token] A token.\n\n%rule[lex.old removed]\n");
+    try f.commit("other");
+    _ = try f.pin(null, null);
+    const out = try f.check(.recorded);
+    try expectContains(out, "warning: intro: the text refers to 'other:lex.token', which is now 'other:lex.unit'");
+    try expectContains(out, "no problems, 2 warnings");
+}
+
 // req: lsp.definition
 test "go to definition leads into the other repository's checkout" {
     var f: Fixture = undefined;

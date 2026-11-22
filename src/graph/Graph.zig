@@ -22,6 +22,8 @@ const Graph = @This();
 /// in the order of the sources, the files (by path) and the lines
 items: []const Item = &.{},
 by_id: std.array_hash_map.String(usize) = .empty,
+/// by former ID (an alias), the item that had it
+by_alias: std.array_hash_map.String(usize) = .empty,
 /// by target: the links that point to it, in the order of the items
 incoming: std.array_hash_map.String(std.ArrayList(Incoming)) = .empty,
 /// by target: the IDs of the items whose text refers to it, each once
@@ -50,7 +52,7 @@ pub fn target(self: *const Graph, schema: *const Schema, id: []const u8) ?Target
             else => null,
         };
     }
-    const item = self.find(id) orelse return null;
+    const item = self.find(id) orelse self.formerly(id) orelse return null;
     return .{ .item = item, .graph = self, .schema = schema };
 }
 
@@ -65,6 +67,12 @@ pub fn find(self: *const Graph, id: []const u8) ?*const Item {
     return &self.items[i];
 }
 
+/// The item whose former ID `id` is; null when it is no one's
+pub fn formerly(self: *const Graph, id: []const u8) ?*const Item {
+    const i = self.by_alias.get(id) orelse return null;
+    return &self.items[i];
+}
+
 /// The graph of `items`. An ID used twice is reported, and found as its
 /// first use.
 pub fn init(arena: std.mem.Allocator, items: []const Item, report: *Report) std.mem.Allocator.Error!Graph {
@@ -75,6 +83,21 @@ pub fn init(arena: std.mem.Allocator, items: []const Item, report: *Report) std.
             const first = items[entry.value_ptr.*];
             try report.add(item.file, item.line, 1, "{s}: the ID is already used at {s}:{d}", .{ item.id, first.file, first.line });
         } else entry.value_ptr.* = i;
+    }
+    // a former ID stays taken, as a removed item's does
+    for (items, 0..) |item, i| {
+        for (item.aliases) |alias| {
+            if (out.by_id.get(alias)) |other| {
+                const o = items[other];
+                try report.add(item.file, item.line, 1, "{s}: '{s}' is a former ID of it, and the ID of the item at {s}:{d}", .{ item.id, alias, o.file, o.line });
+                continue;
+            }
+            const entry = try out.by_alias.getOrPut(arena, alias);
+            if (entry.found_existing) {
+                const first = items[entry.value_ptr.*];
+                try report.add(item.file, item.line, 1, "{s}: '{s}' is already a former ID of '{s}'", .{ item.id, alias, first.id });
+            } else entry.value_ptr.* = i;
+        }
     }
     for (items) |*item| {
         for (item.links) |link| {

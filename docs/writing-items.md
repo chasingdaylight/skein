@@ -112,6 +112,8 @@ References work in narrative text as well as in items, so the introduction of a 
 
 Nothing inside a code span or a code block is a reference, nor is a percent sign that follows a letter or a digit (`50%[1]`). The double brackets of wikis and site generators (`[[a page]]`) mean nothing to skein, so a document can use both. `skein check` reports a reference to an item that does not exist or is removed. A reference with a colon, `%[other:some.id]`, names an item of another repository, which the project declares: see [other repositories](repositories.md).
 
+An item renamed with `skein move` can keep its former IDs, as `aliases=lex.token` in its marker or `aliases = ["SRS-001"]` in its front matter. A reference, link or citation that uses a former ID still finds the item, and `skein check` warns that its ID has changed. A former ID stays taken, as a removed item's does.
+
 To write a marker or a reference as plain text, as this page does in its examples, put a backslash before the percent sign: `\%rule[x]` and `\%[x]` are neither. Markdown itself reads `\%` as an escaped percent sign, so GitHub, site generators and skein's own rendering all show `%rule[x]` and `%[x]`.
 
 ## Citations in code and tests

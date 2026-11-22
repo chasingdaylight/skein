@@ -16,6 +16,21 @@ const Context = struct {
     schema: *const Schema,
     report: *Report,
 
+    /// The item `id` names: by its ID, or by a former one, which is a
+    /// warning to follow; null when there is none
+    fn former(self: Context, file: []const u8, line: u32, column: u32, subject: []const u8, id: []const u8) Error!?*const Item {
+        if (self.graph.find(id)) |item| return item;
+        const item = self.graph.formerly(id) orelse return null;
+        try self.report.warn(file, line, column, "{s} '{s}', which is now '{s}'", .{ subject, id, item.id });
+        return item;
+    }
+
+    /// "lex.a: verifies: the link points to", or "lex.a: the text refers to"
+    fn what(self: Context, item: *const Item, link_type: ?[]const u8) Error![]const u8 {
+        if (link_type) |t| return self.report.arena.print("{s}: {s}: the link points to", .{ item.id, t });
+        return self.report.arena.print("{s}: the text refers to", .{item.id});
+    }
+
     /// Reports a problem with `item`, at `line` (0: where it is declared)
     fn problem(self: Context, item: *const Item, line: u32, comptime fmt: []const u8, args: anytype) Error!void {
         var buf: [512]u8 = undefined;
@@ -44,7 +59,7 @@ pub fn run(graph: *const Graph, schema: *const Schema, report: *Report) Error!vo
 fn checkMentions(ctx: Context) Error!void {
     for (ctx.graph.mentions) |m| {
         if (std.mem.findScalar(u8, m.target, ':') != null) continue;
-        const target = ctx.graph.find(m.target) orelse {
+        const target = try ctx.former(m.file, m.line, m.column, "the text refers to", m.target) orelse {
             try ctx.report.add(m.file, m.line, m.column, "the text refers to '{s}', and there is no such item", .{m.target});
             continue;
         };
@@ -109,9 +124,9 @@ fn checkLinks(ctx: Context, item: *const Item, item_type: *const Schema.ItemType
         if (link_type.from.len > 0 and !Schema.names.contains(link_type.from, item.type_name)) {
             try ctx.problem(item, link.line, "a '{s}' cannot have a '{s}' link", .{ item.type_name, link.type_name });
         }
-        // an item of another repository; checked once repositories are linked
+        // an item of another repository: network/checks.zig
         if (std.mem.findScalar(u8, link.target, ':') != null) continue;
-        const target = ctx.graph.find(link.target) orelse {
+        const target = try ctx.former(item.file, if (link.line > 0) link.line else item.line, 1, try ctx.what(item, link.type_name), link.target) orelse {
             try ctx.problem(item, link.line, "{s}: there is no item '{s}'", .{ link.type_name, link.target });
             continue;
         };
@@ -139,7 +154,7 @@ fn checkLinks(ctx: Context, item: *const Item, item_type: *const Schema.ItemType
 fn checkReferences(ctx: Context, item: *const Item) Error!void {
     for (item.references) |r| {
         if (std.mem.findScalar(u8, r.target, ':') != null) continue;
-        const target = ctx.graph.find(r.target) orelse {
+        const target = try ctx.former(item.file, r.line, r.column, try ctx.what(item, null), r.target) orelse {
             try ctx.report.add(item.file, r.line, r.column, "{s}: the text refers to '{s}', and there is no such item", .{ item.id, r.target });
             continue;
         };

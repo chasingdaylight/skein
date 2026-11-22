@@ -35,6 +35,9 @@ A citation of an item that does not exist, is removed, or has an item type the c
 %req[check.removed-exempt]
 A removed item shall not be required to have a category, required attributes, required links or text.
 
+%req[check.aliases]
+A link, reference or citation that names an item by a former ID (`items.aliases`) shall be checked as if it named the item, and reported as a warning that says the item's ID now, so that it is followed; within the project and into another repository alike. An item's own ID given as a former one, a former ID that is another item's ID, and one former ID of two items are reported.
+
 %req[check.other-repositories]
 A link, reference or citation whose target has a colon (`name:id`) names an item of another repository, and shall be checked against that repository's items in the state read (`network.states`): a repository that is not declared, an item it does not have, a removed item, and an item of a type the link type or citation set may not point to are reported. When the repository's items could not be read, its targets are not checked, and that is a warning.
 

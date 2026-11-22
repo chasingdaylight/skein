@@ -17,6 +17,7 @@ report: *Report,
 item: Item,
 attributes: std.ArrayList(Item.Attribute) = .empty,
 links: std.ArrayList(Item.Link) = .empty,
+aliases: std.ArrayList([]const u8) = .empty,
 refs: std.ArrayList(Item.Reference) = .empty,
 /// the pieces of the item's own text, in order
 pieces: std.ArrayList([]const u8) = .empty,
@@ -38,6 +39,13 @@ pub fn set(self: *Builder, key: []const u8, values: []const []const u8, line: u3
     const file = self.item.file;
     if (self.schema.linkType(key) != null) {
         for (values) |target| try self.links.append(self.arena, .{ .type_name = key, .target = target, .line = line });
+        return;
+    }
+    if (std.mem.eql(u8, key, "aliases")) {
+        for (values) |alias| {
+            if (std.mem.eql(u8, alias, self.item.id)) return self.report.add(file, line, 1, "{s}: an item's own ID is not a former one", .{self.item.id});
+        }
+        try self.aliases.appendSlice(self.arena, values);
         return;
     }
     if (values.len != 1) {
@@ -81,6 +89,7 @@ pub fn addPart(self: *Builder, id: []const u8) Error!void {
 pub fn finish(self: *Builder) Error!Item {
     self.item.attributes = self.attributes.items;
     self.item.links = self.links.items;
+    self.item.aliases = self.aliases.items;
     self.item.references = self.refs.items;
     self.item.text = if (self.pieces.items.len == 1) self.pieces.items[0] else try std.mem.join(self.arena, "\n\n", self.pieces.items);
     self.item.parts = self.parts.items;

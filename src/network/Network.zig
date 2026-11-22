@@ -82,7 +82,8 @@ pub fn resolve(self: *const Network, target: []const u8) Found {
     const parts = split(target) orelse unreachable;
     const m = self.member(parts.repository) orelse return .{ .undeclared = parts.repository };
     if (m.unavailable != null) return .{ .unavailable = m };
-    const item = m.graph.find(parts.id) orelse return .{ .missing = m };
+    // a former ID still names the item: what links in from outside needs
+    const item = m.graph.find(parts.id) orelse m.graph.formerly(parts.id) orelse return .{ .missing = m };
     return .{ .item = .{ .member = m, .item = item } };
 }
 

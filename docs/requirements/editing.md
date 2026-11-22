@@ -19,6 +19,9 @@ A rename is not a change to the content of anything. The review and approval rec
 %req[move.refusals]
 `skein move` shall refuse, and change nothing, when there is no item with the old ID, when the new ID is not spelled as the IDs of the item's type are, when the new ID or the new ID of a part is taken by another item, and when the old and the new ID are the same.
 
+%req[move.aliases]
+`skein move` shall keep the old ID, and the old IDs of the parts that follow it, as aliases of the items (`items.aliases`), in their markers or front matter: with `--alias`, and by default when the project declares an `id`, since other projects can then cite it; with `--no-alias`, or without an `id`, not. A new ID that is a former ID of an item is refused, so that it is taken out of the aliases first.
+
 ## Starting an item
 
 %req[new.numbered]

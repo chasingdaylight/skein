@@ -214,6 +214,7 @@ skein: lex.keywords is now lex.kw, with 2 parts: 6 places in 3 files
 - **Parts follow:** a part whose ID continues the old ID is renamed with it (`lex.keywords.as` becomes `lex.kw.as`). A part with an ID of its own is left as it is.
 - **Item files:** a file named after its ID (`SRS-012.md`) is renamed too.
 - **Reviews and approvals survive:** a rename changes no content, so what was reviewed stays reviewed and what was approved stays approved, under the new IDs.
+- **The old ID can stay as an alias:** with `--alias`, and by default in a project that declares an `id` (others may cite it), the old ID is written into the item's `aliases`, so a reference from another repository, an issue or a bookmark still finds the item; `check` warns there that the ID has changed. `--no-alias` leaves it out.
 - **Only whole IDs on the lines that name them** are replaced. `lex.token` is not touched inside `lex.token.kinds`, nor in a line of code that merely contains the same letters.
 
 `skein move` refuses, and changes nothing, when the new ID is taken or is not a valid ID of the item's type. Look at the result with `git diff` before committing; nothing is committed for you.
