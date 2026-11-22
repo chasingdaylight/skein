@@ -32,6 +32,7 @@ test {
     _ = @import("commands/examples.zig");
     _ = @import("results/Results.zig");
     _ = @import("commands/_test/check_formats.zig");
+    _ = @import("forge/checks.zig");
     _ = @import("commands/new.zig");
     _ = @import("commands/link.zig");
     _ = @import("commands/baseline.zig");

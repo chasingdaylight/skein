@@ -18,10 +18,12 @@ expected: bool = false,
 /// a link of this kind is reviewed: it records its target as last
 /// reviewed, and is suspect when the target has changed since
 review: bool = false,
+/// an issue or pull request it points to must be open
+open: bool = false,
 
 /// The link type that the table of `r` declares; problems go to its report.
 pub fn read(r: Reader, name: []const u8) Reader.Error!LinkType {
-    try r.known(&.{ "description", "from", "to", "required", "expected", "review" });
+    try r.known(&.{ "description", "from", "to", "required", "expected", "review", "open" });
     return .{
         .name = name,
         .description = try r.string("description") orelse "",
@@ -30,5 +32,6 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!LinkType {
         .required = try r.boolean("required", false),
         .expected = try r.boolean("expected", false),
         .review = try r.boolean("review", false),
+        .open = try r.boolean("open", false),
     };
 }

@@ -28,9 +28,12 @@ citations: []const CitationSet = &.{},
 repositories: []const Repository = &.{},
 /// the results files it keeps, or directories of them, from its root
 results: []const []const u8 = &.{},
+/// where its issues and pull requests are
+forge: ?Forge = null,
 schema: Schema = .{},
 
 pub const Repository = @import("network/Repository.zig");
+pub const Forge = @import("forge/Forge.zig");
 
 /// A place whose files cite items in comments
 pub const CitationSet = struct {
@@ -104,7 +107,8 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources", "citations", "repositories", "results" });
+    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge" });
+    self.forge = try Forge.read(r);
     if (try r.child("results")) |results| {
         try results.known(&.{"paths"});
         for (try results.strings("paths")) |p| {

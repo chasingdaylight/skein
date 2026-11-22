@@ -25,6 +25,7 @@ type = "srs"
 | --- | --- |
 | `project.name` | The project's name, for reports. |
 | `project.id` | What other projects know this one by, whatever short name they give it: `"cesiumlang/cesium"`. |
+| `forge.kind`, `forge.repository`, `forge.url` | Where the project's issues and pull requests are: `"github"`, `"owner/repo"`, and a server other than the public one. See [the forge](forge.md). |
 | `results.paths` | The test results files the project keeps, or directories of them: see [test results](results.md). |
 | `repositories` | The other repositories whose items this project's items refer to: see [other repositories](repositories.md). |
 | `repositories.name` | The short name targets use before the colon: `compiler` in `%[compiler:lex.token]`. |
@@ -117,6 +118,7 @@ expected = true
 | `required` | Every item of a `from` type must have one. |
 | `expected` | Every item of a `to` type should be pointed to by one; coverage counts the ones that are not. |
 | `review` | Links of this type are reviewed: see [reviewing](reviewing.md). |
+| `open` | An issue or pull request a link of this type points to must be open: see [the forge](forge.md). |
 
 ## `.skein/profiles/<name>.toml`: a profile
 

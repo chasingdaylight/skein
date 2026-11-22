@@ -19,6 +19,7 @@ const render = @import("commands/render.zig");
 const result = @import("commands/result.zig");
 const review = @import("commands/review.zig");
 const trace = @import("commands/trace.zig");
+const env = @import("env.zig");
 const stdio = @import("stdio.zig");
 const Workspace = @import("commands/Workspace.zig");
 
@@ -28,6 +29,7 @@ pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const arena = init.arena.allocator();
     const argv = try init.minimal.args.toSlice(arena);
+    env.map = init.environ_map;
 
     const outcome: Workspace.Outcome = switch (try cli.parse(arena, argv[1..])) {
         .help => .{ .text = cli.usage },

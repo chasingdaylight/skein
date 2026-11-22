@@ -28,6 +28,7 @@ Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as
 | [Reviewing](reviewing.md) | Fingerprints, suspect links, reviews and approvals. |
 | [Other repositories](repositories.md) | Items of other repositories, `pin`, and the state of the network. |
 | [Test results](results.md) | Reading test results, and what they say of each item. |
+| [The forge](forge.md) | Issues and pull requests, checked against GitHub. |
 | [Importing](importing.md) | Bringing in Doorstop documents and CSV files. |
 | [Design](design.md) | What skein is for, how it is built, and what is planned. |
 | [Requirements](requirements/readme.md) | What skein is required to do, written in skein and checked by skein. |
