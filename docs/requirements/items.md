@@ -24,6 +24,9 @@ The text of an item shall follow the marker on the same line, or start on the ne
 %req[items.list-entries]
 An entry of a list, at any depth, shall be an item when it starts with a marker.
 
+%req[items.marker.bold]
+A marker may be wrapped in bold, `**%rule[lex.comment syntax]** Text.`, so that it stands out where skein does not render the document; that is never required (emanspeaks, 2026-11-22, #163). The `**` before the marker shall be closed right after its closing bracket, and are then part of the marker, not of the item's text; a `**` before a marker that is not closed there is reported. The renderer writes a wrapped marker as it writes any other, bold once.
+
 %req[items.marker.types-only]
 A marker shall be recognized only at the start of a paragraph or of a list entry, as a percent sign, a lowercase name and an opening bracket. The same characters elsewhere in a line, and anything in a code block, are text. A marker that names an item type the project does not have is reported.
 
