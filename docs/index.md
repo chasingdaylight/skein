@@ -24,7 +24,7 @@ Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as
 | --- | --- |
 | [Writing items](writing-items.md) | Markers, parts, item files, references in text, citations in code and tests. |
 | [Project files](project-files.md) | The `.skein/` directory: configuration, item types, link types, profiles. |
-| [Commands](commands.md) | `check`, `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `import`, `review`, `approve`. |
+| [Commands](commands.md) | `check`, `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `move`, `import`, `review`, `approve`. |
 | [Reviewing](reviewing.md) | Fingerprints, suspect links, reviews and approvals. |
 | [Importing](importing.md) | Bringing in Doorstop documents and CSV files. |
 | [Design](design.md) | What skein is for, how it is built, and what is planned. |

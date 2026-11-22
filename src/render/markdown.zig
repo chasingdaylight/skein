@@ -94,7 +94,7 @@ const Page = struct {
             if (number > first_line) try out.append(a, '\n');
             var at: usize = 0;
             if (self.markers.get(number)) |item| {
-                if (markerStart(line)) |start| {
+                if (Marker.startIn(line)) |start| {
                     try out.appendSlice(a, line[0..start]);
                     try self.label(&out, item);
                     at = start + Marker.extent(line[start..]);
@@ -153,16 +153,6 @@ fn isItemFile(ctx: Context, file: []const u8) bool {
         if (file.len > dir.len and std.mem.startsWith(u8, file, dir) and file[dir.len] == '/') return true;
     }
     return false;
-}
-
-/// Where the marker of a line starts: after its indentation and the
-/// bullets or numbers of the list entries it opens
-fn markerStart(line: []const u8) ?usize {
-    for (line, 0..) |c, i| {
-        if (c == '%') return if (Marker.startsOne(line[i..])) i else null;
-        if (std.mem.findScalar(u8, " \t-*+.)0123456789", c) == null) return null;
-    }
-    return null;
 }
 
 /// The path of the file `to` as written in the file `from`; both are

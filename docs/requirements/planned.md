@@ -48,7 +48,7 @@ What a forge holds about an issue shall stay there and be read through the adapt
 ## Editing
 
 %req[edit.commands planned]
-`skein new`, `move` and `link` shall create items with the next free ID, rename IDs everywhere they are used, and add links. (Design, section 5.)
+`skein new` and `link` shall create items with the next free ID and add links. Renaming is `skein move`, which is built. (Design, section 5.)
 
 %req[edit.lsp planned]
 `skein lsp` shall be a language server for the item and document sources: go to definition, find references, completion of IDs, hover, diagnostics from `check`, and rename. (Design, section 9.)
