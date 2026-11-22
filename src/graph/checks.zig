@@ -101,18 +101,21 @@ fn checkAttributes(ctx: Context, item: *const Item, item_type: *const Schema.Ite
             try ctx.problem(item, a.line, "'{s}' is not an attribute of a '{s}', nor a link type", .{ a.name, item_type.name });
             continue;
         };
-        const fits = switch (declared.kind) {
-            .string => declared.values.len == 0 or Schema.names.contains(declared.values, a.value),
-            .integer => if (std.fmt.parseInt(i64, a.value, 10)) |_| true else |_| false,
-            .boolean => std.mem.eql(u8, a.value, "true") or std.mem.eql(u8, a.value, "false"),
-            .date => a.value.len == 10 and datetime.parse(a.value) != null,
-        };
-        if (!fits) switch (declared.kind) {
-            .string => try ctx.problem(item, a.line, "'{s}' is not a value of '{s}'", .{ a.value, a.name }),
-            .integer => try ctx.problem(item, a.line, "'{s}' must be an integer", .{a.name}),
-            .boolean => try ctx.problem(item, a.line, "'{s}' must be true or false", .{a.name}),
-            .date => try ctx.problem(item, a.line, "'{s}' must be a date, like 2027-03-01", .{a.name}),
-        };
+        const each: []const []const u8 = if (a.values.len > 0) a.values else &.{a.value};
+        for (each) |value| {
+            const fits = switch (declared.kind) {
+                .string => declared.values.len == 0 or Schema.names.contains(declared.values, value),
+                .integer => if (std.fmt.parseInt(i64, value, 10)) |_| true else |_| false,
+                .boolean => std.mem.eql(u8, value, "true") or std.mem.eql(u8, value, "false"),
+                .date => value.len == 10 and datetime.parse(value) != null,
+            };
+            if (!fits) switch (declared.kind) {
+                .string => try ctx.problem(item, a.line, "'{s}' is not a value of '{s}'", .{ value, a.name }),
+                .integer => try ctx.problem(item, a.line, "'{s}' must be an integer", .{a.name}),
+                .boolean => try ctx.problem(item, a.line, "'{s}' must be true or false", .{a.name}),
+                .date => try ctx.problem(item, a.line, "'{s}' must be a date, like 2027-03-01", .{a.name}),
+            };
+        }
     }
     if (item.isTombstone(item_type)) return;
     for (item_type.attributes) |declared| {

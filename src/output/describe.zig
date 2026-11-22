@@ -64,7 +64,7 @@ pub fn json(ctx: Context, j: *Json, item: *const Item, with_text: bool) Error!vo
     try j.beginObject();
     for (item.attributes) |a| {
         try j.key(a.name);
-        try j.string(a.value);
+        if (a.values.len > 0) try j.strings(a.values) else try j.string(a.value);
     }
     try j.endObject();
 

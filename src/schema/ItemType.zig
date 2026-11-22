@@ -52,6 +52,8 @@ pub const Attribute = struct {
     required: bool = false,
     /// whether a change to it changes the item's fingerprint
     normative: bool = false,
+    /// whether it holds several values: `classes=A,B,C`
+    list: bool = false,
 
     pub const Kind = enum { string, integer, boolean, date };
 };
@@ -114,7 +116,7 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
 }
 
 fn readAttribute(r: Reader, name: []const u8) Reader.Error!Attribute {
-    try r.known(&.{ "type", "values", "required", "normative" });
+    try r.known(&.{ "type", "values", "required", "normative", "list" });
     var out: Attribute = .{ .name = name };
     if (try r.string("type")) |t| {
         out.kind = std.meta.stringToEnum(Attribute.Kind, t) orelse blk: {
@@ -126,6 +128,7 @@ fn readAttribute(r: Reader, name: []const u8) Reader.Error!Attribute {
     if (out.values.len > 0 and out.kind != .string) try r.complain("values", "only a string attribute lists its values", .{});
     out.required = try r.boolean("required", false);
     out.normative = try r.boolean("normative", false);
+    out.list = try r.boolean("list", false);
     return out;
 }
 
