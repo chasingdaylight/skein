@@ -21,7 +21,7 @@ fn expectContains(haystack: []const u8, needle: []const u8) !void {
     }
 }
 
-test "bold markers are checked, linked, moved and rendered bold once" {
+test "markers in bold are read, linked, moved and rendered bold once" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
@@ -30,15 +30,11 @@ test "bold markers are checked, linked, moved and rendered bold once" {
     try write(tmp.dir, ".skein/config.toml", "[[sources]]\npath = \"spec\"\n");
     try write(tmp.dir, ".skein/types/rule.toml", "categories = [\"syntax\"]\n");
     try write(tmp.dir, ".skein/links/see.toml", "from = [\"rule\"]\nto = [\"rule\"]\n");
-    try write(tmp.dir, "spec/lex.md", "# Lexical\n\n**%rule[lex.a syntax]** The *first* rule.\n\n- **%rule[lex.b]** The second.\n- %rule[lex.c] The third.\n\n**%rule[lex.d] Not closed where it should be.**\n");
+    // a wrapped marker, in a paragraph and a list, and one in bold that goes on into the text
+    try write(tmp.dir, "spec/lex.md", "# Lexical\n\n**%rule[lex.a syntax]** The *first* rule.\n\n- **%rule[lex.b syntax]** The second.\n- %rule[lex.c syntax] The third.\n\n**%rule[lex.d syntax] All of it bold, see %[lex.c].**\n\n```skein\nlist rule\n```\n");
     const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
-
-    const unclosed = try check_command.run(testing.io, a, .{ .root = root });
-    try expectContains(unclosed.text, "spec/lex.md:8:");
-    try expectContains(unclosed.text, "closed right after its ']'");
-    try write(tmp.dir, "spec/lex.md", "# Lexical\n\n**%rule[lex.a syntax]** The *first* rule.\n\n- **%rule[lex.b syntax]** The second.\n- %rule[lex.c syntax] The third.\n");
     const checked = try check_command.run(testing.io, a, .{ .root = root });
-    try expectContains(checked.text, "no problems (3 items");
+    try expectContains(checked.text, "no problems (4 items");
 
     try testing.expectEqual(.ok, (try link_command.run(testing.io, a, .{ .common = .{ .root = root }, .from = "lex.a", .type_name = "see", .to = "lex.b" })).status);
     try testing.expectEqual(.ok, (try move_command.run(testing.io, a, .{ .common = .{ .root = root }, .old = "lex.b", .new = "lex.bee", .alias = false })).status);
@@ -51,5 +47,9 @@ test "bold markers are checked, linked, moved and rendered bold once" {
     const page = try tmp.dir.readFileAlloc(testing.io, "out/spec/lex.md", a, .limited(1 << 16));
     try expectContains(page, "<a id=\"lex.a\"></a>**[lex.a](#lex.a)** *(syntax)* The *first* rule.\n");
     try expectContains(page, "- <a id=\"lex.bee\"></a>**[lex.bee](#lex.bee)** *(syntax)* The second.\n");
+    // inside the writer's bold, the label adds none of its own
+    try expectContains(page, "**<a id=\"lex.d\"></a>[lex.d](#lex.d) *(syntax)* All of it bold, see [lex.c](#lex.c).**\n");
+    // and the item's text keeps the bold it opens
+    try expectContains(page, "| **All of it bold, see %[lex.c].** |");
     try testing.expect(std.mem.find(u8, page, "****") == null);
 }

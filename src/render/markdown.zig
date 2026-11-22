@@ -218,11 +218,12 @@ const Page = struct {
             var at: usize = 0;
             if (self.markers.get(number)) |item| {
                 if (Marker.startIn(line)) |start| {
-                    // the label is bold already: the writer's `**` around the marker go
-                    const wrapped = Marker.isBold(line, start);
-                    try out.appendSlice(a, line[0..if (wrapped) start - 2 else start]);
-                    try self.label(&out, item);
-                    at = start + Marker.extent(line[start..]) + @as(usize, if (wrapped) 2 else 0);
+                    // bold once: the label's own in place of the writer's `**` around
+                    // the marker, and none inside the writer's bold that goes on
+                    const in_bold = Marker.boldOf(line, start);
+                    try out.appendSlice(a, line[0..if (in_bold == .wrapped) start - 2 else start]);
+                    try self.label(&out, item, in_bold != .open);
+                    at = start + Marker.extent(line[start..]) + @as(usize, if (in_bold == .wrapped) 2 else 0);
                 }
             }
             while (at < line.len) {
@@ -260,9 +261,10 @@ const Page = struct {
 
     /// The marker of `item`, as a reader sees it: an anchor, the ID linked
     /// to itself, and the category and status when the marker gives them
-    fn label(self: *const Page, out: *std.ArrayList(u8), item: *const Item) Error!void {
+    fn label(self: *const Page, out: *std.ArrayList(u8), item: *const Item, bold: bool) Error!void {
         const a = self.ctx.arena;
-        try out.print(a, "<a id=\"{s}\"></a>**[{s}](#{s})**", .{ item.id, item.id, item.id });
+        const b = if (bold) "**" else "";
+        try out.print(a, "<a id=\"{s}\"></a>{s}[{s}](#{s}){s}", .{ item.id, b, item.id, item.id, b });
         if (try describe(self.ctx, item)) |words| try out.print(a, " *({s})*", .{words});
     }
 

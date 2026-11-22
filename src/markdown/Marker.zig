@@ -14,6 +14,8 @@
 //! A writer may wrap the marker in bold, `**%rule[lex.comment]** Text.`, to
 //! make it stand out where skein does not render it (emanspeaks,
 //! 2026-11-22, #163); the `**` on both sides are then part of the marker.
+//! Bold that starts before the marker and goes on into the text,
+//! `**%rule[lex.comment] Text.**`, belongs to the text.
 
 const std = @import("std");
 
@@ -28,6 +30,9 @@ fields: []const Field = &.{},
 len: usize,
 /// what is wrong with the marker, if anything
 problem: ?[]const u8 = null,
+/// the `**` before the marker opens bold that goes on into the text
+/// (`**%rule[a] Text.**`), so the text starts with it
+in_bold: bool = false,
 
 pub const Field = struct {
     key: []const u8,
@@ -66,10 +71,19 @@ pub fn extent(line: []const u8) usize {
     return if (closingBracket(line, open)) |close| close + 1 else line.len;
 }
 
-/// Whether the marker that starts at `start` of `line` (its `%`) is wrapped
-/// in bold: `**` before it and right after its closing bracket
-pub fn isBold(line: []const u8, start: usize) bool {
-    return start >= bold.len and std.mem.eql(u8, line[start - bold.len .. start], bold) and closingBold(line[start..]) > 0;
+/// How the marker that starts at `start` of `line` (its `%`) stands in bold
+pub const Bold = enum {
+    /// not in bold
+    none,
+    /// `**` before it and right after its closing bracket
+    wrapped,
+    /// `**` before it, which the text goes on in
+    open,
+};
+
+pub fn boldOf(line: []const u8, start: usize) Bold {
+    if (start < bold.len or !std.mem.eql(u8, line[start - bold.len .. start], bold)) return .none;
+    return if (closingBold(line[start..]) > 0) .wrapped else .open;
 }
 
 /// The length of the `**` that closes the bold around the marker `line`
@@ -86,7 +100,7 @@ pub fn parse(arena: std.mem.Allocator, line: []const u8) std.mem.Allocator.Error
     if (std.mem.startsWith(u8, line, bold)) {
         var inner = (try parse(arena, line[bold.len..])).?;
         const closing = closingBold(line[bold.len..]);
-        if (closing == 0 and inner.problem == null) inner.problem = "the '**' before the marker is to be closed right after its ']'";
+        inner.in_bold = closing == 0;
         inner.len += bold.len + closing;
         return inner;
     }
@@ -236,12 +250,17 @@ test "a marker wrapped in bold" {
     // from its `%`, as the commands that edit a marker see it
     try testing.expectEqual(2, startIn(line).?);
     try testing.expectEqualStrings("%rule[lex.comment legality]", line[2 .. 2 + extent(line[2..])]);
-    try testing.expect(isBold(line, 2));
-    try testing.expect(!isBold("%rule[a] b", 0));
-    try testing.expect(!isBold("- **%rule[a] b**", 4));
+    try testing.expectEqual(.wrapped, boldOf(line, 2));
+    try testing.expectEqual(.none, boldOf("%rule[a] b", 0));
+    try testing.expectEqual(.open, boldOf("- **%rule[a] b**", 4));
+    try testing.expect(!m.in_bold);
 
-    const open = (try parse(arena.allocator(), "**%rule[lex.comment] A comment.**")).?;
-    try testing.expect(open.problem != null);
+    // bold that goes on into the text is the text's
+    const open_line = "**%rule[lex.comment] A comment.**";
+    const open = (try parse(arena.allocator(), open_line)).?;
+    try testing.expectEqual(null, open.problem);
+    try testing.expect(open.in_bold);
+    try testing.expectEqualStrings(" A comment.**", open_line[open.len..]);
 }
 
 test "lines that do not start a marker" {

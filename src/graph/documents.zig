@@ -160,6 +160,13 @@ const Reader = struct {
                     try self.list(r, block, &b);
                 } else if (isExample(block)) {
                     try self.example(r, block, &b);
+                } else if (marker.in_bold and next == at + 1) {
+                    // the bold the marker stands in is the text's: `**%rule[a] Text.**`
+                    try b.addText(try self.arena.print("**{s}", .{block.text}), .{
+                        .line = r.line + block.first_line - 1,
+                        .first_col = columnsBefore(r.text, block.text) -| 2,
+                        .dedent = r.dedent,
+                    });
                 } else try b.addText(block.text, .{
                     .line = r.line + block.first_line - 1,
                     .first_col = columnsBefore(r.text, block.text),

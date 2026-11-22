@@ -31,7 +31,7 @@ The marker is a percent sign, the item type, and in brackets the ID and then opt
 | a bare word | The category or the status, whichever of the type's it is; at most one of each. |
 | `key=value` | An attribute, the verification method, or links of the type `key`. Several values are separated by commas; a value with spaces is put in double quotes. |
 
-A marker may be wrapped in bold, so that it stands out on a forge or in an editor's preview, where skein does not render it: `**%rule[lex.space syntax]** White space separates tokens.` It is never needed. The closing `**` comes right after the bracket, and `skein render` writes the marker bold once, as it writes any other.
+A marker may be wrapped in bold, so that it stands out on a forge or in an editor's preview, where skein does not render it: `**%rule[lex.space syntax]** White space separates tokens.` It is never needed. The bold may also go on into the text, `**%rule[lex.space syntax] White space separates tokens.**`, and then it is the text's. Either way `skein render` writes the marker bold once, not bold inside bold.
 
 A marker is recognized only at the start of a paragraph or of a list entry, as a percent sign, a lowercase name and an opening bracket. Anywhere else in a line, and inside a code block, the same characters are text. A marker that names an item type the project does not have is reported, so a misspelled type is not silently treated as prose.
 
