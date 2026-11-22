@@ -103,6 +103,35 @@ normative = false
 
 An empty file is a valid type: hierarchical IDs, no categories, the default statuses, no attributes.
 
+### Work: `[planning]`
+
+A type with a `[planning]` table is work: tasks, epics, milestones. The table says which of the type's attributes holds each planning role, so a project names its attributes as it likes:
+
+```toml
+# .skein/types/task.toml
+[attributes.start]
+type = "date"
+[attributes.days]
+type = "integer"
+[attributes.owner]
+
+[planning]
+start = "start"
+duration = "days"
+assignees = "owner"
+```
+
+| Role | Attribute | Meaning |
+| --- | --- | --- |
+| `start`, `finish` | a date | The first and the last day of the work. |
+| `duration` | an integer | Days, from the first to the last; 0 for a milestone. |
+| `estimate`, `remaining` | an integer | The effort expected, and still to do, in days. |
+| `lag` | an integer | Days to wait after the predecessors finish. |
+| `mode` | `"fixed"` or `"float"` | Fixed work keeps the dates written for it; float work is scheduled from its predecessors and its parent. Without it, work with a start is fixed and work without is float. |
+| `assignees`, `priority`, `milestone` | any | Who does it, how urgent it is, and what it belongs to. |
+
+A day is a calendar day, until calendars come with resources. `skein check` reports a finish before the start, a start, duration and finish that do not agree (a start of 2027-03-01 and 5 days finish on 2027-03-05), fixed work without a start, a loop of predecessors or of parents, and work that others follow without a known length.
+
 ## `.skein/links/<name>.toml`: a link type
 
 ```toml
@@ -123,6 +152,7 @@ expected = true
 | `open` | An issue or pull request a link of this type points to must be open: see [the forge](forge.md). |
 | `counts_as` | A link of this type counts as one of that type, for coverage: a tailoring as good as compliance. |
 | `excuses` | A link of this type excuses its target from the coverage of that type: shown as waived, counted neither way. |
+| `planning.role` | What a link of this type is to the schedule: `"precedes"` (finish to start: the target starts once the item has finished), `"parent"` (the item is part of its target), or `"blocks"` (recorded, not scheduled). |
 
 A standard's requirements, imported into a read-only source, are covered by the project's links to them; waivers and deviations are item types of the project's, linked to the requirement they relax:
 

@@ -26,8 +26,11 @@ approval_roles: []const []const u8 = &.{},
 attributes: []const Attribute = &.{},
 /// when the type's items are tested examples: how
 example: ?Example = null,
+/// which attribute holds each planning role; null for a type that is not work
+planning: ?Planning = null,
 
 pub const Example = @import("Example.zig");
+pub const Planning = @import("Planning.zig");
 
 pub const default_statuses = [_][]const u8{ "draft", "approved", "deprecated", "removed" };
 
@@ -63,7 +66,7 @@ pub const Attribute = struct {
 
 /// The type that the table of `r` declares; problems go to its report.
 pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
-    try r.known(&.{ "description", "id", "prefix", "digits", "separator", "names", "categories", "statuses", "tombstone", "verification", "approval", "attributes", "example" });
+    try r.known(&.{ "description", "id", "prefix", "digits", "separator", "names", "categories", "statuses", "tombstone", "verification", "approval", "attributes", "example", "planning" });
     var out: ItemType = .{ .name = name };
     out.description = try r.string("description") orelse "";
     out.categories = try r.strings("categories");
@@ -123,6 +126,7 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
         out.example = try Example.read(e);
         if (out.categories.len > 0 and !names.contains(out.categories, out.example.?.rejects)) try e.complain("rejects", "'{s}' is not one of the categories", .{out.example.?.rejects});
     }
+    if (try r.child("planning")) |p| out.planning = try Planning.read(p, out.attributes);
     return out;
 }
 

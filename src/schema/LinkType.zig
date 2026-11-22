@@ -1,5 +1,6 @@
 //! One kind of link, as `.skein/links/<name>.toml` declares it.
 
+const Planning = @import("Planning.zig");
 const Profile = @import("Profile.zig");
 const Reader = @import("Reader.zig");
 
@@ -29,12 +30,15 @@ counts_as: ?[]const u8 = null,
 /// a link of this kind excuses its target from the expectation of that
 /// type: shown as waived, and counted neither as covered nor as not
 excuses: ?[]const u8 = null,
+/// what a link of this kind is to the schedule (`[planning] role`)
+planning: ?Planning.LinkRole = null,
 
 /// The link type that the table of `r` declares; problems go to its report.
 pub fn read(r: Reader, name: []const u8) Reader.Error!LinkType {
     const expected = try Profile.readExpected(r);
-    try r.known(&.{ "description", "from", "to", "required", "expected", "review", "open", "counts_as", "excuses" });
+    try r.known(&.{ "description", "from", "to", "required", "expected", "review", "open", "counts_as", "excuses", "planning" });
     return .{
+        .planning = if (try r.child("planning")) |p| try Planning.readLink(p) else null,
         .name = name,
         .description = try r.string("description") orelse "",
         .from = try r.strings("from"),
