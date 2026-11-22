@@ -3,6 +3,7 @@
 const std = @import("std");
 const Io = std.Io;
 
+const Network = @import("../network/Network.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 const Schema = @import("../schema/Schema.zig");
@@ -28,6 +29,30 @@ referrers: std.array_hash_map.String(std.ArrayList([]const u8)) = .empty,
 
 /// the references to items in narrative text, in the order read
 mentions: []const Mention = &.{},
+/// the other repositories, for targets `name:id`; null when not read
+others: ?*const Network = null,
+
+/// An item of this graph or, for `name:id`, of another repository, with
+/// the graph and schema it is read by
+pub const Target = struct {
+    item: *const Item,
+    graph: *const Graph,
+    schema: *const Schema,
+};
+
+/// The item `id` names: one of this graph, read by `schema`, or for
+/// `name:id` one of another repository; null when there is none
+pub fn target(self: *const Graph, schema: *const Schema, id: []const u8) ?Target {
+    if (Network.split(id) != null) {
+        const n = self.others orelse return null;
+        return switch (n.resolve(id)) {
+            .item => |f| .{ .item = f.item, .graph = &f.member.graph, .schema = &f.member.project.schema },
+            else => null,
+        };
+    }
+    const item = self.find(id) orelse return null;
+    return .{ .item = item, .graph = self, .schema = schema };
+}
 
 /// A link, with the item it is a link of
 pub const Incoming = struct {

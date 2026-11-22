@@ -56,7 +56,7 @@ For an item file, the link shall be added to its front matter: to the key's arra
 `skein lsp` shall serve the Language Server Protocol on standard input and output: it answers `initialize` with what it can do, refuses requests before that, answers a request it does not know with an error and no more, and ends with status 0 after `shutdown` and `exit`. The project is the one in the directory the editor has open.
 
 %req[lsp.diagnostics]
-The server shall publish the problems that `skein check` reports as diagnostics, each on its file and line: when it starts, and whenever a document is opened or saved or the editor says files have changed. When a file that had problems has none, its diagnostics are published as empty. The project is read from the files, so a change counts once it is saved.
+The server shall publish the problems that `skein check` reports as diagnostics, each on its file and line, its warnings as warnings: when it starts, and whenever a document is opened or saved or the editor says files have changed. When a file that had problems has none, its diagnostics are published as empty. The project is read from the files, so a change counts once it is saved.
 
 %req[lsp.definition]
 On the ID of an item, wherever it is written (a reference, a link, a citation in code or tests, or plain text), "go to definition" shall lead to the marker or the file that declares the item. On a marker that names a part by a leading dot, it leads to that part.

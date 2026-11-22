@@ -30,6 +30,7 @@ type = "srs"
 | `repositories.path` | A checkout on disk, from the project's root: `"../cesium-src"`. |
 | `repositories.url` | An address git can fetch from, in place of a path. |
 | `repositories.ref` | For a `url`: the branch or tag `--current` follows. |
+| `repositories.site` | The address of its site, as `skein render --format html` writes it: references to its items link there. |
 | `sources` | The places that hold items. |
 | `sources.path` | A directory, from the project's root, with forward slashes. |
 | `sources.kind` | `"documents"` (the default) or `"items"`. |

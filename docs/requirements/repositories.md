@@ -20,6 +20,14 @@ The recorded state shall be in `.skein/network.toml`, a file skein writes and th
 %req[pin.refusals]
 `skein pin` shall refuse, and write nothing, when the project declares no repository or none of that name, when the project is not in a git repository, when a checkout is not there or has no such commit, and, when no commit is named, when the checkout has changes that are not committed: a state of the network is one of commits.
 
+## Reviews, trace and rendering
+
+%req[network.reviews]
+A reviewed link to an item of another repository shall be held against that item's fingerprint in the state read, as a link within the repository is: never reviewed until `skein review` records it, and suspect when the item has changed since. In the recorded state, a change there makes the link suspect only once the commit that has it is pinned. `skein trace` shows such a target with its type, its repository, and the commit read, or why it could not be read.
+
+%req[network.site]
+A repository may give the address of its site, as `skein render --format html` writes it (`site`). A reference to one of its items is then rendered as a link to the item's page there, with the item's anchor when it is in a document; without a site, as its words.
+
 ## Repositories by url
 
 %req[network.fetched]

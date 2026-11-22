@@ -20,6 +20,7 @@ const json = std.json;
 
 const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
+const Report = @import("../Report.zig");
 const Workspace = @import("../commands/Workspace.zig");
 const check = @import("../commands/check.zig");
 const complete = @import("complete.zig");
@@ -199,7 +200,11 @@ fn publish(s: *Server, a: Allocator) Error!void {
     if (ws_or_null) |*ws| {
         defer ws.close();
         try check.all(s.io, a, ws);
-        for (ws.report.problems.items) |p| {
+        // LSP severities: 1 an error, 2 a warning
+        for ([_]struct { list: []const Report.Problem, severity: u8 }{
+            .{ .list = ws.report.problems.items, .severity = 1 },
+            .{ .list = ws.report.warnings.items, .severity = 2 },
+        }) |kind| for (kind.list) |p| {
             const entry = try by_file.getOrPut(a, p.file);
             if (!entry.found_existing) entry.value_ptr.* = .empty;
             const line: usize = if (p.line > 0) p.line - 1 else 0;
@@ -207,9 +212,10 @@ fn publish(s: *Server, a: Allocator) Error!void {
             try entry.value_ptr.append(a, .{
                 // to the end of the line: an editor ends the range where the line does
                 .range = .{ .start = .{ .line = line, .character = column }, .end = .{ .line = line, .character = 10_000 } },
+                .severity = kind.severity,
                 .message = p.message,
             });
-        }
+        };
         // the files that had problems and have none now
         var old = s.published.keyIterator();
         while (old.next()) |file| {
