@@ -10,6 +10,7 @@ const import_doorstop = @import("commands/import_doorstop.zig");
 const coverage = @import("commands/coverage.zig");
 const cli = @import("cli.zig");
 const move = @import("commands/move.zig");
+const new = @import("commands/new.zig");
 const render = @import("commands/render.zig");
 const review = @import("commands/review.zig");
 const trace = @import("commands/trace.zig");
@@ -34,6 +35,7 @@ pub fn main(init: std.process.Init) !void {
         .exporting => |options| try exporter.run(io, arena, options),
         .render => |options| try render.run(io, arena, options),
         .move => |options| try move.run(io, arena, options),
+        .new => |options| try new.run(io, arena, options),
         .lsp => std.process.exit(try lsp.serve(io, init.gpa, version)),
         .import => |options| switch (options.format) {
             .doorstop => try import_doorstop.run(io, arena, options),

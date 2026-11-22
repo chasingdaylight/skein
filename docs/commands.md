@@ -198,6 +198,23 @@ Record that links have been reviewed; see [reviewing](reviewing.md). `review` ta
 
 Records that someone approved these items as they are now; see [reviewing](reviewing.md). `--by NAME` says who (default: the name git has for the user), `--on DATE` when (default: today).
 
+## `skein new TYPE [ID]`
+
+Starts an item of a type.
+
+```text
+$ skein new srs
+requirements/SRS-013.md
+$ skein new rule lex.comment.block
+%rule[lex.comment.block]
+```
+
+- **Numbered types** get the next free number when no ID is given: one more than the highest in use, counting removed items, so a number is never given twice.
+- **Types with IDs joined by dots** need the ID, since only the author knows what it is about.
+- **Where it goes:** a type with a source of item files gets its file there, with its front matter and no text, and the path is printed; `--to DIR` picks the source when there are several. A type written in documents gets its marker printed, to start a paragraph or list entry with.
+
+`skein check` reports the new item as having no text until its text is written.
+
 ## `skein lsp`
 
 A language server for editors, on standard input and output. It works in the Markdown documents of a project and in the code and tests that cite its items.
