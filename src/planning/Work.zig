@@ -106,7 +106,7 @@ pub fn collect(arena: std.mem.Allocator, schema: *const Schema, graph: *const Gr
 }
 
 /// The work item `id` among `works`
-pub fn find(works: []Work, id: []const u8) ?*Work {
+pub fn find(works: []const Work, id: []const u8) ?*const Work {
     for (works) |*w| if (std.mem.eql(u8, w.item.id, id)) return w;
     return null;
 }

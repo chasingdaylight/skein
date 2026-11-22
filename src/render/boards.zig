@@ -18,6 +18,7 @@ const Schema = @import("../schema/Schema.zig");
 const burn = @import("../planning/burn.zig");
 const day = @import("../planning/day.zig");
 const generated = @import("generated.zig");
+const Time = @import("../planning/Time.zig");
 const schedule = @import("../planning/schedule.zig");
 
 const Error = generated.Error;
@@ -104,6 +105,37 @@ fn card(ctx: generated.Context, out: *std.ArrayList(u8), e: *const schedule.Entr
         try out.appendSlice(ctx.arena, " ");
         try generated.cell(ctx.arena, out, line);
     }
+}
+
+/// `time [TYPE...] [conditions]`: the estimate of each work item that has
+/// one or time spent, what was spent and by whom, and the difference
+pub fn timeTable(ctx: generated.Context, args: []const []const u8) Error![]const u8 {
+    const a = ctx.arena;
+    const plan = ctx.planning orelse return a.print("> **skein:** there are no work items to show time for\n", .{});
+    var filter: generated.Filter = .{ .profile = ctx.default_profile };
+    if (try generated.readFilter(ctx, args, &filter, true)) |message| return message;
+    var out: std.ArrayList(u8) = .empty;
+    try out.appendSlice(a, "| Item | Estimate (h) | Spent (h) | Difference (h) | By |\n| --- | ---: | ---: | ---: | --- |\n");
+    var estimate: f64 = 0;
+    var spent: f64 = 0;
+    var rows: usize = 0;
+    for (try Time.summarize(a, plan.works, plan.spent, plan.hours_a_day)) |r| {
+        if (!filter.passes(&ctx.project.schema, ctx.graph, r.work.item)) continue;
+        rows += 1;
+        try out.appendSlice(a, "| ");
+        try generated.link(ctx, &out, r.work.item);
+        if (r.estimate) |e| {
+            try out.print(a, " | {d:.1} | {d:.1} | {s}{d:.1} |", .{ e, r.spent, if (r.spent > e) "+" else "", r.spent - e });
+            estimate += e;
+        } else try out.print(a, " | | {d:.1} | |", .{r.spent});
+        spent += r.spent;
+        try out.append(a, ' ');
+        for (r.by, 0..) |b, i| try out.print(a, "{s}{s} {d:.1}", .{ if (i > 0) ", " else "", b.name, b.hours });
+        try out.appendSlice(a, " |\n");
+    }
+    if (rows == 0) return a.print("*No work item has an estimate or time spent.*\n", .{});
+    try out.print(a, "| **In all** | {d:.1} | {d:.1} | {s}{d:.1} | |\n", .{ estimate, spent, if (spent > estimate) "+" else "", spent - estimate });
+    return out.items;
 }
 
 pub fn roadmap(ctx: generated.Context, args: []const []const u8) Error![]const u8 {

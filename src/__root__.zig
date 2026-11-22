@@ -31,6 +31,8 @@ test {
     _ = @import("planning/_test/schedule.zig");
     _ = @import("planning/_test/burn.zig");
     _ = @import("planning/_test/forge.zig");
+    _ = @import("planning/_test/time.zig");
+    _ = @import("planning/Time.zig");
     _ = @import("edit/attribute.zig");
     _ = @import("graph/coverage.zig");
     _ = @import("commands/diff.zig");

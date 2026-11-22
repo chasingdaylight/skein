@@ -16,6 +16,7 @@ const Calendar = @import("../planning/Calendar.zig");
 const burn_points = @import("../planning/burn.zig");
 const day = @import("../planning/day.zig");
 const generated = @import("generated.zig");
+const Time = @import("../planning/Time.zig");
 const Work = @import("../planning/Work.zig");
 const schedule = @import("../planning/schedule.zig");
 const toml = @import("../toml.zig");
@@ -26,6 +27,9 @@ pub const Error = generated.Error;
 pub const Plan = struct {
     /// the work items, with what the forge holds of their issues
     works: []const Work,
+    /// the time spent on them, and the hours of a working day
+    spent: []const Time.Entry = &.{},
+    hours_a_day: f64 = 8,
     entries: []const schedule.Entry,
     calendar: *const Calendar,
     /// The bars of the schedule stored at a baseline; null when the baseline

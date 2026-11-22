@@ -16,7 +16,8 @@
 //! - `documents`: the register of controlled documents
 //! - `gantt [...]`: the schedule as a Gantt chart (gantt.zig)
 //! - `burndown MILESTONE`, `burnup MILESTONE`: a milestone's charts (burnchart.zig)
-//! - `board [...]`, `roadmap [...]`: boards and the roadmap (boards.zig)
+//! - `board [...]`, `roadmap [...]`, `time [...]`: boards, the roadmap and
+//!   time spent against estimates (boards.zig)
 
 const std = @import("std");
 
@@ -78,7 +79,7 @@ pub fn render(ctx: Context, text: []const u8) Error![]const u8 {
     var words: std.ArrayList([]const u8) = .empty;
     var it = std.mem.tokenizeAny(u8, text, " \t\r\n");
     while (it.next()) |w| try words.append(a, w);
-    if (words.items.len == 0) return problem(a, "the request is empty: list, matrix, coverage, documents, gantt, burndown, burnup, board or roadmap", .{});
+    if (words.items.len == 0) return problem(a, "the request is empty: list, matrix, coverage, documents, gantt, burndown, burnup, board, roadmap or time", .{});
     const what = words.items[0];
     const args = words.items[1..];
     if (std.mem.eql(u8, what, "list")) return list(ctx, args);
@@ -90,7 +91,8 @@ pub fn render(ctx: Context, text: []const u8) Error![]const u8 {
     if (std.mem.eql(u8, what, "burnup")) return burnchart.render(ctx, .burnup, args);
     if (std.mem.eql(u8, what, "board")) return boards.board(ctx, args);
     if (std.mem.eql(u8, what, "roadmap")) return boards.roadmap(ctx, args);
-    return problem(a, "'{s}' is no request skein knows: list, matrix, coverage, documents, gantt, burndown, burnup, board or roadmap", .{what});
+    if (std.mem.eql(u8, what, "time")) return boards.timeTable(ctx, args);
+    return problem(a, "'{s}' is no request skein knows: list, matrix, coverage, documents, gantt, burndown, burnup, board, roadmap or time", .{what});
 }
 
 fn problem(a: std.mem.Allocator, comptime fmt: []const u8, args: anytype) Error![]const u8 {

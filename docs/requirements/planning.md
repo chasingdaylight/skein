@@ -33,6 +33,14 @@ The schedule shall give each scheduled item its slack, the working days it can f
 %req[planning.schedule-checks]
 `skein check` shall report a fixed item that starts before its predecessors let it, an item that runs outside its parent's dates (a parent that spans its children excepted), an item that finishes after its milestone (the work item its milestone names), and a stored schedule, in any of its formats, that is missing or not the one the work items give now.
 
+## Time spent
+
+%req[planning.time]
+`skein time ITEM HOURS [--by NAME] [--on DATE] [--note TEXT]` shall log hours spent on a work item by a person on a day (by default git's user name and today), written to `.skein/time/` as one sorted line per item, person and day, in the file of the item's document, so that branches conflict only where they log the same day; hours logged for a day that already has some are added to them, rounded to hundredths. It refuses an item that is no work item or is in a read-only source, hours that are not more than 0, and a day that would have more than 24. `skein check` reports time of an item that is no work item and hours outside those bounds. (Design, section 10.1; emanspeaks, 2026-11-21.)
+
+%req[planning.time-report]
+`skein time` without arguments (also `--json`) shall set, for each work item that has an estimate or time spent, the estimate in hours (its estimate in days times the hours of the calendar's working day) against what was spent, the difference and who spent it, with the totals; and `time [TYPE...] [conditions]` in a document gives the same as a table.
+
 ## Issues on the forge
 
 %req[planning.forge-fields]
