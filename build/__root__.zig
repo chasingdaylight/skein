@@ -8,8 +8,12 @@ pub fn build(b: *std.Build) void {
 
     const options = b.addOptions();
     options.addOption([]const u8, "version", zon.version);
-    // for the tests that check the example projects
+    // for the tests that check the example projects, and the list of templates
     options.addOptionPathUntracked("examples_dir", b.path("examples"));
+    options.addOptionPathUntracked("templates_dir", b.path("templates"));
+
+    // the templates, built into the program
+    const templates = b.createModule(.{ .root_source_file = b.path("templates/__root__.zig") });
 
     const mod = b.createModule(.{
         .root_source_file = b.path("src/__root__.zig"),
@@ -17,6 +21,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     mod.addOptions("build_options", options);
+    mod.addImport("templates", templates);
 
     const exe = b.addExecutable(.{
         .name = "skein",

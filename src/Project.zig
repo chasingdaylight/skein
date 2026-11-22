@@ -30,10 +30,14 @@ repositories: []const Repository = &.{},
 results: []const []const u8 = &.{},
 /// where its issues and pull requests are
 forge: ?Forge = null,
+/// the templates it uses, with their options
+templates: []const template_use.Use = &.{},
 schema: Schema = .{},
 
 pub const Repository = @import("network/Repository.zig");
 pub const Forge = @import("forge/Forge.zig");
+pub const Template = @import("template/Template.zig");
+const template_use = @import("template/use.zig");
 
 /// A place whose files cite items in comments
 pub const CitationSet = struct {
@@ -91,9 +95,9 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
         try out.readConfig(.{ .report = report, .arena = arena, .file = config_file, .table = table });
     }
     out.schema = .{
-        .types = try loadEach(Schema.ItemType, io, arena, root, "types", report),
-        .links = try loadEach(Schema.LinkType, io, arena, root, "links", report),
-        .profiles = try loadEach(Schema.Profile, io, arena, root, "profiles", report),
+        .types = try loadEach(Schema.ItemType, io, arena, root, "types", out.templates, report),
+        .links = try loadEach(Schema.LinkType, io, arena, root, "links", out.templates, report),
+        .profiles = try loadEach(Schema.Profile, io, arena, root, "profiles", out.templates, report),
     };
     try out.schema.validate(report, dir_name);
     for (out.sources) |s| {
@@ -109,7 +113,8 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge" });
+    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template" });
+    self.templates = try template_use.readAll(r);
     self.forge = try Forge.read(r);
     if (try r.child("results")) |results| {
         try results.known(&.{"paths"});
@@ -187,44 +192,78 @@ fn pathOk(r: Schema.Reader, path: []const u8) Schema.Reader.Error!bool {
     return false;
 }
 
-/// The things declared by the TOML files of `.skein/<sub>/`, by name
+/// The things declared by the TOML files of `.skein/<sub>/`, and of the
+/// templates used, by name: a project's own file of a name replaces a
+/// template's, and two templates that declare one name are reported
 fn loadEach(
     comptime T: type,
     io: Io,
     arena: std.mem.Allocator,
     root: Io.Dir,
     comptime sub: []const u8,
+    templates: []const template_use.Use,
     report: *Report,
 ) std.mem.Allocator.Error![]const T {
-    const dir_path = dir_name ++ "/" ++ sub;
-    var dir = root.openDir(io, dir_path, .{ .iterate = true }) catch return &.{};
-    defer dir.close(io);
-
-    var files: std.ArrayList([]const u8) = .empty;
-    var it = dir.iterate();
-    while (it.next(io) catch null) |entry| {
-        if (entry.kind != .file or !std.mem.endsWith(u8, entry.name, ".toml")) continue;
-        try files.append(arena, try arena.dupe(u8, entry.name));
+    const Source_ = struct { name: []const u8, path: []const u8, text: ?[]const u8 };
+    var sources: std.ArrayList(Source_) = .empty;
+    for (templates) |use| {
+        for (try Template.filesOf(arena, use.name, sub ++ "/")) |f| {
+            if (!std.mem.endsWith(u8, f.path, ".toml") or std.mem.findScalar(u8, f.path[sub.len + 1 ..], '/') != null) continue;
+            const name = f.path[sub.len + 1 .. f.path.len - ".toml".len];
+            const path = try arena.print("template {s}: {s}", .{ use.name, f.path });
+            const text = try Template.substitute(arena, f.data, use.options);
+            for (sources.items) |s| {
+                if (std.mem.eql(u8, s.name, name)) try report.add(config_file, 0, 0, "template: '{s}' is declared by two templates ({s}, and {s}); declare it in .skein/{s}/ to choose", .{ name, s.path, path, sub });
+            } else try sources.append(arena, .{ .name = name, .path = path, .text = text });
+        }
     }
+    const dir_path = dir_name ++ "/" ++ sub;
+    if (root.openDir(io, dir_path, .{ .iterate = true })) |opened| {
+        var dir = opened;
+        defer dir.close(io);
+        var it = dir.iterate();
+        while (it.next(io) catch null) |entry| {
+            if (entry.kind != .file or !std.mem.endsWith(u8, entry.name, ".toml")) continue;
+            const file = try arena.dupe(u8, entry.name);
+            const name = file[0 .. file.len - ".toml".len];
+            const own: Source_ = .{ .name = name, .path = try arena.print("{s}/{s}", .{ dir_path, file }), .text = null };
+            // the project's own file replaces a template's of the same name
+            for (sources.items) |*s| {
+                if (std.mem.eql(u8, s.name, name)) {
+                    s.* = own;
+                    break;
+                }
+            } else try sources.append(arena, own);
+        }
+    } else |_| {}
     // the same order everywhere
-    std.mem.sort([]const u8, files.items, {}, struct {
-        fn lt(_: void, a: []const u8, b: []const u8) bool {
-            return std.mem.lessThan(u8, a, b);
+    std.mem.sort(Source_, sources.items, {}, struct {
+        fn lt(_: void, a: Source_, b: Source_) bool {
+            return std.mem.lessThan(u8, a.name, b.name);
         }
     }.lt);
 
     var out: std.ArrayList(T) = .empty;
-    for (files.items) |file| {
-        const path = try arena.print("{s}/{s}", .{ dir_path, file });
-        const name = file[0 .. file.len - ".toml".len];
-        if (!Schema.names.valid(name)) {
-            try report.add(path, 0, 0, "the file's name is the name it declares: {s}", .{Schema.names.rule});
+    for (sources.items) |s| {
+        if (!Schema.names.valid(s.name)) {
+            try report.add(s.path, 0, 0, "the file's name is the name it declares: {s}", .{Schema.names.rule});
             continue;
         }
-        const table = try readToml(io, arena, root, path, report) orelse continue;
-        try out.append(arena, try T.read(.{ .report = report, .arena = arena, .file = path, .table = table }, name));
+        const table = (if (s.text) |text| try parseToml(arena, s.path, text, report) else try readToml(io, arena, root, s.path, report)) orelse continue;
+        try out.append(arena, try T.read(.{ .report = report, .arena = arena, .file = s.path, .table = table }, s.name));
     }
     return out.items;
+}
+
+fn parseToml(arena: std.mem.Allocator, path: []const u8, text: []const u8, report: *Report) std.mem.Allocator.Error!?*toml.Table {
+    var diag: toml.Diagnostic = .{};
+    return toml.parse(arena, text, &diag) catch |e| switch (e) {
+        error.OutOfMemory => return error.OutOfMemory,
+        error.InvalidToml => {
+            try report.add(path, diag.line, diag.column, "{s}", .{diag.message});
+            return null;
+        },
+    };
 }
 
 /// The root table of the TOML file at `path`; null, with the reason

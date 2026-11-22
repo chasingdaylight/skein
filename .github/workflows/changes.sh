@@ -50,6 +50,8 @@ shipped_changes() {
             editors/vscode/CHANGELOG.md) continue ;;
             # everything else of the extension is in its package, its readme too
             editors/vscode/*) ;;
+            # the templates are built into skein, their Markdown too
+            templates/*) ;;
             *) matches "$f" "${exempt[@]}" && continue ;;
         esac
         echo "$f"

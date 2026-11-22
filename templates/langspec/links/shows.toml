@@ -1,0 +1,4 @@
+description = "An example shows a rule"
+from = ["example"]
+to = ["rule"]
+expected = true

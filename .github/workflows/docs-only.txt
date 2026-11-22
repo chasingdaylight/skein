@@ -4,7 +4,8 @@
 # One bash `case` glob per line, matched against the path from the repo
 # root (`*` also matches `/`). Lines starting with # and blank lines are
 # ignored. The files of the VS Code extension are never taken for
-# documentation: they are in its package.
+# documentation: they are in its package; nor are those of templates/,
+# which are built into skein.
 
 *.md
 .markdownlint-cli2.jsonc

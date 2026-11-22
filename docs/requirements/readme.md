@@ -24,6 +24,7 @@ A requirement that names no status is implemented. One marked `planned` describe
 | [repositories](repositories.md) | Other repositories, `pin`, and the state of the network. |
 | [results](results.md) | Test results, and what they say of the items. |
 | [forge](forge.md) | Issues and pull requests on the forge. |
+| [templates](templates.md) | Templates built into skein. |
 | [importing](importing.md) | `import doorstop`, `import csv`. |
 | [planned](planned.md) | What is to come. |
 

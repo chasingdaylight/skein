@@ -24,6 +24,7 @@ type = "srs"
 | Key | Meaning |
 | --- | --- |
 | `project.name` | The project's name, for reports. |
+| `template` | The templates the project uses: `"langspec"`, a list of names, or `[template.KEY]` tables with a `name` and options. See [templates](templates.md). |
 | `project.id` | What other projects know this one by, whatever short name they give it: `"cesiumlang/cesium"`. |
 | `forge.kind`, `forge.repository`, `forge.url` | Where the project's issues and pull requests are: `"github"`, `"owner/repo"`, and a server other than the public one. See [the forge](forge.md). |
 | `results.paths` | The test results files the project keeps, or directories of them: see [test results](results.md). |

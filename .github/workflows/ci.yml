@@ -82,6 +82,8 @@ jobs:
               case "$f" in
                 # the extension's files are in its package, its readme too
                 editors/vscode/*) scope=full ;;
+                # the templates are built into skein, their Markdown too
+                templates/*) scope=full ;;
                 *) matches "$f" "${docs_only[@]}" || scope=full ;;
               esac
               if [ "$scope" = full ]; then echo "changed: $f"; break; fi
@@ -197,7 +199,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
 
       - name: zig fmt
-        run: zig fmt --check build build.zig src
+        run: zig fmt --check build build.zig src templates
 
       - name: Markdown
         run: npx --yes markdownlint-cli2@0.24.2 "**/*.md"

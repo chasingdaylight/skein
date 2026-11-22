@@ -1,0 +1,5 @@
+description = "Code that shows a rule: accepted, or rejected"
+categories = ["accepts", "rejects"]
+
+[example]
+link = "shows"

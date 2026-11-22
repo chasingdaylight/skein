@@ -20,6 +20,9 @@ pub const usage =
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  link FROM TYPE TO Add a link of a type from one item to another
     \\  baseline [NAME]   Tag what is committed as a baseline; without NAME, list them
+    \\  template list     The templates built into skein
+    \\  template show NAME
+    \\                    What a template declares, and its options
     \\  examples --out DIR
     \\                    Write the tested examples as files, with an index, for
     \\                    the project's own test driver
@@ -103,6 +106,7 @@ pub const Command = union(enum) {
     baseline: Baseline,
     pin: Pin,
     examples: Examples,
+    template: TemplateCommand,
     /// the language server
     lsp,
     import: Import,
@@ -124,6 +128,13 @@ pub const Common = struct {
     state: Network.State = .recorded,
     /// fetch nothing; repositories by url are read from their caches
     offline: bool = false,
+};
+
+pub const TemplateCommand = struct {
+    what: What,
+    name: ?[]const u8 = null,
+
+    pub const What = enum { list, show };
 };
 
 pub const Check = struct {
@@ -370,6 +381,14 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         const format: Check.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Check.Format, f) orelse
             return .{ .misuse = "check: the formats are text, github and gitlab" } else .text;
         return .{ .check = .{ .common = common, .format = format } };
+    }
+    if (eql(name, "template")) {
+        if (try p.allow(&.{})) |problem| return .{ .misuse = problem };
+        const forms = "template: list, or show NAME";
+        if (words.len == 0) return .{ .misuse = forms };
+        const what = std.meta.stringToEnum(TemplateCommand.What, words[0]) orelse return .{ .misuse = forms };
+        if ((what == .show) != (words.len == 2) or words.len > 2) return .{ .misuse = forms };
+        return .{ .template = .{ .what = what, .name = if (words.len == 2) words[1] else null } };
     }
     if (eql(name, "examples")) {
         if (try p.allow(&.{ "--root", "--out" })) |problem| return .{ .misuse = problem };
