@@ -52,6 +52,28 @@ For the items removed or changed in content, `skein impact` shall list every ite
 %req[diff.formats]
 `diff` and `impact` shall give their result as text, as JSON, or as Markdown for a pull request.
 
+## Markdown as HTML
+
+skein turns Markdown into HTML with code of its own, which nothing is fetched for. It covers what documents of requirements and specifications use, as GitHub shows it; it is not a complete CommonMark renderer.
+
+%req[html.blocks]
+skein shall render the blocks it reads as HTML: paragraphs, block quotes (their content read as Markdown again), thematic breaks, and HTML blocks passed through as they are. Front matter is left out. A file with CRLF line ends gives the same HTML as with LF.
+
+%req[html.headings]
+A heading shall get an anchor as GitHub makes it: in lowercase, punctuation left out, spaces as hyphens; a second heading of the same name gets `-1`, a third `-2`. The first heading of level 1 gives the document its title.
+
+%req[html.lists]
+Lists shall be rendered ordered or unordered, an ordered one from its first number, with each entry read as Markdown of its own, so lists nest. In a list without blank lines between entries, an entry's first paragraph is not put in a paragraph element.
+
+%req[html.code]
+Fenced and indented code blocks shall be rendered with their lines as they are, escaped, and a fenced block's language given as the class `language-` and its name.
+
+%req[html.tables]
+Tables shall be rendered with their header, their rows, and the alignment of each column from its delimiter row. A `|` in a code span or after a backslash does not end a cell. Lines that start with `|` and have no delimiter row are a paragraph.
+
+%req[html.inline]
+Inline Markdown shall be rendered: emphasis and strong with `*` and `_` (not `_` inside a word), strikethrough with `~~`, code spans, links with an optional title, images, autolinks in angle brackets, bare `http://` and `https://` URLs, raw inline HTML passed through, backslash escapes, and hard line breaks. Text is escaped, and character references such as `&copy;` are kept. For a site, a relative link to a `.md` file can be made one to the `.html` file, its anchor kept.
+
 ## Export
 
 %req[export.json]
