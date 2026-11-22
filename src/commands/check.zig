@@ -72,6 +72,7 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
     try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
+    try reviews.checkCitations(arena, &ws.project, &ws.graph, &ws.citations, &ws.report);
     try maturity.check(io, arena, ws.root, &ws.project, &ws.graph, &ws.report);
     const resources = try Resources.of(io, arena, ws, &ws.report);
     const calendar: *const Calendar = if (resources) |*r| &r.calendar else &Calendar.every_day;

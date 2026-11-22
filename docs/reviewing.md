@@ -42,6 +42,22 @@ Two commands record a review. Both take IDs, or `--all`:
 
 Link types without `review = true` are never reported, so a project chooses which relations need this care.
 
+### Reviewed citations
+
+A test that cites a rule (`// spec: lex.comment.line`) is as much a dependent of the rule as a test linked by `verifies`. A citation set asks for the same care:
+
+```toml
+# .skein/config.toml
+[[citations]]
+name = "test"
+path = "tests"
+files = [".zig"]
+marker = "// spec:"
+review = true
+```
+
+`skein check` then reports a citation that was never reviewed, and one whose item has changed since it was. `skein review tests/lex.zig` records the citations in that file as reviewed (it takes files that cite, beside items), and `skein clear lex.comment.line` those of the rule that changed, after you have looked at the tests that cite it. The records are in `.skein/reviews/citations/`, one file for each citing file, like the others committed with the change.
+
 ## Where the records are
 
 Under `.skein/reviews/`, never in the items or beside the documents, so the sources hold no hashes. There is one file per document, and one per directory of item files, each with one sorted line per link:
