@@ -169,6 +169,22 @@ test "systems engineering under NPR 7123.1D: its requirements and its reviews" {
     try expectContains(criteria, "- %criteria[.e1] ");
 }
 
+// req: templates.npr7120.5f
+test "program and project management under NPR 7120.5F, with NPR 7123.1D" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{ "npr7120.5f", "npr7123.1d" } })).status);
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    const coverage = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text;
+    try expectContains(coverage, "complies-pm links to pm items: 0 of 51");
+    try expectContains(coverage, "complies-se links to se items: 0 of 62");
+}
+
 // req: templates.iso29148
 test "a project with requirements as ISO/IEC/IEEE 29148 describes them" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);

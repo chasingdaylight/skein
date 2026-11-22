@@ -1,0 +1,19 @@
+description = "A requirement of NPR 7120.5F as its compliance matrix (Table C-1) lists it, named by its paragraph (PM-2.2.5); read-only, from skein's template"
+id = "numbered"
+prefix = "PM"
+digits = 1
+
+# who owns the requirement (Table C-1)
+[attributes.owner]
+normative = false
+
+# whether its owner may delegate approving its tailoring
+[attributes.delegated]
+values = ["yes", "no"]
+normative = false
+
+# who approves tailoring it: the Mission Directorate Associate Administrator, the Center Director, the program or project manager
+[attributes.approvers]
+list = true
+values = ["MD-AA", "CD", "PM"]
+normative = false
