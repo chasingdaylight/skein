@@ -171,6 +171,24 @@ The project itself is not changed. `DIR` is created when needed and is best kept
 
 Every link is relative and the styles are inside each page, so `DIR` can be served from any address (GitHub Pages, a file share) or opened straight from disk. The pages follow the reader's light or dark setting.
 
+### Generated pages
+
+A document can ask for a page that skein makes from the project, in a fenced code block of the language `skein`. `skein render` replaces the block with the page, in both formats; elsewhere (on GitHub, in an editor) the request shows as the code it is.
+
+````markdown
+```skein
+list term
+```
+````
+
+| Request | Gives |
+| --- | --- |
+| `list [TYPE...] [category=C] [status=S] [profile=P] [ATTRIBUTE=V]` | A table of the items that pass every condition, with category, status and first paragraph. `list term` is a glossary. |
+| `matrix LINKTYPE [conditions]` | Each item the link type may point to, with the items that link to it; the gaps marked **none**. A traceability matrix. |
+| `coverage [profile=P]` | The coverage table, with links to the items that are not covered. |
+
+A request skein cannot read becomes a note in its place, saying what is wrong.
+
 ## `skein move OLD NEW`
 
 Gives an item another ID, everywhere the old one is used, in one step:

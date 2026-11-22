@@ -7,7 +7,10 @@ const std = @import("std");
 const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Marker = @import("../markdown/Marker.zig");
+const Project = @import("../Project.zig");
 const Schema = @import("../schema/Schema.zig");
+const generated = @import("generated.zig");
+const markdown = @import("../markdown.zig");
 
 pub const Error = std.mem.Allocator.Error;
 
@@ -17,6 +20,10 @@ pub const Context = struct {
     schema: *const Schema,
     /// the directories of the sources that hold one item per file
     item_sources: []const []const u8 = &.{},
+    /// for the pages a document asks for (generated.zig); without them
+    /// such a request is left as it is
+    project: ?*const Project = null,
+    citations: ?*const Graph.Citations = null,
 };
 
 /// The document `file`, whose text is `source`, rendered.
@@ -28,6 +35,7 @@ pub fn document(ctx: Context, file: []const u8, source: []const u8) Error![]cons
         try page.addReferences(item);
     }
     try page.addMentions();
+    try page.addGenerated(source);
     return page.render(source, 1);
 }
 
@@ -70,11 +78,45 @@ const Page = struct {
     markers: std.AutoHashMapUnmanaged(u32, *const Item) = .empty,
     /// by line and column: the ID referred to
     references: std.AutoHashMapUnmanaged(Place, []const u8) = .empty,
+    /// by the first line of the code block that asks for it: the
+    /// generated page, and the block's last line
+    generated: std.AutoHashMapUnmanaged(u32, Generated) = .empty,
+
+    const Generated = struct { last_line: u32, text: []const u8 };
 
     const Place = struct { line: u32, column: u32 };
 
     fn addReferences(self: *Page, item: *const Item) Error!void {
         for (item.references) |r| try self.references.put(self.ctx.arena, .{ .line = r.line, .column = r.column }, r.target);
+    }
+
+    /// The code blocks of `source` that ask for a generated page, and the
+    /// Markdown each stands for
+    fn addGenerated(self: *Page, source: []const u8) Error!void {
+        const project = self.ctx.project orelse return;
+        const citations = self.ctx.citations orelse return;
+        for (try markdown.scan(self.ctx.arena, source)) |b| {
+            if (b.kind != .code) continue;
+            const nl = std.mem.findScalar(u8, b.text, '\n') orelse continue;
+            if (!generated.isRequest(b.text[0..nl])) continue;
+            // the request is the lines between the fences
+            const inner_end = std.mem.findScalarLast(u8, b.text, '\n') orelse continue;
+            const request = if (inner_end > nl) b.text[nl + 1 .. inner_end] else "";
+            const text = try generated.render(.{
+                .arena = self.ctx.arena,
+                .project = project,
+                .graph = self.ctx.graph,
+                .citations = citations,
+                .href = hrefOf,
+                .href_ctx = self,
+            }, request);
+            try self.generated.put(self.ctx.arena, b.first_line, .{ .last_line = b.last_line, .text = std.mem.trimEnd(u8, text, "\n") });
+        }
+    }
+
+    fn hrefOf(ctx: *const anyopaque, item: *const Item) Error![]const u8 {
+        const self: *const Page = @ptrCast(@alignCast(ctx));
+        return try self.href(item.id) orelse "";
     }
 
     fn addMentions(self: *Page) Error!void {
@@ -90,8 +132,15 @@ const Page = struct {
         var out: std.ArrayList(u8) = .empty;
         var lines = std.mem.splitScalar(u8, text, '\n');
         var number = first_line;
+        var skip_to: u32 = 0;
         while (lines.next()) |line| : (number += 1) {
+            if (number <= skip_to) continue;
             if (number > first_line) try out.append(a, '\n');
+            if (self.generated.get(number)) |g| {
+                try out.appendSlice(a, g.text);
+                skip_to = g.last_line;
+                continue;
+            }
             var at: usize = 0;
             if (self.markers.get(number)) |item| {
                 if (Marker.startIn(line)) |start| {
