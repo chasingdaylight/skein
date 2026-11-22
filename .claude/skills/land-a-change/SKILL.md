@@ -1,0 +1,18 @@
+---
+name: land-a-change
+description: Land a change in skein on dev - the checks, commit and pull request as the Chasing Daylight Agent app, merge, the issue closed or commented on, the standing dev to main pull request kept current, and its CI watched. Use when a change for an issue is ready.
+---
+
+# Landing a change
+
+Every change reaches `dev` through a pull request that is merged at once (no check is required on `dev`; CI does not run there). The checks run locally are what stand between the change and `dev`.
+
+1. **Branch:** `git switch -c feature/NAME` (or `fix/NAME`) from an up-to-date `dev`.
+2. **Write the pull request body** to a file (heredocs mangle backslashes and quotes): what changed and why, `Closes #N` (or `Part of #N`), **How it was checked** (the checks below, and anything tried by hand), **Choices made without guidance**, and the Claude Code line at the end.
+3. **Land it:** `bash tools/agent/land.sh ISSUE LABEL "Commit line" "PR title" BODY_FILE close|keep PATH...`, naming every path of the change (never `git add -A`: emanspeaks works in this tree too; his uncommitted edits to `CLAUDE.md`, the LTeX files and readmes may go along). It runs `zig fmt --check`, `zig build`, `zig build test`, `skein check` on skein itself, markdownlint and cspell, then commits as the app, opens the pull request into `dev` with the release-note label, merges it, deletes the branch and closes (or comments on) the issue. Set `ZIG` to the Zig 0.17.1 executable when `zig` is not on the PATH.
+4. **The standing pull request:** add a line for the merged pull request to the description of the open `dev` to `main` pull request (`gh pr edit N --body-file`).
+5. **CI:** each merge into `dev` restarts CI on the standing pull request. Watch it (`gh run list --branch dev --limit 1`, then `gh run view ID`); a red run means `dev` is broken, and its fix is the next pull request.
+
+Labels: `feature`, `fix`, `performance`, `tests`, `refactor`, `ci`, `skip-changelog` (`.github/release.yml`). Commit lines are about 50 characters, no body; the AI attribution trailer is added by the script.
+
+Traps: in the Bash tool on this machine, a command line containing a single quote fails with "unexpected EOF while looking for matching" before it runs, so put such commands in a script file and run the file.
