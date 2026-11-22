@@ -9,6 +9,7 @@ const Io = std.Io;
 const Calendar = @import("../planning/Calendar.zig");
 const Resources = @import("../planning/Resources.zig");
 const Report = @import("../Report.zig");
+const Time = @import("../planning/Time.zig");
 const Work = @import("../planning/Work.zig");
 const Workspace = @import("../commands/Workspace.zig");
 const burn = @import("../planning/burn.zig");
@@ -28,11 +29,14 @@ pub fn load(io: Io, arena: std.mem.Allocator, ws: *const Workspace, offline: boo
     var ignored: Report = .{ .arena = arena };
     const calendar = try arena.create(Calendar);
     calendar.* = if (try Resources.load(io, arena, ws.root, &ignored)) |r| r.calendar else .every_day;
+    const spent = try Time.load(io, arena, ws.root, &ignored);
     const at = try arena.create(History);
     at.* = .{ .io = io, .arena = arena, .root = ws.root, .works = works };
     const plan = try arena.create(gantt.Plan);
     plan.* = .{
         .works = works,
+        .spent = spent.all.items,
+        .hours_a_day = calendar.hours,
         .entries = try schedule.compute(arena, works, calendar),
         .calendar = calendar,
         .baseline = History.bars,

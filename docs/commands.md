@@ -195,6 +195,7 @@ list term
 | `documents` | The register of documents: each document that gives its identifier, with its title, revision and last change. |
 | `burndown MILESTONE [weight] [from=DATE] [to=DATE]`, `burnup ...` | A milestone's burndown (what remains, beside a guideline to none) or burnup (scope and done), day by day up to today, from the project as committed each day; `weight` counts estimates in place of items. Work is done in the statuses of `[planning] done`, by default the type's last status. |
 | `board [TYPE...] [conditions] [by=status\|assignee\|milestone]` | A board of the work items: a column for each status (or assignee, or milestone), a card for each item. |
+| `time [TYPE...] [conditions]` | Time spent on work items against their estimates, in hours, with who spent it: see `skein time`. |
 | `roadmap [MILESTONE...]` | The milestones by finish, each with its dates, how much of its work is done, and its work. |
 | `gantt [TYPE...] [conditions] [by=parent\|assignee] [baseline=NAME]` | The schedule as a Gantt chart (a Mermaid diagram): bars, milestones and the critical path, by parent or by assignee, with a baseline's bars under today's to show slippage; and a table of the dates, slack and predecessors. See `skein schedule`. |
 
@@ -366,6 +367,10 @@ skein runs none of them: the project's test driver reads the index, compiles or 
 ## `skein schedule`
 
 Schedules the work items (item types with `[planning]`, see [project files](project-files.md#work-planning)) and writes the schedule to `.skein/schedule.toml`, and to the formats `[schedule] also` names. It says how many items it scheduled and how many are on the critical path, and writes `float` into float items that name no mode. Run it after a change to the plan, and commit what it writes: `skein check` reports a stored schedule that is not the one the items give.
+
+## `skein time`
+
+`skein time ITEM HOURS [--by NAME] [--on DATE] [--note TEXT]` logs time spent on a work item: by a person (default git's `user.name`) on a day (default today). It is kept in git under `.skein/time/`, one line per item, person and day, in the file of the item's document; logging the same day again adds to it. Without arguments, `skein time` sets what was spent against each work item's estimate (its estimate in days in the hours of the calendar's working day), with who spent it and the totals; `--json` gives the same as JSON. In a document, a `time [TYPE...] [conditions]` request gives it as a table.
 
 ## `skein load`
 

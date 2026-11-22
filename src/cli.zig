@@ -43,6 +43,7 @@ pub const usage =
     \\                    Record a result a person obtained, such as a procedure
     \\                    carried out by hand, in the results the project keeps
     \\  schedule          Schedule the work items, and write .skein/schedule.toml
+    \\  time [ITEM HOURS] Log hours spent on a work item; without them, spent against estimate
     \\  load              Each person's work, week by week, beside the time they have
     \\  lsp               Serve editors as a language server, on standard input and output
     \\  mcp               Serve AI agents skein's tools (Model Context Protocol), on
@@ -54,7 +55,7 @@ pub const usage =
     \\
     \\Options:
     \\  --root DIR        The project, or a directory inside it (default: here)
-    \\  --json            trace, coverage, diff, impact, load: as JSON
+    \\  --json            trace, coverage, diff, impact, load, time: as JSON
     \\  --markdown        coverage, diff, impact: as Markdown, for a pull request
     \\  --profile NAME    coverage, export, render: only the items of this profile
     \\  --current         check, trace, coverage, export, render: read the other
@@ -74,9 +75,9 @@ pub const usage =
     \\                    of what it changed
     \\  --as ROLE         approve: the role the approval is given in, where the type
     \\                    names the roles that must each approve
-    \\  --by NAME         approve, result: who (default: git's user.name)
-    \\  --on DATE         approve, result: when, as 2027-03-01 (default: today)
-    \\  --note TEXT       result: what to keep with it
+    \\  --by NAME         approve, result, time: who (default: git's user.name)
+    \\  --on DATE         approve, result, time: when, as 2027-03-01 (default: today)
+    \\  --note TEXT       result, time: what to keep with it
     \\  --evidence PATH   result: a file that shows it; may be given more than once
     \\  --implementation NAME
     \\                    result: what produced it
@@ -107,6 +108,7 @@ pub const Command = union(enum) {
     coverage: Coverage,
     load: Load,
     schedule: Schedule,
+    time: TimeSpent,
     /// `diff`, and `impact`
     diff: Diff,
     /// `export`
@@ -208,6 +210,17 @@ pub const Load = struct {
 
 pub const Schedule = struct {
     common: Common = .{},
+};
+
+pub const TimeSpent = struct {
+    common: Common = .{},
+    /// the work item and the hours; neither for the report
+    id: ?[]const u8 = null,
+    hours: ?[]const u8 = null,
+    by: ?[]const u8 = null,
+    on: ?[]const u8 = null,
+    note: ?[]const u8 = null,
+    json: bool = false,
 };
 
 pub const Agents = struct {
@@ -471,6 +484,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
         return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.values("--results") } };
+    }
+    if (eql(name, "time")) {
+        if (try p.allow(&.{ "--root", "--by", "--on", "--note", "--json", "--offline" })) |problem| return .{ .misuse = problem };
+        if (words.len != 0 and words.len != 2) return .{ .misuse = "time takes a work item and the hours spent, or nothing for the report" };
+        return .{ .time = .{ .common = common, .id = if (words.len == 2) words[0] else null, .hours = if (words.len == 2) words[1] else null, .by = p.value("--by"), .on = p.value("--on"), .note = p.value("--note"), .json = p.flag("--json") } };
     }
     if (eql(name, "schedule")) {
         if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
