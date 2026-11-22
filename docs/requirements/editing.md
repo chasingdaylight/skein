@@ -36,6 +36,20 @@ Where the type has no source of item files, the marker to start a paragraph or l
 %req[new.refusals]
 `skein new` shall refuse, and write nothing, when the type does not exist, when the ID is taken (also by a removed item) or is not spelled as the type's IDs are, when `--to` names no source of item files, and when the type has more than one source of item files and `--to` names none of them.
 
+## Adding a link
+
+%req[link.add]
+`skein link FROM TYPE TO` shall add a link of the type `TYPE` from the item `FROM` to the item `TO`, and change nothing else in the file.
+
+%req[link.marker]
+For an item in a document, the link shall be added to its marker: to the values of the key when the marker has that key, else as a new `key=value` before the closing bracket.
+
+%req[link.front-matter]
+For an item file, the link shall be added to its front matter: to the key's array or string when it is written on one line, else as a new key right after the ID, where it cannot fall into a table. Line endings are kept. A key written another way is not changed, and the command says to add the link by hand.
+
+%req[link.refusals]
+`skein link` shall refuse, and write nothing, what `skein check` would report: an item or link type that does not exist, a link type the item's type cannot have, a target of a type the link cannot point to, a removed target, a link to the item itself, and a link that is there already. A target of another repository (`name:id`) is accepted unchecked, as `check` accepts it.
+
 ## The language server
 
 %req[lsp.lifecycle]

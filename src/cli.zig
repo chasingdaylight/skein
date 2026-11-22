@@ -15,6 +15,7 @@ pub const usage =
     \\  render --out DIR  Write the documents as Markdown for a site generator
     \\  move OLD NEW      Give an item another ID, everywhere the old one is used
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
+    \\  link FROM TYPE TO Add a link of a type from one item to another
     \\  import doorstop DIR...
     \\                    Turn Doorstop documents into skein items, in place
     \\  import csv FILE --type TYPE --to DIR
@@ -58,6 +59,7 @@ pub const Command = union(enum) {
     render: Render,
     move: Move,
     new: New,
+    link: Link,
     /// the language server
     lsp,
     import: Import,
@@ -114,6 +116,13 @@ pub const Export = struct {
         links,
         citations,
     };
+};
+
+pub const Link = struct {
+    common: Common = .{},
+    from: []const u8,
+    type_name: []const u8,
+    to: []const u8,
 };
 
 pub const New = struct {
@@ -238,6 +247,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
             return .{ .misuse = "export: json, items, links or citations" };
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
+    }
+    if (eql(name, "link")) {
+        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (words.len != 3) return .{ .misuse = "link takes the item, the link type, and the item to link to" };
+        return .{ .link = .{ .common = common, .from = words[0], .type_name = words[1], .to = words[2] } };
     }
     if (eql(name, "new")) {
         if (try p.allow(&.{ "--root", "--to" })) |problem| return .{ .misuse = problem };
@@ -489,6 +503,16 @@ test "lsp takes nothing but the transport" {
     try testing.expectEqual(.lsp, try f.run(&.{"lsp"}));
     try testing.expectEqual(.lsp, try f.run(&.{ "lsp", "--stdio" }));
     try testing.expectEqualStrings("lsp takes no arguments", (try f.run(&.{ "lsp", "--port", "1" })).misuse);
+}
+
+test "link takes two items and a type" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    const l = (try f.run(&.{ "link", "c.one", "verifies", "lex.a" })).link;
+    try testing.expectEqualStrings("c.one", l.from);
+    try testing.expectEqualStrings("verifies", l.type_name);
+    try testing.expectEqualStrings("lex.a", l.to);
+    try testing.expectEqualStrings("link takes the item, the link type, and the item to link to", (try f.run(&.{ "link", "c.one" })).misuse);
 }
 
 test "new takes a type, and maybe an ID" {
