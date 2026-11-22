@@ -34,6 +34,9 @@ forge: ?Forge = null,
 templates: []const template_use.Use = &.{},
 /// how mature its documents are expected to be, at which milestone
 maturity: Maturity = .{},
+/// the formats the schedule is also written in (`[schedule] also`), besides
+/// `.skein/schedule.toml`
+schedule_also: []const []const u8 = &.{},
 schema: Schema = .{},
 
 /// `[maturity]`: the maturities a document may be at, lowest first
@@ -131,12 +134,19 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template", "maturity" });
+    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template", "maturity", "schedule" });
     self.templates = try template_use.readAll(r);
     self.forge = try Forge.read(r);
     if (try r.child("maturity")) |m| {
         try m.known(&.{ "order", "milestone" });
         self.maturity = .{ .order = try m.strings("order"), .milestone = try m.string("milestone") };
+    }
+    if (try r.child("schedule")) |s| {
+        try s.known(&.{"also"});
+        self.schedule_also = try s.strings("also");
+        for (self.schedule_also) |f| {
+            if (!std.mem.eql(u8, f, "json") and !std.mem.eql(u8, f, "csv")) try s.complain("also", "'{s}' is no format skein writes the schedule in: \"json\" or \"csv\"", .{f});
+        }
     }
     if (try r.child("results")) |results| {
         try results.known(&.{"paths"});

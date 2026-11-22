@@ -42,6 +42,7 @@ pub const usage =
     \\  result ID pass|fail|skip
     \\                    Record a result a person obtained, such as a procedure
     \\                    carried out by hand, in the results the project keeps
+    \\  schedule          Schedule the work items, and write .skein/schedule.toml
     \\  load              Each person's work, week by week, beside the time they have
     \\  lsp               Serve editors as a language server, on standard input and output
     \\  help              Show this text
@@ -101,6 +102,7 @@ pub const Command = union(enum) {
     trace: Trace,
     coverage: Coverage,
     load: Load,
+    schedule: Schedule,
     /// `diff`, and `impact`
     diff: Diff,
     /// `export`
@@ -195,6 +197,10 @@ pub const Coverage = struct {
 pub const Load = struct {
     common: Common = .{},
     json: bool = false,
+};
+
+pub const Schedule = struct {
+    common: Common = .{},
 };
 
 pub const Diff = struct {
@@ -437,6 +443,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
         return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.values("--results") } };
+    }
+    if (eql(name, "schedule")) {
+        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "schedule takes no items" };
+        return .{ .schedule = .{ .common = common } };
     }
     if (eql(name, "load")) {
         if (try p.allow(&.{ "--root", "--json" })) |problem| return .{ .misuse = problem };

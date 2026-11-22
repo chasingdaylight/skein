@@ -359,6 +359,10 @@ Writes each tested example (see [writing items](writing-items.md#tested-examples
 
 skein runs none of them: the project's test driver reads the index, compiles or runs each file, and fails when an example is not accepted or rejected as it must be.
 
+## `skein schedule`
+
+Schedules the work items (item types with `[planning]`, see [project files](project-files.md#work-planning)) and writes the schedule to `.skein/schedule.toml`, and to the formats `[schedule] also` names. It says how many items it scheduled and how many are on the critical path, and writes `float` into float items that name no mode. Run it after a change to the plan, and commit what it writes: `skein check` reports a stored schedule that is not the one the items give.
+
 ## `skein load`
 
 Each person of `.skein/resources.toml` with their work week by week (ISO weeks) and the hours they can work that week:
