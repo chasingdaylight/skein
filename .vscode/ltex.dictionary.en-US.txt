@@ -65,3 +65,15 @@ strs
 syrs
 StRS
 SyRS
+Cmap
+IPEP
+beginbfchar
+beginbfrange
+bfchar
+bfrange
+cmap
+endbfchar
+endbfrange
+flate
+nums
+parenright

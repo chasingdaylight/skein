@@ -20,8 +20,8 @@ pub const usage =
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  link FROM TYPE TO Add a link of a type from one item to another
     \\  baseline [NAME]   Tag what is committed as a baseline; without NAME, list them
-    \\  init [--template NAME]
-    \\                    Start a project here, from a template's document skeletons
+    \\  init [--template NAME]...
+    \\                    Start a project here, from templates' document skeletons
     \\  template list     The templates built into skein
     \\  template show NAME
     \\                    What a template declares, and its options
@@ -146,7 +146,8 @@ pub const TemplateCommand = struct {
 pub const Init = struct {
     /// the directory to start the project in
     root: []const u8 = ".",
-    template: ?[]const u8 = null,
+    /// the templates it uses; an overlay goes with the template it overlays
+    templates: []const []const u8 = &.{},
 };
 
 pub const Check = struct {
@@ -406,7 +407,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
     if (eql(name, "init")) {
         if (try p.allow(&.{ "--root", "--template" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "init takes no items" };
-        return .{ .init = .{ .root = p.value("--root") orelse ".", .template = p.value("--template") } };
+        return .{ .init = .{ .root = p.value("--root") orelse ".", .templates = try p.values("--template") } };
     }
     if (eql(name, "examples")) {
         if (try p.allow(&.{ "--root", "--out" })) |problem| return .{ .misuse = problem };

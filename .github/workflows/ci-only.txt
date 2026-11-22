@@ -11,3 +11,5 @@
 .github/*
 # the generator of the npr7150.2d template's requirements: tested, not shipped (what it writes is, in templates/)
 tools/npr7150/*
+# the PDF reader that took the text of standards into the templates: tested, not shipped
+tools/pdf/*

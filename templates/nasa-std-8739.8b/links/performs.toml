@@ -1,0 +1,6 @@
+description = "A row of the assurance mapping matrix says how tasks of the standard are carried out"
+from = ["assurance"]
+to = ["satask"]
+# every group of tasks of the requirements the project's class invokes has its rows; a group
+# counts as covered when each of its tasks is
+expected = { profile = "assured" }

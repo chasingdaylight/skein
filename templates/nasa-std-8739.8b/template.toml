@@ -1,0 +1,22 @@
+# A template of skein's: see docs/templates.md.
+description = "Software assurance and software safety under NASA-STD-8739.8B, with npr7150.2d: the standard's tasks for each requirement of the NPR, its IV&V requirements, and the assurance organization's mapping matrix"
+
+[options.class]
+description = "The software class of the project, as in npr7150.2d (NPR 7150.2D, Appendix D)"
+values = ["A", "B", "C", "D", "E", "F"]
+
+[options.safety-critical]
+description = "Whether the project has safety-critical software (section 4.2 of the standard; SWE-205)"
+values = ["true", "false"]
+default = "false"
+
+[options.safety-critical.sets.true]
+applies = '["always", "safety-critical"]'
+
+[options.safety-critical.sets.false]
+applies = '["always"]'
+
+[options.ivv]
+description = "Whether IV&V is performed on the project (SWE-141), which brings in the requirements of section 4.4.2"
+values = ["true", "false"]
+default = "false"

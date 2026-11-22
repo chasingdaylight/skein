@@ -1,0 +1,6 @@
+description = "A requirement of NASA-STD-8739.8B on the IV&V Provider (section 4.4.2); read-only, from skein's template"
+id = "numbered"
+prefix = "IVV"
+
+[attributes.section]
+normative = false

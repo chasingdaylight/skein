@@ -52,4 +52,15 @@ pub fn build(b: *std.Build) void {
     npr_run.addPassthruArgs();
     b.step("npr7150", "Write NPR 7150.2D as skein documents: -- HTML_DIR OUT_DIR RETRIEVED").dependOn(&npr_run.step);
     test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = npr })).step);
+
+    // the text of a PDF, for the generators of templates from standards published as PDF
+    const pdf = b.createModule(.{
+        .root_source_file = b.path("tools/pdf/__main__.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const pdf_run = b.addRunArtifact(b.addExecutable(.{ .name = "pdftext", .root_module = pdf }));
+    pdf_run.addPassthruArgs();
+    b.step("pdftext", "Write the text of a PDF: -- FILE.pdf OUT.txt").dependOn(&pdf_run.step);
+    test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = pdf })).step);
 }
