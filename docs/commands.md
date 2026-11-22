@@ -237,7 +237,7 @@ The tag is only made locally; push it to share it.
 
 ## `skein pin [NAME [REV]]`
 
-Records in `.skein/network.toml` the commit of each other repository that the items are checked against: the commit `REV`, or the one its checkout has checked out. With a name, only that repository is pinned. For a repository pinned before, it says what changed there and which of the changed items this project refers to, so that someone can look at them before committing the record. It refuses a checkout with changes that are not committed, unless the commit is named. See [other repositories](repositories.md).
+Records in `.skein/network.toml` the commit of each other repository that the items are checked against: the commit `REV`, or the one its checkout has checked out. With a name, only that repository is pinned. For a repository pinned before, it says what changed there and which of the changed items this project refers to, so that someone can look at them before committing the record. It refuses a checkout with changes that are not committed, unless the commit is named. It also records the repositories reached through the members' own records, and leaves submodules to git. See [other repositories](repositories.md).
 
 ## `skein import doorstop DIR...`
 

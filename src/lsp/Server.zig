@@ -20,6 +20,7 @@ const json = std.json;
 
 const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
+const Network = @import("../network/Network.zig");
 const Report = @import("../Report.zig");
 const Workspace = @import("../commands/Workspace.zig");
 const check = @import("../commands/check.zig");
@@ -263,6 +264,29 @@ fn find(s: *Server, a: Allocator, params: json.Value) Allocator.Error!?Found {
     return .{ .ws = ws, .item = item };
 }
 
+/// Where the item of another repository under the cursor (`name:id`) is
+/// declared, in that repository's checkout; null when the word is no such
+/// item, or its repository has no checkout on disk
+fn otherDefinition(s: *Server, a: Allocator, params: json.Value) Allocator.Error!?protocol.Location {
+    const p = parse(protocol.PositionParams, a, params) orelse return null;
+    var ws = s.open(a) orelse return null;
+    defer ws.close();
+    const file = try s.fileOf(a, &ws, p.textDocument.uri) orelse return null;
+    const text = s.docs.get(p.textDocument.uri) orelse ws.root.readFileAlloc(s.io, file, a, .limited(1 << 26)) catch return null;
+    const line = query.lineOf(text, p.position.line) orelse return null;
+    const word = query.wordAt(line, p.position.character) orelse return null;
+    if (Network.split(word) == null) return null;
+    const n = ws.graph.others orelse return null;
+    const f = switch (n.resolve(word)) {
+        .item => |f| f,
+        else => return null,
+    };
+    const checkout = f.member.repository.path orelse return null;
+    const path = try Io.Dir.path.resolveAlloc(a, &.{ ws.root_path, checkout, f.item.file });
+    const l: usize = if (f.item.line > 0) f.item.line - 1 else 0;
+    return .{ .uri = try uri_paths.fromPath(a, path, s.style), .range = .{ .start = .{ .line = l, .character = 0 }, .end = .{ .line = l, .character = 0 } } };
+}
+
 fn locationOf(s: *Server, a: Allocator, ws: *const Workspace, file: []const u8, line: u32, column: u32) Allocator.Error!protocol.Location {
     const l: usize = if (line > 0) line - 1 else 0;
     const c: usize = if (column > 0) column - 1 else 0;
@@ -270,6 +294,7 @@ fn locationOf(s: *Server, a: Allocator, ws: *const Workspace, file: []const u8, 
 }
 
 fn definition(s: *Server, a: Allocator, id: json.Value, params: json.Value) Error!void {
+    if (try s.otherDefinition(a, params)) |location| return s.respond(a, id, location);
     var found = try s.find(a, params) orelse return s.respond(a, id, null);
     defer found.ws.close();
     try s.respond(a, id, try s.locationOf(a, &found.ws, found.item.file, found.item.line, 1));

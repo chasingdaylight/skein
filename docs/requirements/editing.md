@@ -59,7 +59,7 @@ For an item file, the link shall be added to its front matter: to the key's arra
 The server shall publish the problems that `skein check` reports as diagnostics, each on its file and line, its warnings as warnings: when it starts, and whenever a document is opened or saved or the editor says files have changed. When a file that had problems has none, its diagnostics are published as empty. The project is read from the files, so a change counts once it is saved.
 
 %req[lsp.definition]
-On the ID of an item, wherever it is written (a reference, a link, a citation in code or tests, or plain text), "go to definition" shall lead to the marker or the file that declares the item. On a marker that names a part by a leading dot, it leads to that part.
+On the ID of an item, wherever it is written (a reference, a link, a citation in code or tests, or plain text), "go to definition" shall lead to the marker or the file that declares the item. On a marker that names a part by a leading dot, it leads to that part. On `name:id`, it leads into the checkout of that repository, when it has one on disk.
 
 %req[lsp.references]
 "Find references" on an item shall list its declaration, when asked for, and every place that names it: references in the text of items and in narrative text, links, and citations.

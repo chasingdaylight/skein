@@ -15,11 +15,14 @@ const fingerprint = @import("../graph/fingerprint.zig");
 const git = @import("../git.zig");
 const history = @import("../history.zig");
 const fetch = @import("fetch.zig");
+const identity = @import("identity.zig");
 const record = @import("record.zig");
 
 const Network = @This();
 
 members: []const Member = &.{},
+/// the project's own record
+recorded: record.Record = .{},
 
 pub const State = enum {
     /// the commits `.skein/network.toml` records
@@ -38,6 +41,10 @@ pub const Member = struct {
     graph: Graph = .{},
     /// why its items could not be read; null when they were
     unavailable: ?[]const u8 = null,
+    /// whether it is a git submodule of the project, whose commit git records
+    submodule: bool = false,
+    /// its own record of its network, as it was at the commit read
+    recorded: record.Record = .{},
 
     /// The commit, short, for messages
     pub fn at(self: *const Member) []const u8 {
@@ -110,7 +117,8 @@ pub fn origin(io: Io, arena: std.mem.Allocator, root_path: []const u8, git_dir: 
 /// that does not match the commit it names is reported.
 pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, root_path: []const u8, project: *const Project, options: Options, report: *Report) !Network {
     if (project.repositories.len == 0) return .{};
-    const entries = try record.read(io, arena, root, report);
+    const own = try record.read(io, arena, root, report);
+    const entries = own.entries;
     // snapshots and caches go into this repository's git directory, never another's
     const git_dir: ?[]const u8 = history.gitDir(io, arena, root) catch |e| switch (e) {
         error.OutOfMemory => return error.OutOfMemory,
@@ -119,8 +127,8 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, root_path: []const u
     var members: std.ArrayList(Member) = .empty;
     for (project.repositories) |repository| {
         var m: Member = .{ .repository = repository };
-        try read(io, arena, root_path, git_dir, entries, options, &m);
-        if (options.state == .recorded and m.unavailable == null) {
+        try read(io, arena, root, root_path, git_dir, entries, options, &m);
+        if (options.state == .recorded and m.unavailable == null and !m.submodule) {
             const entry = record.find(entries, repository.name).?;
             const now = try ofProject(arena, &m.graph, &m.project.schema);
             if (!std.mem.eql(u8, now, entry.fingerprint)) {
@@ -129,11 +137,25 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, root_path: []const u
         }
         try members.append(arena, m);
     }
-    return .{ .members = members.items };
+    const out: Network = .{ .members = members.items, .recorded = own };
+    try identity.check(&out, project, report);
+    return out;
+}
+
+/// The commit a submodule of `root` at `path` is recorded at, in git's
+/// index; null when `path` is no submodule
+pub fn submoduleCommit(io: Io, arena: std.mem.Allocator, root: Io.Dir, path: []const u8) !?[]const u8 {
+    if (std.mem.find(u8, path, "..") != null) return null;
+    const out = try git.output(io, arena, root, &.{ "ls-files", "--stage", "--", path }) orelse return null;
+    // "160000 <commit> 0\t<path>" for a gitlink
+    if (!std.mem.startsWith(u8, out, "160000 ")) return null;
+    var words = std.mem.tokenizeAny(u8, out, " \t\n");
+    _ = words.next();
+    return words.next();
 }
 
 /// Fills in `m`: its commit and its items, or why they cannot be read
-fn read(io: Io, arena: std.mem.Allocator, root_path: []const u8, git_dir: ?[]const u8, entries: []const record.Entry, options: Options, m: *Member) !void {
+fn read(io: Io, arena: std.mem.Allocator, root: Io.Dir, root_path: []const u8, git_dir: ?[]const u8, entries: []const record.Entry, options: Options, m: *Member) !void {
     const name = m.repository.name;
     var o = switch (try origin(io, arena, root_path, git_dir, m.repository)) {
         .ok => |o| o,
@@ -143,14 +165,20 @@ fn read(io: Io, arena: std.mem.Allocator, root_path: []const u8, git_dir: ?[]con
         },
     };
     defer o.dir.close(io);
+    var ignored: Report = .{ .arena = arena };
     if (options.state == .working and !o.fetched) {
-        var ignored: Report = .{ .arena = arena };
         m.project = try Project.load(io, arena, o.dir, &ignored);
         m.graph = try Graph.load(io, arena, o.dir, &m.project, &ignored);
+        m.recorded = try record.read(io, arena, o.dir, &ignored);
         return;
     }
+    const gitlink = if (o.fetched) null else try submoduleCommit(io, arena, root, m.repository.path.?);
     const revision: []const u8 = switch (options.state) {
-        .recorded => blk: {
+        // a submodule is recorded by git itself
+        .recorded => if (gitlink) |c| blk: {
+            m.submodule = true;
+            break :blk c;
+        } else blk: {
             const entry = record.find(entries, name) orelse {
                 m.unavailable = try arena.print("it is not pinned yet ('skein pin {s}')", .{name});
                 return;
@@ -181,9 +209,11 @@ fn read(io: Io, arena: std.mem.Allocator, root_path: []const u8, git_dir: ?[]con
         return;
     };
     defer snap.deinit();
+    m.submodule = gitlink != null;
     m.commit = snap.commit;
     m.project = snap.project;
     m.graph = snap.graph;
+    m.recorded = try record.read(io, arena, snap.dir, &ignored);
 }
 
 /// Why a repository by url could not be read: offline, or not fetched
