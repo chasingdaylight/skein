@@ -353,35 +353,27 @@ The usage text, and skein's version.
 A CI job needs three lines: get skein, check, and report coverage.
 
 ```yaml
+# GitHub Actions
 - name: skein
   run: |
-    echo "::add-matcher::.github/skein-matcher.json"
-    skein check
+    skein check --format github
     skein coverage --markdown >> "$GITHUB_STEP_SUMMARY"
 ```
 
-- **`skein check` fails the job** when the project has problems (exit status 1), and prints each as `file:line:column: error: message`.
-- **Annotations on GitHub:** that form is one GitHub Actions can read. With the problem matcher below saved as `.github/skein-matcher.json`, each problem is shown on its line in the pull request. It needs the project to be at the root of the repository, since the paths are from the project's root.
+- **`skein check` fails the job** when the project has problems (exit status 1). With `--format github` it writes each problem and warning as an annotation, which GitHub shows on its line in the pull request; without it, as `file:line:column: error: message`. The paths are from the project's root, so the project is to be at the root of the repository.
 - **`skein coverage` never fails the job:** it reports. `--markdown` puts the table in the job's summary.
 
-```json
-{
-  "problemMatcher": [
-    {
-      "owner": "skein",
-      "pattern": [
-        {
-          "regexp": "^(.+?):(\\d+):(\\d+): (error): (.*)$",
-          "file": 1,
-          "line": 2,
-          "column": 3,
-          "severity": 4,
-          "message": 5
-        }
-      ]
-    }
-  ]
-}
+On GitLab, `--format gitlab` writes a Code Quality report, which the job keeps as an artifact so that GitLab shows the problems on the merge request:
+
+```yaml
+# GitLab CI
+skein:
+  script:
+    - skein check --format gitlab > gl-code-quality-report.json
+  artifacts:
+    when: always
+    reports:
+      codequality: gl-code-quality-report.json
 ```
 
 To get skein in the job, download the archive of a [release](https://github.com/chasingdaylight/skein/releases) for the runner's platform and check it against the release's `SHA256SUMS`; pin the version, so that a new skein never changes a job by itself.

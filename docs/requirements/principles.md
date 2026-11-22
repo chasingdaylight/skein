@@ -21,7 +21,7 @@ It shall be possible to write an item as a paragraph in a document that also con
 The same files shall give the same output, byte for byte. Problems, traces, coverage, exports and the record files skein writes are in an order that does not depend on the machine, the file system or the run.
 
 %req[principle.one-codebase]
-skein shall build from its own repository alone, into one program with no dependencies at run time. Nothing is fetched during the build, and skein runs no other tool than `git`.
+skein shall build from its own repository alone, into one program with no dependencies at run time. Nothing is fetched during the build, and skein requires no other tool than `git`. It may use a tool the user has installed for what it does better, such as a forge's own program (`gh`, `glab`) for its sign-in, but does without it when it is not there (emanspeaks, 2026-11-22).
 
 %req[principle.no-silent-mistakes]
 Anything skein cannot read as intended shall be reported, not ignored: an unknown key in a file of `.skein/`, an option that does not belong to a command, a reference to an item that does not exist.

@@ -74,14 +74,16 @@ pub const usage =
     \\                    or the verification method
     \\  --out DIR         render, examples: where the files go
     \\  --format NAME     render: markdown for a site generator (the default),
-    \\                    html: the site itself, or document: one file per document
+    \\                    html: the site itself, or document: one file per document;
+    \\                    check: text (the default), github: annotations for
+    \\                    GitHub Actions, or gitlab: a Code Quality report
     \\
 ;
 
 pub const Command = union(enum) {
     help,
     version,
-    check: Common,
+    check: Check,
     trace: Trace,
     coverage: Coverage,
     /// `diff`, and `impact`
@@ -116,6 +118,20 @@ pub const Common = struct {
     state: Network.State = .recorded,
     /// fetch nothing; repositories by url are read from their caches
     offline: bool = false,
+};
+
+pub const Check = struct {
+    common: Common = .{},
+    format: Format = .text,
+
+    pub const Format = enum {
+        /// `file:line:column: error: message`, on standard error
+        text,
+        /// GitHub Actions workflow commands, on standard output
+        github,
+        /// a GitLab Code Quality report, on standard output
+        gitlab,
+    };
 };
 
 pub const Pin = struct {
@@ -334,9 +350,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
     const words = p.words.items;
 
     if (eql(name, "check")) {
-        if (try p.allow(&.{ "--root", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--current", "--working", "--offline", "--format" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "check takes no items" };
-        return .{ .check = common };
+        const format: Check.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Check.Format, f) orelse
+            return .{ .misuse = "check: the formats are text, github and gitlab" } else .text;
+        return .{ .check = .{ .common = common, .format = format } };
     }
     if (eql(name, "examples")) {
         if (try p.allow(&.{ "--root", "--out" })) |problem| return .{ .misuse = problem };
@@ -575,8 +593,8 @@ test "an unknown command is reported by name" {
 test "options: values, unknown ones, and ones that do not go with the command" {
     var f: Fixture = .init();
     defer f.deinit();
-    try testing.expectEqualStrings(".", (try f.run(&.{"check"})).check.root);
-    try testing.expectEqualStrings("docs", (try f.run(&.{ "check", "--root", "docs" })).check.root);
+    try testing.expectEqualStrings(".", (try f.run(&.{"check"})).check.common.root);
+    try testing.expectEqualStrings("docs", (try f.run(&.{ "check", "--root", "docs" })).check.common.root);
     try testing.expectEqualStrings("--root needs a value after it", (try f.run(&.{ "check", "--root" })).misuse);
     try testing.expectEqualStrings("check takes no items", (try f.run(&.{ "check", "everything" })).misuse);
     try testing.expectEqualStrings("unknown option --fast", (try f.run(&.{ "check", "--fast" })).misuse);
@@ -721,8 +739,8 @@ test "pin, and the state of the other repositories" {
     try testing.expectEqualStrings("compiler", one.name.?);
     try testing.expectEqualStrings("v1.2", one.revision.?);
     try testing.expectEqualStrings("pin takes a repository, and a commit of it", (try f.run(&.{ "pin", "a", "b", "c" })).misuse);
-    try testing.expectEqual(.recorded, (try f.run(&.{"check"})).check.state);
-    try testing.expectEqual(.current, (try f.run(&.{ "check", "--current" })).check.state);
+    try testing.expectEqual(.recorded, (try f.run(&.{"check"})).check.common.state);
+    try testing.expectEqual(.current, (try f.run(&.{ "check", "--current" })).check.common.state);
     try testing.expectEqual(.working, (try f.run(&.{ "trace", "x", "--working" })).trace.common.state);
     try testing.expectEqualStrings("give --current or --working, not both", (try f.run(&.{ "check", "--current", "--working" })).misuse);
     try testing.expect((try f.run(&.{ "pin", "--offline" })).pin.common.offline);

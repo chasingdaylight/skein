@@ -18,6 +18,9 @@ const Workspace = @This();
 pub const Outcome = struct {
     text: []const u8,
     status: Status = .ok,
+    /// whether the text goes to standard output whatever the status: what
+    /// a CI system reads there (annotations, a report)
+    to_stdout: bool = false,
 
     pub const Status = enum(u8) {
         ok = 0,
