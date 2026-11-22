@@ -103,6 +103,83 @@ fn viaHttps(io: Io, arena: std.mem.Allocator, forge: *const Forge, path: []const
     };
 }
 
+/// What `skein apply` writes to an issue
+pub const Changes = struct {
+    /// the logins it is to be assigned to
+    assignees: ?[]const []const u8 = null,
+    /// the title of its milestone; empty for none
+    milestone: ?[]const u8 = null,
+    /// `open` or `closed`
+    state: ?[]const u8 = null,
+};
+
+/// Writes `changes` to the issue `r`, through `gh` (which holds the
+/// sign-in); null when it was written, else why not. `body_path` is a file
+/// skein may write the request in.
+pub fn update(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Ref, changes: Changes, body_path: []const u8) !?[]const u8 {
+    var body: std.ArrayList(u8) = .empty;
+    try body.append(arena, '{');
+    var first = true;
+    if (changes.assignees) |logins| {
+        try body.appendSlice(arena, "\"assignees\":[");
+        for (logins, 0..) |l, i| try body.print(arena, "{s}{f}", .{ if (i > 0) "," else "", std.json.fmt(l, .{}) });
+        try body.append(arena, ']');
+        first = false;
+    }
+    if (changes.milestone) |title| {
+        if (!first) try body.append(arena, ',');
+        first = false;
+        if (title.len == 0) {
+            try body.appendSlice(arena, "\"milestone\":null");
+        } else {
+            const number = try milestoneNumber(io, arena, forge, r.repository, title) orelse
+                return try arena.print("the forge has no milestone '{s}' in {s}", .{ title, r.repository });
+            try body.print(arena, "\"milestone\":{d}", .{number});
+        }
+    }
+    if (changes.state) |state| {
+        if (!first) try body.append(arena, ',');
+        try body.print(arena, "\"state\":{f}", .{std.json.fmt(state, .{})});
+    }
+    try body.append(arena, '}');
+    if (Io.Dir.path.dirname(body_path)) |d| Io.Dir.cwd().createDirPath(io, d) catch {};
+    Io.Dir.cwd().writeFile(io, .{ .sub_path = body_path, .data = body.items }) catch return "the request could not be written";
+    defer Io.Dir.cwd().deleteFile(io, body_path) catch {};
+
+    var argv: std.ArrayList([]const u8) = .empty;
+    try argv.appendSlice(arena, &.{ "gh", "api", "--method", "PATCH", try arena.print("repos/{s}/issues/{d}", .{ r.repository, r.number }), "--input", body_path });
+    if (forge.url != null) try argv.appendSlice(arena, &.{ "--hostname", forge.host() });
+    const result = std.process.run(arena, io, .{
+        .argv = argv.items,
+        .stdout_limit = .limited(1 << 22),
+        .timeout = .{ .duration = .{ .raw = .fromSeconds(idle_seconds), .clock = .awake } },
+    }) catch |e| return switch (e) {
+        error.OutOfMemory => error.OutOfMemory,
+        error.FileNotFound => "gh is not installed: writing to the forge needs it, signed in",
+        else => try arena.print("gh could not be run ({t})", .{e}),
+    };
+    if (result.term.success()) return null;
+    return try arena.print("gh: {s}", .{std.mem.trim(u8, result.stderr, " \r\n")});
+}
+
+/// The number of the milestone titled `title` of `repository`
+fn milestoneNumber(io: Io, arena: std.mem.Allocator, forge: *const Forge, repository: []const u8, title: []const u8) !?u64 {
+    const reply = try api(io, arena, forge, try arena.print("repos/{s}/milestones?state=all&per_page=100", .{repository}));
+    const text = switch (reply) {
+        .body => |t| t,
+        else => return null,
+    };
+    const v = std.json.parseFromSliceLeaky(std.json.Value, arena, text, .{}) catch return null;
+    if (v != .array) return null;
+    for (v.array.items) |m| {
+        if (m != .object) continue;
+        const t = m.object.get("title") orelse continue;
+        const n = m.object.get("number") orelse continue;
+        if (t == .string and n == .integer and std.mem.eql(u8, t.string, title)) return @intCast(n.integer);
+    }
+    return null;
+}
+
 /// An issue as GitHub's API gives it: its title, its state, and whether
 /// it is a pull request
 pub fn parse(arena: std.mem.Allocator, json: []const u8) ?Issue {

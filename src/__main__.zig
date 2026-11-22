@@ -13,6 +13,8 @@ const coverage = @import("commands/coverage.zig");
 const load = @import("commands/load.zig");
 const schedule = @import("commands/schedule.zig");
 const time_spent = @import("commands/time.zig");
+const overlay = @import("commands/overlay.zig");
+const apply = @import("commands/apply.zig");
 const cli = @import("cli.zig");
 const move = @import("commands/move.zig");
 const new = @import("commands/new.zig");
@@ -69,6 +71,8 @@ pub fn main(init: std.process.Init) !void {
         .load => |options| try load.run(io, arena, options),
         .schedule => |options| try schedule.run(io, arena, options),
         .time => |options| try time_spent.run(io, arena, options),
+        .overlay => |options| try overlay.run(io, arena, options),
+        .apply => |options| try apply.run(io, arena, options),
         .unknown => |name| .{
             .text = try arena.print("skein: unknown command '{s}'\n\n{s}", .{ name, cli.usage }),
             .status = .misuse,

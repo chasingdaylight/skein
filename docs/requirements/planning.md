@@ -46,6 +46,14 @@ The schedule shall give each scheduled item its slack, the working days it can f
 %req[planning.forge-fields]
 A work item whose type has the planning role `issue` and whose `issue` attribute names an issue (`#12`, `owner/repo#12`) of the forge in `[forge]` shall take from the forge what the forge holds, as the adapter declares it; GitHub's are the issue's assignees, its milestone with the day it is due, and whether it is closed (not a start, a duration or effort, which stay in the item). An assignee or milestone the item does not write is the issue's; assignees the item writes that differ from the issue's are a warning of `skein check`; a closed issue is finished work (burndown, roadmap); and work with nothing else to place it, whose issue's milestone is due, finishes on that day and starts as many working days before as it lasts (source `forge` in the stored schedule). The forge is asked unless `--offline`; what it last said is kept and used when it cannot be reached, and the stored schedule is not compared while an issue cannot be learned. (Design, section 10.4; emanspeaks, 2026-11-21, on #85.)
 
+## What-if plans
+
+%req[planning.overlay]
+A branch of the plan shall be able to deviate from what the forge holds without changing it: `skein overlay ISSUE FIELD VALUE` records, in `.skein/overlay.toml`, as one sorted line per issue and field, the fields where the plan differs (GitHub: `assignees`, `milestone`, `state`), each with the upstream value it was based on (what the forge says when it is made; `-` for no assignee or milestone), and `--remove` takes one out; `skein overlay` alone lists them. A value the forge says already is no deviation. The plan's views and schedule see the issue with the overlay applied, everything else still coming from the forge, and `skein check` reports a deviation whose upstream value has since changed (as a merge reports a conflict) and one of an issue no work item is. (Design, section 10.4; emanspeaks, 2026-11-21.)
+
+%req[planning.apply]
+`skein apply` shall write the overlay to the forge, through the adapter (GitHub: `gh`, signed in), and take what was written out of the overlay, deleting its file when it is empty. A field that changed on both sides, the forge's value now not being the one the deviation was based on, is not written and stays in the overlay, with the exit status of a problem, unless `--force`; one the forge already says is taken out; `--dry-run` says what would be written and writes nothing; a write the forge refuses leaves its deviations in the overlay, with its reason. It is not available with `--offline`.
+
 ## Progress
 
 %req[planning.views]

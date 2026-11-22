@@ -368,6 +368,20 @@ skein runs none of them: the project's test driver reads the index, compiles or 
 
 Schedules the work items (item types with `[planning]`, see [project files](project-files.md#work-planning)) and writes the schedule to `.skein/schedule.toml`, and to the formats `[schedule] also` names. It says how many items it scheduled and how many are on the critical path, and writes `float` into float items that name no mode. Run it after a change to the plan, and commit what it writes: `skein check` reports a stored schedule that is not the one the items give.
 
+## `skein overlay` and `skein apply`
+
+A what-if plan is a branch whose deviations from what the forge holds are kept as an overlay, in `.skein/overlay.toml`: only the fields that differ, each with the upstream value it was based on. For work items that are issues (the planning role `issue`):
+
+```sh
+skein overlay '#12' assignees bob,carol   # in this plan, bob and carol do it
+skein overlay '#12' milestone v2          # or "-" for none
+skein overlay '#12' state closed
+skein overlay                             # list the deviations
+skein overlay '#12' state --remove        # the forge's again
+```
+
+The plan's schedule, charts and `skein load` see the issue with the overlay applied; everything else still comes from the forge. `skein check` reports a deviation whose upstream value has changed since. When the plan is adopted, `skein apply` writes the overlay to the forge (`gh`, signed in) and takes it out; a field that changed on both sides is left for a decision unless `--force`, and `--dry-run` writes nothing.
+
 ## `skein time`
 
 `skein time ITEM HOURS [--by NAME] [--on DATE] [--note TEXT]` logs time spent on a work item: by a person (default git's `user.name`) on a day (default today). It is kept in git under `.skein/time/`, one line per item, person and day, in the file of the item's document; logging the same day again adds to it. Without arguments, `skein time` sets what was spent against each work item's estimate (its estimate in days in the hours of the calendar's working day), with who spent it and the totals; `--json` gives the same as JSON. In a document, a `time [TYPE...] [conditions]` request gives it as a table.

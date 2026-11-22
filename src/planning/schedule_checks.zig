@@ -12,6 +12,7 @@ const Graph = @import("../graph/Graph.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 const Work = @import("Work.zig");
+const Overlay = @import("../forge/Overlay.zig");
 const planning_forge = @import("forge.zig");
 const day = @import("day.zig");
 const schedule = @import("schedule.zig");
@@ -23,6 +24,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proje
     const collected = try planning_forge.collect(io, arena, root, project, graph, offline);
     const works = collected.works;
     if (works.len == 0) return;
+    for (collected.overlay_problems) |p| try report.add(Overlay.file, 0, 0, "{s}", .{p});
     for (works) |w| if (w.conflict) |what| {
         try report.warn(w.item.file, w.item.line, 1, "{s}: it writes {s} that its issue {s} on the forge says otherwise of; the forge's are the truth, so leave them out", .{ w.item.id, what, w.issue.? });
     };

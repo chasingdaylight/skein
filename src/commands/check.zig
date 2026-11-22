@@ -15,6 +15,7 @@ const planning_checks = @import("../planning/checks.zig");
 const load = @import("../planning/load.zig");
 const Calendar = @import("../planning/Calendar.zig");
 const schedule_checks = @import("../planning/schedule_checks.zig");
+const Overlay = @import("../forge/Overlay.zig");
 const Time = @import("../planning/Time.zig");
 const planning_forge = @import("../planning/forge.zig");
 const Resources = @import("../planning/Resources.zig");
@@ -76,6 +77,8 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     const calendar: *const Calendar = if (resources) |*r| &r.calendar else &Calendar.every_day;
     try planning_checks.run(arena, &ws.project.schema, &ws.graph, calendar, &ws.report);
     if (resources) |*r| try load.check(io, arena, ws.root, &ws.project, &ws.graph, r, ws.common.offline, &ws.report);
+    // the overlay's file must read; what it says is checked with the schedule
+    _ = try Overlay.load(io, arena, ws.root, &ws.report);
     const time = try Time.load(io, arena, ws.root, &ws.report);
     try time.check((try planning_forge.collect(io, arena, ws.root, &ws.project, &ws.graph, true)).works, &ws.report);
     try schedule_checks.run(io, arena, ws.root, &ws.project, &ws.graph, calendar, ws.common.offline, &ws.report);
