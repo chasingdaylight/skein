@@ -22,6 +22,7 @@ A requirement that names no status is implemented. One marked `planned` describe
 | [views](views.md) | `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `baseline`. |
 | [editing](editing.md) | `move`, `new`, `link`, the language server `lsp`, and the VS Code extension. |
 | [planning](planning.md) | Work items and their schedule. |
+| [agents](agents.md) | The Model Context Protocol server `mcp`, and instructions for coding agents. |
 | [repositories](repositories.md) | Other repositories, `pin`, and the state of the network. |
 | [results](results.md) | Test results, and what they say of the items. |
 | [forge](forge.md) | Issues and pull requests on the forge. |

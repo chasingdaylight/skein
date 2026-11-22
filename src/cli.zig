@@ -45,6 +45,10 @@ pub const usage =
     \\  schedule          Schedule the work items, and write .skein/schedule.toml
     \\  load              Each person's work, week by week, beside the time they have
     \\  lsp               Serve editors as a language server, on standard input and output
+    \\  mcp               Serve AI agents skein's tools (Model Context Protocol), on
+    \\                    standard input and output
+    \\  agents [--skill]  Write what coding agents should know of skein into AGENTS.md
+    \\                    (or CLAUDE.md, or --file PATH), or as a skill file
     \\  help              Show this text
     \\  version           Show skein's version
     \\
@@ -118,6 +122,9 @@ pub const Command = union(enum) {
     init: Init,
     /// the language server
     lsp,
+    /// the Model Context Protocol server, on the project at the root given
+    mcp: []const u8,
+    agents: Agents,
     import: Import,
     review: Review,
     clear: Review,
@@ -201,6 +208,14 @@ pub const Load = struct {
 
 pub const Schedule = struct {
     common: Common = .{},
+};
+
+pub const Agents = struct {
+    common: Common = .{},
+    /// as a skill file, not a section of the instructions
+    skill: bool = false,
+    /// the file to write, in place of the usual one
+    file: ?[]const u8 = null,
 };
 
 pub const Diff = struct {
@@ -374,6 +389,8 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--evidence", .takes_value = true },
     .{ .name = "--as", .takes_value = true },
     .{ .name = "--template", .takes_value = true },
+    .{ .name = "--skill", .takes_value = false },
+    .{ .name = "--file", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -401,6 +418,17 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         .offline = p.flag("--offline"),
     };
     const words = p.words.items;
+
+    if (eql(name, "mcp")) {
+        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "mcp takes no items" };
+        return .{ .mcp = common.root };
+    }
+    if (eql(name, "agents")) {
+        if (try p.allow(&.{ "--root", "--skill", "--file" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "agents takes no items" };
+        return .{ .agents = .{ .common = common, .skill = p.flag("--skill"), .file = p.value("--file") } };
+    }
 
     if (eql(name, "check")) {
         if (try p.allow(&.{ "--root", "--current", "--working", "--offline", "--format" })) |problem| return .{ .misuse = problem };

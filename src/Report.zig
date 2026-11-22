@@ -105,6 +105,39 @@ fn escapeGithub(arena: std.mem.Allocator, s: []const u8, property: bool) std.mem
     return out.items;
 }
 
+/// The problems and warnings as JSON, for agents:
+/// `{"ok": B, "problems": [{"file", "line", "column", "severity", "message"}]}`
+pub fn renderJson(self: *Report, arena: std.mem.Allocator) std.mem.Allocator.Error![]const u8 {
+    const Json = @import("output/Json.zig");
+    var j: Json = .{ .arena = arena };
+    try j.beginObject();
+    try j.key("ok");
+    try j.boolean(self.ok());
+    try j.key("problems");
+    try j.beginArray();
+    for (try self.sorted(arena)) |l| {
+        try j.beginObject();
+        try j.key("file");
+        try j.string(l.p.file);
+        try j.key("line");
+        try j.integer(l.p.line);
+        try j.key("column");
+        try j.integer(l.p.column);
+        try j.key("severity");
+        try j.string(l.kind);
+        try j.key("message");
+        try j.string(l.p.message);
+        if (l.p.fix) |f| {
+            try j.key("fix");
+            try j.string(try arena.print("write '{s}' for '{s}'", .{ f.new, f.old }));
+        }
+        try j.endObject();
+    }
+    try j.endArray();
+    try j.endObject();
+    return j.finish();
+}
+
 /// The problems and warnings as a GitLab Code Quality report, which a job
 /// keeps as an artifact (`artifacts: reports: codequality:`) and GitLab
 /// shows on the merge request: a JSON array of findings

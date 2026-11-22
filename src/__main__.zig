@@ -6,6 +6,8 @@ const diff = @import("commands/diff.zig");
 const exporter = @import("commands/export.zig");
 const import_csv = @import("commands/import_csv.zig");
 const lsp = @import("commands/lsp.zig");
+const mcp = @import("commands/mcp.zig");
+const agents = @import("commands/agents.zig");
 const import_doorstop = @import("commands/import_doorstop.zig");
 const coverage = @import("commands/coverage.zig");
 const load = @import("commands/load.zig");
@@ -55,6 +57,8 @@ pub fn main(init: std.process.Init) !void {
         .template => |options| try template.run(io, arena, options),
         .init => |options| try init_command.run(io, arena, options),
         .lsp => std.process.exit(try lsp.serve(io, init.gpa, version)),
+        .mcp => |root| std.process.exit(try mcp.serve(io, init.gpa, version, root)),
+        .agents => |options| try agents.run(io, arena, options),
         .import => |options| switch (options.format) {
             .doorstop => try import_doorstop.run(io, arena, options),
             .csv => try import_csv.run(io, arena, options),

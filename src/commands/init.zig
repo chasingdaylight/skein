@@ -1,7 +1,8 @@
 //! `skein init [--template NAME]...`: starts a project here: `.skein/` with
 //! its configuration, and, from each template, what the template's
 //! `config.toml` adds to it, its document skeletons (`documents/`) under
-//! `docs/`, and its `project/` files where they say.
+//! `docs/`, and its `project/` files where they say; and what coding agents
+//! should know of skein, in the project's agent instructions (agents.zig).
 
 const std = @import("std");
 const Io = std.Io;
@@ -9,6 +10,7 @@ const Io = std.Io;
 const Project = @import("../Project.zig");
 const Template = @import("../template/Template.zig");
 const Workspace = @import("Workspace.zig");
+const agents = @import("agents.zig");
 const cli = @import("../cli.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outcome {
@@ -33,15 +35,27 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
         for (try Template.filesOf(arena, name, "project/")) |f| _ = try writeNew(io, root, f.path["project/".len..], f.data);
     }
     try root.createDirPath(io, "docs");
+    // what coding agents should know of it, in the project's instructions for them
+    var agents_file: []const u8 = "";
+    switch (try Workspace.open(io, arena, .{ .root = options.root })) {
+        .ok => |ws_ok| {
+            var ws = ws_ok;
+            defer ws.close();
+            agents_file = try agents.write(io, arena, &ws, false, null);
+        },
+        .failed => {},
+    }
     const from = if (options.templates.len == 0) "" else try arena.print(", from the template{s} {s}", .{
         if (options.templates.len == 1) "" else "s",
         try std.mem.join(arena, " and ", options.templates),
     });
-    return .{ .text = try arena.print("skein: a project in {s}{s}, with {d} document{s} to start from; 'skein check' checks it\n", .{
+    const told = if (agents_file.len == 0) "" else try arena.print("; {s} tells coding agents about skein", .{agents_file});
+    return .{ .text = try arena.print("skein: a project in {s}{s}, with {d} document{s} to start from; 'skein check' checks it{s}\n", .{
         options.root,
         from,
         written,
         if (written == 1) "" else "s",
+        told,
     }) };
 }
 
