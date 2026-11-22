@@ -21,6 +21,9 @@ pub const Source = enum {
     computed,
     /// a float item with nothing to schedule it from
     unscheduled,
+    /// its finish is the due day of its issue's milestone on the forge, its
+    /// start that many working days before
+    forge,
 };
 
 pub const Entry = struct {
@@ -45,7 +48,12 @@ pub fn compute(arena: std.mem.Allocator, works: []const Work, calendar: *const C
         if (mode == .fixed) {
             e.start = w.start;
             if (w.start) |s| e.finish = w.lastDay(calendar) orelse s;
-        }
+        } else if (w.forge_due) |due| if (w.after.len == 0 and w.start == null) {
+            // what the forge says is due, when nothing else places it
+            e.finish = due;
+            e.start = calendar.back(due, (w.duration orelse 1) -| 1);
+            e.source = .forge;
+        };
     }
     // each pass schedules what it can; a loop of predecessors stays unscheduled
     var changed = true;

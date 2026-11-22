@@ -8,10 +8,10 @@ const Io = std.Io;
 
 const Calendar = @import("../planning/Calendar.zig");
 const Resources = @import("../planning/Resources.zig");
-const Work = @import("../planning/Work.zig");
 const Workspace = @import("Workspace.zig");
 const attribute = @import("../edit/attribute.zig");
 const cli = @import("../cli.zig");
+const planning_forge = @import("../planning/forge.zig");
 const schedule = @import("../planning/schedule.zig");
 const stored = @import("../planning/stored.zig");
 
@@ -27,7 +27,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Schedule) !Workspace.O
     if (ws.report.problems.items.len > before) return ws.problems();
     const calendar: *const Calendar = if (resources) |*r| &r.calendar else &Calendar.every_day;
 
-    const works = try Work.collect(arena, &ws.project.schema, &ws.graph);
+    const works = (try planning_forge.collect(io, arena, ws.root, &ws.project, &ws.graph, options.common.offline)).works;
     if (works.len == 0) return .{ .text = try arena.print("skein: there are no work items: no item type has [planning]\n", .{}), .status = .misuse };
     const entries = try schedule.compute(arena, works, calendar);
 

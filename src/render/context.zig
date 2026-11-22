@@ -64,6 +64,6 @@ pub fn build(io: Io, arena: std.mem.Allocator, ws: *Workspace, options: Options)
         .results = if (results.all.len > 0) .{ .results = results, .index = idx } else null,
         .issues = issues,
         .control = control,
-        .planning = try plan.load(io, arena, ws),
+        .planning = try plan.load(io, arena, ws, options.offline),
     };
 }

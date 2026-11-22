@@ -5,14 +5,16 @@
 //! counted until it is scheduled.
 
 const std = @import("std");
+const Io = std.Io;
 
-const Calendar = @import("Calendar.zig");
 const Graph = @import("../graph/Graph.zig");
+const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 const Resources = @import("Resources.zig");
-const Schema = @import("../schema/Schema.zig");
 const Work = @import("Work.zig");
 const day = @import("day.zig");
+const planning_forge = @import("forge.zig");
+const schedule = @import("schedule.zig");
 
 const Error = std.mem.Allocator.Error;
 
@@ -32,15 +34,17 @@ pub const Load = struct {
     weeks: []const Week,
 };
 
-pub fn compute(arena: std.mem.Allocator, schema: *const Schema, graph: *const Graph, resources: *const Resources) Error![]const Load {
-    const works = try Work.collect(arena, schema, graph);
+pub fn compute(arena: std.mem.Allocator, works: []const Work, resources: *const Resources) Error![]const Load {
+    const entries = try schedule.compute(arena, works, &resources.calendar);
     var out: std.ArrayList(Load) = .empty;
     for (resources.people) |*p| {
         var weeks: std.array_hash_map.Auto(day.Day, Week) = .empty;
-        for (works) |*w| {
+        for (entries) |*entry| {
+            const w = entry.work;
             if (!assigned(w, p.handle)) continue;
-            const first = w.start orelse continue;
-            const last = w.lastDay(&resources.calendar) orelse continue;
+            // work counts once it has dates: written, or scheduled
+            const first = entry.start orelse continue;
+            const last = entry.finish orelse continue;
             const working = resources.calendar.workingDays(first, last);
             if (working == 0) continue;
             const effort: f64 = @floatFromInt(w.estimate orelse w.duration orelse working);
@@ -74,13 +78,14 @@ fn assigned(w: *const Work, handle: []const u8) bool {
 
 /// Reports assignees who are not among the people, and warns of each
 /// week a person has more work than time
-pub fn check(arena: std.mem.Allocator, schema: *const Schema, graph: *const Graph, resources: *const Resources, report: *Report) Error!void {
-    for (try Work.collect(arena, schema, graph)) |*w| {
+pub fn check(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, resources: *const Resources, offline: bool, report: *Report) !void {
+    const works = (try planning_forge.collect(io, arena, root, project, graph, offline)).works;
+    for (works) |*w| {
         for (w.assignees) |a| if (resources.person(a) == null) {
             try report.add(w.item.file, w.item.line, 1, "{s}: '{s}' is not among the people of {s}", .{ w.item.id, a, Resources.file });
         };
     }
-    for (try compute(arena, schema, graph, resources)) |l| {
+    for (try compute(arena, works, resources)) |l| {
         for (l.weeks) |week| if (week.over()) {
             try report.warn(Resources.file, l.person.line, 1, "{s} has {d:.1} hours of work in the week of {s} ({s}), and {d:.1} hours to work", .{ l.person.handle, week.hours, &day.format(week.monday), &day.isoWeek(week.monday), week.capacity });
         };

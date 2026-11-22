@@ -9,9 +9,6 @@
 const std = @import("std");
 const Io = std.Io;
 
-const Graph = @import("../graph/Graph.zig");
-const Project = @import("../Project.zig");
-const Schema = @import("../schema/Schema.zig");
 const Work = @import("Work.zig");
 const day = @import("day.zig");
 const git = @import("../git.zig");
@@ -22,34 +19,32 @@ pub const Point = struct { day: day.Day, total: f64, done: f64 };
 pub const Count = enum { items, weight };
 
 /// The work of `milestone` in a project, and how much of it is done
-pub fn measure(arena: std.mem.Allocator, project: *const Project, graph: *const Graph, milestone: []const u8, count: Count) std.mem.Allocator.Error!struct { total: f64, done: f64 } {
+pub fn measure(works: []const Work, milestone: []const u8, count: Count) struct { total: f64, done: f64 } {
     var total: f64 = 0;
     var done: f64 = 0;
-    for (try Work.collect(arena, &project.schema, graph)) |*w| {
+    for (works) |*w| {
         const m = w.milestone orelse continue;
         if (!std.mem.eql(u8, m, milestone)) continue;
-        const t = project.schema.itemType(w.item.type_name).?;
         const weight: f64 = switch (count) {
             .items => 1,
             .weight => @floatFromInt(w.estimate orelse w.duration orelse 1),
         };
         total += weight;
-        const finished = t.planning.?.doneStatuses(t.statuses, t.tombstone);
-        if (Schema.names.contains(finished, w.item.effectiveStatus(t))) done += weight;
+        if (w.done) done += weight;
     }
     return .{ .total = total, .done = done };
 }
 
 /// The points from `first` to `last` (and no later than `today`): each day
 /// as committed by its end, today as the files are (`now`)
-pub fn compute(io: Io, arena: std.mem.Allocator, root: Io.Dir, now: struct { project: *const Project, graph: *const Graph }, milestone: []const u8, first: day.Day, last: day.Day, today: day.Day, count: Count) ![]const Point {
+pub fn compute(io: Io, arena: std.mem.Allocator, root: Io.Dir, now: struct { works: []const Work }, milestone: []const u8, first: day.Day, last: day.Day, today: day.Day, count: Count) ![]const Point {
     const commits = try commitsOf(io, arena, root);
     var measured: std.StringHashMapUnmanaged(struct { total: f64, done: f64 }) = .empty;
     var out: std.ArrayList(Point) = .empty;
     var d = first;
     while (d <= @min(last, today)) : (d += 1) {
         if (d == today) {
-            const m = try measure(arena, now.project, now.graph, milestone, count);
+            const m = measure(now.works, milestone, count);
             try out.append(arena, .{ .day = d, .total = m.total, .done = m.done });
             continue;
         }
@@ -68,7 +63,7 @@ pub fn compute(io: Io, arena: std.mem.Allocator, root: Io.Dir, now: struct { pro
                 continue;
             };
             defer snap.deinit();
-            const m = try measure(arena, &snap.project, &snap.graph, milestone, count);
+            const m = measure(try Work.collect(arena, &snap.project.schema, &snap.graph), milestone, count);
             e.value_ptr.* = .{ .total = m.total, .done = m.done };
         }
         try out.append(arena, .{ .day = d, .total = e.value_ptr.total, .done = e.value_ptr.done });

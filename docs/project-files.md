@@ -129,7 +129,10 @@ assignees = "owner"
 | `estimate`, `remaining` | an integer | The effort expected, and still to do, in days. |
 | `lag` | an integer | Days to wait after the predecessors finish. |
 | `mode` | `"fixed"` or `"float"` | Fixed work keeps the dates written for it; float work is scheduled from its predecessors and its parent. Without it, work with a start is fixed and work without is float. |
+| `issue` | a string | The issue on the forge that is this work, `#12`: see below. |
 | `assignees`, `priority`, `milestone` | any | Who does it, how urgent it is, and what it belongs to (for a milestone's charts, the ID of the work item that is the milestone). |
+
+The role `issue` ties work to an issue of the forge named in `[forge]`: `issue = "issue"` in `[planning]`, and `issue=#12` in the item. The forge holds an issue's assignees, its milestone with the day it is due, and whether it is closed (GitHub; a start, a duration and effort it does not), so they are read through the adapter, not written again: an item without assignees has the issue's, one that writes others is warned of by `skein check`, a closed issue is finished work, and work with nothing else to place it finishes when its milestone is due (`source = "forge"` in the stored schedule). `--offline` uses what the forge last said.
 
 `done = ["done", "closed"]` in `[planning]` names the statuses of finished work, for burndown and burnup charts; without it, the type's last status before its tombstone.
 
