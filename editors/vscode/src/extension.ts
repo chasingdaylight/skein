@@ -1,11 +1,13 @@
 // skein for VS Code: a client of `skein lsp`, which the package carries
 // (bin/), with the views the server feeds: the items in a tree, an item's
 // trace, the coverage page, and the coverage in the status bar. It also
-// puts the program on the PATH of VS Code's terminals. The highlighting
+// puts the program on the PATH of VS Code's terminals, and gives VS Code's
+// AI agents skein's tools (agents.ts). The highlighting
 // needs none of this; it is the grammar's.
 
 import * as path from "node:path";
 import * as vscode from "vscode";
+import * as agents from "./agents";
 import { Server } from "./client";
 import * as commands from "./commands";
 import { findProgram } from "./program";
@@ -36,6 +38,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }, settle_ms);
   };
   commands.register(context, server, tree, views, refresh);
+  agents.register(context, server);
 
   const watcher = vscode.workspace.createFileSystemWatcher("**/*.{md,toml,yaml,yml,json}");
   context.subscriptions.push(

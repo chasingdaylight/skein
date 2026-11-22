@@ -12,7 +12,7 @@ import { findProgram, programName } from "../../src/program";
 
 const root = path.join(__dirname, "..", "..");
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-const source = fs.readFileSync(path.join(root, "src", "commands.ts"), "utf8");
+const source = ["commands.ts", "agents.ts"].map((f) => fs.readFileSync(path.join(root, "src", f), "utf8")).join("\n");
 
 test("every command has a title and is registered", () => {
   const commands: { command: string; title: string; category: string }[] = manifest.contributes.commands;
@@ -20,7 +20,7 @@ test("every command has a title and is registered", () => {
   for (const c of commands) {
     assert.ok(c.title, `${c.command} has a title`);
     assert.equal(c.category, "skein");
-    assert.ok(source.includes(`command("${c.command}"`), `${c.command} is registered`);
+    assert.ok(source.includes(`command("${c.command}"`) || source.includes(`registerCommand("${c.command}"`), `${c.command} is registered`);
   }
   // and every command named in a menu exists
   const names = new Set(commands.map((c) => c.command));

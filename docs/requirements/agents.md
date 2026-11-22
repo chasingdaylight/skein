@@ -10,6 +10,17 @@ What skein gives the AI agents of its users, so that a coding agent in a reposit
 %req[mcp.tools]
 The server's tools shall be skein's commands, each with a description and a JSON Schema of its arguments, answering in JSON: `items` (the items, by type and by words in the ID or the text), `trace`, `check` (each problem with its file, line, column, severity, message and fix), `coverage`, `impact`, and the editing commands `new`, `link`, `move`, `result` and `approve`. What a command refuses, and an argument that is missing, is an error result whose text says why.
 
+## In VS Code
+
+%req[vscode.mcp]
+The VS Code extension shall offer `skein mcp`, run from the program it carries or the one `skein.path` names in the workspace's folder, to VS Code's MCP support, so that VS Code's agents have skein's tools with nothing to configure; in a trusted workspace only, and not when `skein.mcp.enabled` is off. (emanspeaks, 2026-11-22, #181.)
+
+%req[vscode.chat-context]
+The extension shall contribute a language model tool, `#skeinItem` in chat, that gives the trace of the item under the cursor, or of the item whose ID it is given, for an agent or a user to bring an item and everything linked to it into a chat.
+
+%req[vscode.agent-instructions]
+The command **skein: Write Agent Instructions** shall run `skein agents` in the workspace's folder, with the file `skein.agents.file` names and as a skill file when `skein.agents.skill` is on, and say what it wrote.
+
 ## Agent instructions
 
 %req[agents.instructions]
