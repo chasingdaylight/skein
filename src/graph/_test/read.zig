@@ -174,7 +174,7 @@ test "item files that are not items" {
         \\requirements/d.md:1:1: error: the front matter has no id
         \\requirements/e.md:1:1: error: x.y: the front matter has no type, and its source gives none
         \\requirements/f.md:1:1: error: SRS-002: the item has no text
-        \\requirements/g.md:1:1: error: SRS-003: 'priority' must be a string, a number, true or false, a date, or an array of strings
+        \\requirements/g.md:3:1: error: SRS-003: 'priority' must be a string, a number, true or false, a date, or an array of strings
         \\
     );
 }

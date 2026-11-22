@@ -184,3 +184,18 @@ test "an item of a type that does not exist" {
         \\
     );
 }
+
+// req: check.attributes, project.toml.places
+test "a problem with a value of front matter is reported at its line" {
+    var f: Fixture = undefined;
+    f.init();
+    defer f.deinit();
+    try f.itemFile("requirements/SRS-001.md", "+++\nid = \"SRS-001\"\n\npriority = \"urgent\"\nverifies = \"nothing\"\n+++\nText.\n", "srs");
+    _ = try f.check();
+    try f.expectProblems(
+        \\requirements/SRS-001.md:4:1: error: SRS-001: 'urgent' is not a value of 'priority'
+        \\requirements/SRS-001.md:5:1: error: SRS-001: a 'srs' cannot have a 'verifies' link
+        \\requirements/SRS-001.md:5:1: error: SRS-001: verifies: there is no item 'nothing'
+        \\
+    );
+}

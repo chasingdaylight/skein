@@ -30,16 +30,19 @@ pub fn read(
     const table = toml.parse(arena, blocks[0].text, &diag) catch |e| switch (e) {
         error.OutOfMemory => return error.OutOfMemory,
         error.InvalidToml => {
-            try report.add(file, diag.line, diag.column, "{s}", .{diag.message});
+            try report.add(file, blocks[0].first_line - 1 + diag.line, diag.column, "{s}", .{diag.message});
             return null;
         },
     };
+    // a key's line in the file: the text of the front matter starts with
+    // the line end of its +++, so its lines count from the +++ line
+    const offset = blocks[0].first_line - 1;
 
-    const id = try stringOf(report, file, table, "id") orelse {
+    const id = try stringOf(report, file, offset, table, "id") orelse {
         try report.add(file, 1, 1, "the front matter has no id", .{});
         return null;
     };
-    const type_name = try stringOf(report, file, table, "type") orelse default_type orelse {
+    const type_name = try stringOf(report, file, offset, table, "type") orelse default_type orelse {
         try report.add(file, 1, 1, "{s}: the front matter has no type, and its source gives none", .{id});
         return null;
     };
@@ -51,11 +54,12 @@ pub fn read(
     };
     for (table.keys()) |key| {
         if (std.mem.eql(u8, key, "id") or std.mem.eql(u8, key, "type")) continue;
+        const line = offset + table.placeOf(key).line;
         const values = try valuesOf(arena, table.get(key).?) orelse {
-            try report.add(file, 1, 1, "{s}: '{s}' must be a string, a number, true or false, a date, or an array of strings", .{ id, key });
+            try report.add(file, line, 1, "{s}: '{s}' must be a string, a number, true or false, a date, or an array of strings", .{ id, key });
             continue;
         };
-        try b.set(key, values, 0);
+        try b.set(key, values, line);
     }
     if (blocks.len > 1) {
         const first = blocks[1];
@@ -69,10 +73,10 @@ pub fn read(
     return try b.finish();
 }
 
-fn stringOf(report: *Report, file: []const u8, table: *const toml.Table, key: []const u8) !?[]const u8 {
+fn stringOf(report: *Report, file: []const u8, offset: u32, table: *const toml.Table, key: []const u8) !?[]const u8 {
     const v = table.get(key) orelse return null;
     if (v == .string and v.string.len > 0) return v.string;
-    try report.add(file, 1, 1, "'{s}' must be a string", .{key});
+    try report.add(file, offset + table.placeOf(key).line, 1, "'{s}' must be a string", .{key});
     return null;
 }
 

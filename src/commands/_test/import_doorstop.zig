@@ -147,7 +147,7 @@ test "Doorstop documents become a skein project that checks clean but for the li
     // the link Doorstop had a review of is reviewed; the other is to be
     const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
     try testing.expectEqualStrings(
-        \\docs/srs/SRS-001.md:1:1: error: SRS-001: parent: the link to 'SYS-002' was never reviewed ('skein review SRS-001')
+        \\docs/srs/SRS-001.md:3:1: error: SRS-001: parent: the link to 'SYS-002' was never reviewed ('skein review SRS-001')
         \\skein: 1 problem
         \\
     , (try check.run(testing.io, a, .{ .root = root })).text);

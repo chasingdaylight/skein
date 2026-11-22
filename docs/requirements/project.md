@@ -25,6 +25,9 @@ The files of `.skein/` and the front matter of items shall be TOML, read by the 
 %req[project.toml.diagnostics]
 TOML that cannot be read shall be reported with its file, line and column, and a description of the error.
 
+%req[project.toml.places]
+A problem with a key or a value of a file of `.skein/` or of the front matter of an item file shall be reported at the line and column of the key in its file; a problem with a key that is missing, at the header of its table. Only what the whole file is missing is reported without a place.
+
 ## The schema
 
 %req[schema.item-type]

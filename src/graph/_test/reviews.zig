@@ -93,7 +93,7 @@ test "links of a reviewed kind are reported until they are reviewed" {
 
     // `see` links are not of a reviewed kind
     try testing.expectEqualStrings(
-        \\requirements/SRS-002.md:1:1: error: SRS-002: refines: the link to 'SRS-001' was never reviewed ('skein review SRS-002')
+        \\requirements/SRS-002.md:3:1: error: SRS-002: refines: the link to 'SRS-001' was never reviewed ('skein review SRS-002')
         \\spec/tests.md:1:1: error: t.comment: verifies: the link to 'lex.comment' was never reviewed ('skein review t.comment')
         \\spec/tests.md:1:1: error: t.comment: verifies: the link to 'lex.token' was never reviewed ('skein review t.comment')
         \\spec/tests.md:4:1: error: t.token: verifies: the link to 'lex.token' was never reviewed ('skein review t.token')
