@@ -10,6 +10,7 @@ const Marker = @import("../markdown/Marker.zig");
 const Network = @import("../network/Network.zig");
 const Forge = @import("../forge/Forge.zig");
 const forge = @import("../forge/checks.zig");
+const Control = @import("control.zig");
 const Project = @import("../Project.zig");
 const Schema = @import("../schema/Schema.zig");
 const coverage = @import("../graph/coverage.zig");
@@ -37,6 +38,8 @@ pub const Context = struct {
     /// what the forge said of the issues and pull requests named; null
     /// without a forge
     issues: ?*const forge.Known = null,
+    /// document control, from git; null without it
+    control: ?*const Control = null,
 };
 
 /// The document `file`, whose text is `source`, rendered.
@@ -53,7 +56,22 @@ pub fn document(ctx: Context, file: []const u8, source: []const u8) Error![]cons
     }
     try page.addMentions();
     try page.addGenerated(source);
-    return page.render(source, 1);
+    const rendered = try page.render(source, 1);
+    const control = ctx.control orelse return rendered;
+    const d = control.document(file) orelse return rendered;
+    return withControl(ctx, control, d, rendered);
+}
+
+/// A controlled document with its control table under its first heading
+/// of level 1, and its change record at its end
+fn withControl(ctx: Context, control: *const Control, d: Control.Document, rendered: []const u8) Error![]const u8 {
+    const a = ctx.arena;
+    const table = try control.table(a, d);
+    const record = try control.record(a, ctx.project.?, d.file);
+    const heading = if (std.mem.startsWith(u8, rendered, "# ")) @as(?usize, 0) else if (std.mem.find(u8, rendered, "\n# ")) |at| at + 1 else null;
+    const at = if (heading) |h| (std.mem.findScalarPos(u8, rendered, h, '\n') orelse rendered.len) else 0;
+    const end_nl = if (rendered.len > 0 and rendered[rendered.len - 1] != '\n') "\n" else "";
+    return std.mem.concat(a, u8, &.{ rendered[0..at], if (at < rendered.len) "\n" else "", table, rendered[@min(at + 1, rendered.len)..], end_nl, record });
 }
 
 /// Whether `item` is rendered: it is in the profile, when there is one,
@@ -87,7 +105,10 @@ pub fn itemFile(ctx: Context, file: []const u8, source: []const u8) Error![]cons
     var page: Page = .{ .ctx = ctx, .file = file };
     try page.addReferences(item);
     var out: std.ArrayList(u8) = .empty;
-    try out.print(ctx.arena, "---\ntitle: \"{s}\"\n---\n", .{item.id});
+    try out.print(ctx.arena, "---\ntitle: \"{s}\"\n", .{item.id});
+    // when the file last changed, where git knows
+    if (ctx.control) |c| if (c.last.get(file)) |last| try out.print(ctx.arena, "last_changed: \"{s}\"\nchanged_by: \"{s}\"\ncommit: \"{s}\"\n", .{ last.date, last.author, last.commit });
+    try out.appendSlice(ctx.arena, "---\n");
     if (try describe(ctx, item)) |words| try out.print(ctx.arena, "\n*{s}*\n", .{words});
     try out.appendSlice(ctx.arena, try page.render(body.text, body.line));
     return out.items;
@@ -152,9 +173,11 @@ const Page = struct {
                 .graph = self.ctx.graph,
                 .citations = citations,
                 .href = hrefOf,
+                .fileHref = fileHrefOf,
                 .default_profile = self.ctx.profile,
                 .href_ctx = self,
                 .results = self.ctx.results,
+                .control = self.ctx.control,
             }, request);
             try self.generated.put(self.ctx.arena, b.first_line, .{ .last_line = b.last_line, .text = std.mem.trimEnd(u8, text, "\n") });
         }
@@ -163,6 +186,11 @@ const Page = struct {
     fn hrefOf(ctx: *const anyopaque, item: *const Item) Error![]const u8 {
         const self: *const Page = @ptrCast(@alignCast(ctx));
         return try self.href(item.id) orelse "";
+    }
+
+    fn fileHrefOf(ctx: *const anyopaque, file: []const u8) Error![]const u8 {
+        const self: *const Page = @ptrCast(@alignCast(ctx));
+        return relative(self.ctx.arena, self.file, file);
     }
 
     fn addMentions(self: *Page) Error!void {

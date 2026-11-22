@@ -192,6 +192,22 @@ list term
 | `list [TYPE...] [category=C] [status=S] [profile=P] [ATTRIBUTE=V]` | A table of the items that pass every condition, with category, status and first paragraph. `list term` is a glossary. |
 | `matrix LINKTYPE [conditions]` | Each item the link type may point to, with the items that link to it; the gaps marked **none**. A traceability matrix. With `columns=text,classes` and `from.columns=status,evidence`, those columns of the item and of each item linking to it, one row per linking item: a compliance matrix. |
 | `coverage [profile=P]` | The coverage table, with links to the items that are not covered. |
+| `documents` | The register of documents: each document that gives its identifier, with its title, revision and last change. |
+
+### Document control
+
+A document that names itself in TOML front matter is controlled:
+
+```markdown
++++
+document = "EX-SDP"
+revision = "B"
++++
+
+# Development plan
+```
+
+Its rendered page gets, under its title, a table with its identifier, its revision, and when it last changed, by whom and in which commit (a link to the commit when the project names its forge), and at its end a change record: each baseline (`skein baseline`) in which its items changed, with the baseline's message and how many items were added, changed and removed since the one before. A rendered item file says in its front matter when it last changed, and by whom. All of it comes from git; without git, there is none.
 
 A request skein cannot read becomes a note in its place, saying what is wrong.
 

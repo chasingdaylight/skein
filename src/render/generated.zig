@@ -24,6 +24,7 @@ const coverage = @import("../graph/coverage.zig");
 const Results = @import("../results/Results.zig");
 const summary = @import("../results/summary.zig");
 const matrix_columns = @import("matrix_columns.zig");
+const Control = @import("control.zig");
 const walk = @import("../graph/walk.zig");
 
 pub const Error = std.mem.Allocator.Error;
@@ -36,11 +37,15 @@ pub const Context = struct {
     /// where an item is linked to from the file the page is in
     href: *const fn (ctx: *const anyopaque, item: *const Item) Error![]const u8,
     href_ctx: *const anyopaque,
+    /// where a link to the file `file` (from the root) leads, from the page
+    fileHref: *const fn (ctx: *const anyopaque, file: []const u8) Error![]const u8,
     /// the profile a request without `profile=` is limited to: that of
     /// the rendering
     default_profile: ?*const Schema.Profile = null,
     /// test results, which a coverage page also shows
     results: ?ResultsOf = null,
+    /// document control, for the register of documents
+    control: ?*const Control = null,
 };
 
 /// Test results, and which items they belong to
@@ -70,7 +75,8 @@ pub fn render(ctx: Context, text: []const u8) Error![]const u8 {
     if (std.mem.eql(u8, what, "list")) return list(ctx, args);
     if (std.mem.eql(u8, what, "matrix")) return matrix(ctx, args);
     if (std.mem.eql(u8, what, "coverage")) return coverageTable(ctx, args);
-    return problem(a, "'{s}' is no request skein knows: list, matrix or coverage", .{what});
+    if (std.mem.eql(u8, what, "documents")) return register(ctx, args);
+    return problem(a, "'{s}' is no request skein knows: list, matrix, coverage or documents", .{what});
 }
 
 fn problem(a: std.mem.Allocator, comptime fmt: []const u8, args: anytype) Error![]const u8 {
@@ -296,6 +302,23 @@ fn resultsTable(ctx: Context, out: *std.ArrayList(u8), profile: ?*const Schema.P
     }
 }
 
+/// The register of documents: each controlled one, with its identifier,
+/// title, revision and last change, linked to its page
+fn register(ctx: Context, args: []const []const u8) Error![]const u8 {
+    const a = ctx.arena;
+    if (args.len > 0) return problem(a, "documents takes nothing more", .{});
+    const control = ctx.control orelse return a.print("*No document gives its identifier (`document` in its front matter).*\n", .{});
+    if (control.documents.len == 0) return a.print("*No document gives its identifier (`document` in its front matter).*\n", .{});
+    var out: std.ArrayList(u8) = .empty;
+    try out.appendSlice(a, "| Document | Title | Revision | Last changed |\n| --- | --- | --- | --- |\n");
+    for (control.documents) |d| {
+        try out.print(a, "| {s} | [", .{d.id});
+        try cell(a, &out, if (d.title.len > 0) d.title else d.file);
+        try out.print(a, "]({s}) | {s} | {s} |\n", .{ try ctx.fileHref(ctx.href_ctx, d.file), d.revision, try control.changed(a, d.file) });
+    }
+    return out.items;
+}
+
 fn percent(a: std.mem.Allocator, covered: usize, total: usize) Error![]const u8 {
     return if (total == 0) "" else a.print("{d}%", .{covered * 100 / total});
 }
@@ -303,6 +326,7 @@ fn percent(a: std.mem.Allocator, covered: usize, total: usize) Error![]const u8 
 test {
     _ = @import("_test/generated.zig");
     _ = @import("_test/matrix_columns.zig");
+    _ = @import("_test/control.zig");
 }
 
 /// Whether `item` is in `profile`, and so is the item it is a part of
