@@ -20,9 +20,6 @@ Items, code and tests of another repository shall be citable by a qualified refe
 
 ## Planning
 
-%req[planning.work-items planned]
-Work shall be items with planning attributes (dates or durations, effort, assignees), linked to each other and to the product items they serve, scheduled from their dependencies, with the critical path computed. (Design, section 10.1.) Built: work items, their modes and their checks (`docs/requirements/planning.md`); the schedule is to come.
-
 %req[planning.views planned]
 skein shall draw Gantt charts, burndown and burnup charts, boards and a roadmap, as static pages. (Design, section 10.3.)
 

@@ -4,6 +4,9 @@ Work as items: their planning attributes, the links that order them, and their s
 
 ## Work items
 
+%req[planning.work-items]
+Work shall be items with planning attributes (dates or durations, effort, assignees), linked to each other and to the product items they serve, scheduled from their dependencies, with the critical path computed. (Design, section 10.1.)
+
 %req[planning.roles]
 An item type shall be work when it has a `[planning]` table, which names the attribute that holds each planning role: `start` and `finish` (dates), `duration`, `estimate`, `remaining` and `lag` (whole days, integers), `assignees`, `priority`, `milestone`, and `mode`. skein names no attribute itself. A role that names no attribute of the type, or one of another kind than the role takes, and a key that is no role, are problems of the schema. (emanspeaks, 2026-11-21, on #85.)
 
@@ -15,6 +18,20 @@ A work item shall be scheduled in one of two modes, the value of its `mode` attr
 
 %req[planning.checks]
 `skein check` shall report, for work items: a value of the mode that is neither `fixed` nor `float`; a fixed item without a start; a finish before the start; a start, duration and finish that do not agree (the finish is the last of as many working days as the duration, from the start); a loop of predecessors or of parents; a work item that others follow and whose length is not known (no duration, nor a start and a finish); and a `precedes` or `parent` link to an item that is not work.
+
+## The schedule
+
+%req[planning.schedule]
+`skein schedule` shall schedule the work items. A fixed item keeps the dates written for it. A float item starts on the first working day after all its predecessors have finished, plus its lag in working days; with no predecessors, on the first working day of its parent, when the parent has dates of its own (fixed, or from its predecessors); and finishes after its duration in working days. A float parent with neither spans its children. A float item with nothing to schedule it from stays unscheduled, which `check` warns of. `skein schedule` writes `float` into each float item that names no mode, where its type has a mode, so that from then on every item gives its mode. (emanspeaks, 2026-11-21, on #85.)
+
+%req[planning.critical-path]
+The schedule shall give each scheduled item its slack, the working days it can finish later before an item after it or the end of the plan moves, and mark as critical the items without slack: the critical path.
+
+%req[planning.stored]
+`skein schedule` shall write the schedule to `.skein/schedule.toml`, a file the project commits and the one source of the schedule offline: every work item with its start, finish, mode, where its dates come from (`written`, `computed`, or `unscheduled`), its slack and whether it is critical. `[schedule] also = ["json", "csv"]` in the configuration writes `.skein/schedule.json` and `.skein/schedule.csv` beside it, from the same schedule, for tools that read those; skein reads only the TOML. (emanspeaks, 2026-11-21, on #85.)
+
+%req[planning.schedule-checks]
+`skein check` shall report a fixed item that starts before its predecessors let it, an item that runs outside its parent's dates (a parent that spans its children excepted), an item that finishes after its milestone (the work item its milestone names), and a stored schedule, in any of its formats, that is missing or not the one the work items give now.
 
 ## Resources
 

@@ -1,11 +1,12 @@
 //! Work items: the planning roles of their types and links, and what
 //! `check` holds them to before any schedule.
 
-// req: planning.roles, planning.link-roles, planning.modes, planning.checks
+// req: planning.work-items, planning.roles, planning.link-roles, planning.modes, planning.checks
 const std = @import("std");
 const testing = std.testing;
 
 const check_command = @import("../../commands/check.zig");
+const schedule_command = @import("../../commands/schedule.zig");
 
 fn write(dir: std.Io.Dir, path: []const u8, data: []const u8) !void {
     if (std.Io.Dir.path.dirname(path)) |parent| try dir.createDirPath(testing.io, parent);
@@ -39,6 +40,7 @@ const task_type =
     \\
 ;
 
+/// What `check` says of the plan, once `skein schedule` has stored its schedule
 fn project(a: std.mem.Allocator, tmp: *testing.TmpDir, plan: []const u8) ![]const u8 {
     try write(tmp.dir, ".skein/config.toml", "[[sources]]\npath = \"plan\"\n");
     try write(tmp.dir, ".skein/types/task.toml", task_type);
@@ -47,6 +49,7 @@ fn project(a: std.mem.Allocator, tmp: *testing.TmpDir, plan: []const u8) ![]cons
     try write(tmp.dir, ".skein/links/part_of.toml", "from = [\"task\"]\n[planning]\nrole = \"parent\"\n");
     try write(tmp.dir, "plan/plan.md", plan);
     const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
+    _ = try schedule_command.run(testing.io, a, .{ .common = .{ .root = root } });
     return (try check_command.run(testing.io, a, .{ .root = root })).text;
 }
 

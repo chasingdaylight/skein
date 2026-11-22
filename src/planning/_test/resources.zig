@@ -7,6 +7,7 @@ const testing = std.testing;
 
 const check_command = @import("../../commands/check.zig");
 const load_command = @import("../../commands/load.zig");
+const schedule_command = @import("../../commands/schedule.zig");
 
 fn write(dir: std.Io.Dir, path: []const u8, data: []const u8) !void {
     if (std.Io.Dir.path.dirname(path)) |parent| try dir.createDirPath(testing.io, parent);
@@ -77,7 +78,9 @@ const Run = struct {
         self.arena.deinit();
     }
 
+    /// What `check` says, once `skein schedule` has stored the schedule
     fn check(self: *Run) ![]const u8 {
+        _ = try schedule_command.run(testing.io, self.arena.allocator(), .{ .common = .{ .root = self.root } });
         return (try check_command.run(testing.io, self.arena.allocator(), .{ .root = self.root })).text;
     }
 

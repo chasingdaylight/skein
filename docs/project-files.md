@@ -47,6 +47,7 @@ type = "srs"
 | `citations.marker` | The text that comes before the IDs on a line: `"// spec:"`. |
 | `citations.to` | The item types the citations may name; leave out for any. |
 | `citations.expected` | Every item of a `to` type should be cited by the set; coverage counts the ones that are not. |
+| `schedule.also` | The formats `skein schedule` writes the schedule in besides `.skein/schedule.toml`: `["json", "csv"]` for `.skein/schedule.json` and `.skein/schedule.csv`. |
 
 ```toml
 [[citations]]
@@ -131,6 +132,22 @@ assignees = "owner"
 | `assignees`, `priority`, `milestone` | any | Who does it, how urgent it is, and what it belongs to. |
 
 Days are working days of the project's calendar (below); without one, every day is. `skein check` reports a finish before the start, a start, duration and finish that do not agree (from Monday 2027-03-01, 5 working days finish on Friday 2027-03-05), fixed work without a start, a loop of predecessors or of parents, and work that others follow without a known length.
+
+### The schedule: `.skein/schedule.toml`
+
+`skein schedule` computes the schedule and writes it to `.skein/schedule.toml`, which the project commits: tools that read the repository offline, and other scheduling tools, find every work item's dates there. skein writes it; it is not to be edited.
+
+```toml
+[items."t.build"]
+start = 2027-03-08
+finish = 2027-03-10
+mode = "float"
+source = "computed"   # or "written" (fixed), "unscheduled"
+slack = 0             # working days it can slip without moving the end
+critical = true
+```
+
+Fixed work keeps its dates. Float work starts on the first working day after all its predecessors finish, plus its lag, or, with no predecessors, when its parent starts; a float parent with neither spans its children. `skein schedule` writes `float` into float items that name no mode, where the type has a mode. `skein check` reports a stored schedule that is missing or out of date, a fixed item that starts before its predecessors let it, an item outside its parent's dates, and one that finishes after its milestone (the work item its `milestone` names).
 
 ## `.skein/resources.toml`: people and the calendar
 

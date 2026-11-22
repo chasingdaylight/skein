@@ -50,6 +50,41 @@ pub fn finishOf(self: *const Calendar, start: Day, duration: u32) Day {
     }
 }
 
+/// The first working day after `d`
+pub fn next(self: *const Calendar, d: Day) Day {
+    if (!self.works()) return d + 1;
+    var n = d + 1;
+    while (!self.isWorking(n)) n += 1;
+    return n;
+}
+
+/// The last working day before `d`
+pub fn previous(self: *const Calendar, d: Day) Day {
+    if (!self.works()) return d - 1;
+    var n = d - 1;
+    while (!self.isWorking(n)) n -= 1;
+    return n;
+}
+
+/// `d` when it is a working day, else the first after it
+pub fn atOrAfter(self: *const Calendar, d: Day) Day {
+    return if (!self.works() or self.isWorking(d)) d else self.next(d);
+}
+
+/// `count` working days after `d`
+pub fn forward(self: *const Calendar, d: Day, count: u32) Day {
+    var n = d;
+    for (0..count) |_| n = self.next(n);
+    return n;
+}
+
+/// `count` working days before `d`
+pub fn back(self: *const Calendar, d: Day, count: u32) Day {
+    var n = d;
+    for (0..count) |_| n = self.previous(n);
+    return n;
+}
+
 /// The working days from `first` to `last`, both counted
 pub fn workingDays(self: *const Calendar, first: Day, last: Day) u32 {
     var n: u32 = 0;
