@@ -47,6 +47,7 @@ type = "srs"
 | `citations.files` | The ends of the names of the files to read: `[".zig"]`, `["_test.c"]`. |
 | `citations.marker` | The text that comes before the IDs on a line: `"// spec:"`. |
 | `citations.to` | The item types the citations may name; leave out for any. |
+| `citations.review` | `true` to review the citations as links of a reviewed type are: one of an item that has changed since is suspect. See [reviewing](reviewing.md#reviewed-citations). |
 | `citations.expected` | Every item of a `to` type should be cited by the set; coverage counts the ones that are not. |
 | `planning.repository` | The project's planning repository, one of its `repositories`: its `.skein/resources.toml` (people and calendar) is used when the project has none. |
 | `planning.span` | `true` in a planning repository: its schedule and its Gantt charts, boards, roadmap and time reports include the work of the repositories it declares, as `repository:ID`, and its work can precede theirs (`precedes=compiler:t.parse`). |
