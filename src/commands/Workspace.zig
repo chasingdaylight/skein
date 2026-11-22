@@ -38,6 +38,8 @@ root_path: []const u8,
 project: Project,
 graph: Graph,
 citations: Graph.Citations = .{},
+/// the options the command was given
+common: cli.Common = .{},
 /// the other repositories, in the state the command asks for
 network: Network = .{},
 /// whether the configuration and schema were sound, so the items were read
@@ -70,6 +72,7 @@ pub fn open(io: Io, arena: std.mem.Allocator, common: cli.Common) !Opened {
         .project = undefined,
         .graph = .{},
         .report = .{ .arena = arena },
+        .common = common,
     };
     self.project = try Project.load(io, arena, self.root, &self.report);
     // items are read against the schema: a broken one would only add noise

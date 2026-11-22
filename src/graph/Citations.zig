@@ -7,6 +7,7 @@
 const std = @import("std");
 const Io = std.Io;
 
+const Forge = @import("../forge/Forge.zig");
 const Graph = @import("Graph.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
@@ -139,7 +140,7 @@ fn isIdChar(c: u8) bool {
 pub fn check(self: *const Citations, project: *const Project, graph: *const Graph, report: *Report) std.mem.Allocator.Error!void {
     for (self.all) |c| {
         // an item of another repository: network/checks.zig
-        if (std.mem.findScalar(u8, c.target, ':') != null) continue;
+        if (std.mem.findScalar(u8, c.target, ':') != null or Forge.isRef(c.target)) continue;
         const target = graph.find(c.target) orelse if (graph.formerly(c.target)) |now| blk: {
             try report.warn(c.file, c.line, c.column, "the citation names '{s}', which is now '{s}'", .{ c.target, now.id });
             break :blk now;

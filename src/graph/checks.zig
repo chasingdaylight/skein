@@ -4,6 +4,7 @@
 const std = @import("std");
 
 const Graph = @import("Graph.zig");
+const Forge = @import("../forge/Forge.zig");
 const Item = @import("Item.zig");
 const Report = @import("../Report.zig");
 const Schema = @import("../schema/Schema.zig");
@@ -58,7 +59,7 @@ pub fn run(graph: *const Graph, schema: *const Schema, report: *Report) Error!vo
 /// References in narrative text are held to what those in items are
 fn checkMentions(ctx: Context) Error!void {
     for (ctx.graph.mentions) |m| {
-        if (std.mem.findScalar(u8, m.target, ':') != null) continue;
+        if (elsewhere(m.target)) continue;
         const target = try ctx.former(m.file, m.line, m.column, "the text refers to", m.target) orelse {
             try ctx.report.add(m.file, m.line, m.column, "the text refers to '{s}', and there is no such item", .{m.target});
             continue;
@@ -126,7 +127,7 @@ fn checkLinks(ctx: Context, item: *const Item, item_type: *const Schema.ItemType
             try ctx.problem(item, link.line, "a '{s}' cannot have a '{s}' link", .{ item.type_name, link.type_name });
         }
         // an item of another repository: network/checks.zig
-        if (std.mem.findScalar(u8, link.target, ':') != null) continue;
+        if (elsewhere(link.target)) continue;
         const target = try ctx.former(item.file, if (link.line > 0) link.line else item.line, 1, try ctx.what(item, link.type_name), link.target) orelse {
             try ctx.problem(item, link.line, "{s}: there is no item '{s}'", .{ link.type_name, link.target });
             continue;
@@ -154,7 +155,7 @@ fn checkLinks(ctx: Context, item: *const Item, item_type: *const Schema.ItemType
 
 fn checkReferences(ctx: Context, item: *const Item) Error!void {
     for (item.references) |r| {
-        if (std.mem.findScalar(u8, r.target, ':') != null) continue;
+        if (elsewhere(r.target)) continue;
         const target = try ctx.former(item.file, r.line, r.column, try ctx.what(item, null), r.target) orelse {
             try ctx.report.add(item.file, r.line, r.column, "{s}: the text refers to '{s}', and there is no such item", .{ item.id, r.target });
             continue;
@@ -164,4 +165,10 @@ fn checkReferences(ctx: Context, item: *const Item) Error!void {
             try ctx.report.add(item.file, r.line, r.column, "{s}: the text refers to '{s}', which is removed", .{ item.id, r.target });
         }
     }
+}
+
+/// Whether `target` is not an item of this repository: one of another
+/// (network/checks.zig), or an issue or pull request (forge/checks.zig)
+fn elsewhere(target: []const u8) bool {
+    return std.mem.findScalar(u8, target, ':') != null or Forge.isRef(target);
 }

@@ -8,6 +8,7 @@ const Graph = @import("../graph/Graph.zig");
 const Results = @import("../results/Results.zig");
 const Reviews = @import("../graph/Reviews.zig");
 const Workspace = @import("Workspace.zig");
+const forge_checks = @import("../forge/checks.zig");
 const network_checks = @import("../network/checks.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Outcome {
@@ -57,6 +58,7 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     try Graph.checks.run(&ws.graph, &ws.project.schema, &ws.report);
     try ws.citations.check(&ws.project, &ws.graph, &ws.report);
     try network_checks.run(arena, &ws.project, &ws.graph, &ws.citations, &ws.network, &ws.report);
+    try forge_checks.run(io, arena, ws.root, &ws.project, &ws.graph, ws.common.offline, &ws.report);
     const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
     const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
     try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);

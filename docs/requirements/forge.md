@@ -1,0 +1,14 @@
+# The forge: issues and pull requests
+
+The user documentation is in `docs/forge.md`.
+
+Items can name the issues and pull requests that introduced them, track them, or are tracked by them. Those are the forge's, so skein asks the forge about them; it keeps none of them itself.
+
+%req[forge.refs]
+`.skein/config.toml` shall name the project's forge under `[forge]`: its `kind` (`github` for now; `gitlab` and `forgejo` later), its `repository` (`owner/repo`), and the `url` of a server other than the public one. A link, reference or citation whose target is `#N` names issue or pull request N of that repository, and `owner/repo#N` one of another. Without `[forge]`, such targets are accepted unchecked.
+
+%req[forge.check]
+`skein check` shall report a target that the forge says does not exist, and one that a link of a type with `open = true` points to while it is closed. It asks the forge through the `gh` program when it is installed, so that its sign-in is used, and otherwise through the forge's HTTPS API with a token from `GH_TOKEN` or `GITHUB_TOKEN` when one is set; each issue or pull request is asked about once per run.
+
+%req[forge.offline]
+What the forge said of each issue and pull request shall be kept in a cache under this repository's git directory, never committed. With `--offline` nothing is asked and the cache is used; when the forge cannot be asked or does not answer, the cache is used too. What neither knows is not checked, and that is a warning.

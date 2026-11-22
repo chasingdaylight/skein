@@ -82,7 +82,8 @@ fn parseAt(text: []const u8, i: usize) ?struct { reference: Reference, end: usiz
     const target = if (space) |s| inner[0..s] else inner;
     if (target.len == 0) return null;
     for (target) |c| {
-        if (!std.ascii.isAlphanumeric(c) and c != '.' and c != '-' and c != '_' and c != ':') return null;
+        // '#' and '/' for an issue or pull request: `#97`, `owner/repo#12`
+        if (!std.ascii.isAlphanumeric(c) and c != '.' and c != '-' and c != '_' and c != ':' and c != '#' and c != '/') return null;
     }
     const display: ?[]const u8 = if (space) |s| std.mem.trim(u8, inner[s + 1 ..], " ") else null;
     return .{
