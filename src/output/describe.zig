@@ -199,10 +199,15 @@ pub fn text(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
     if (approvals.len > 0) try out.appendSlice(a, "\nApproved by:\n");
     for (approvals) |approval| {
         try out.print(a, "  {s} on {d:0>4}-{d:0>2}-{d:0>2}", .{ approval.by, approval.on.year, approval.on.month, approval.on.day });
+        if (approval.as) |role| try out.print(a, " as {s}", .{role});
         const current = try Graph.Approvals.isCurrent(a, ctx.graph, &ctx.project.schema, approval, item);
         if (!current) try out.appendSlice(a, "  [of an earlier version]");
         try out.append(a, '\n');
     }
+    if (ctx.project.schema.itemType(item.type_name)) |t| if (t.approval_roles.len > 0) {
+        const missing = try ctx.approvals.missingRoles(a, ctx.graph, &ctx.project.schema, t, item);
+        if (missing.len > 0) try out.print(a, "{s}  still to approve as: {s}\n", .{ if (approvals.len == 0) "\nApproved by:\n" else "", try std.mem.join(a, ", ", missing) });
+    };
 
     const cited = try ctx.citations.of(a, item.id);
     if (cited.len > 0) try out.appendSlice(a, "\nCited by:\n");

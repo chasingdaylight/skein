@@ -82,3 +82,26 @@ The records are under `.skein/approvals/`, in files named as the review records 
 ```
 
 Several people can approve one item. Approving again replaces that person's earlier record; git keeps the history. Because the records are files in the repository, they are reviewed and merged with the change they belong to, they survive a move to another forge, and they can be shown to an auditor without the forge.
+
+### Approvals by role
+
+Some approvals need several signatures: a tailoring of a requirement, approved by the engineering and the safety and mission assurance authorities. The item type names the roles:
+
+```toml
+# .skein/types/tailoring.toml
+[approval]
+statuses = ["approved"]
+roles = ["engineering-ta", "sma-ta"]
+```
+
+Each approval is then given in a role:
+
+```text
+skein approve t.cost --as engineering-ta --by "A. Engineer"
+```
+
+An item is approved only when every role has approved what it says now; `check` names the roles still missing, and `trace` shows who approved in which role. skein has no sign-in of its own, so who may act in a role is not checked: the records are in git, with their commits.
+
+### From a merged pull request
+
+`skein approve --from-pull-request N` records the approvals a merged pull request had in review: see [the forge](forge.md).

@@ -45,18 +45,29 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Approve) !Workspace.Ou
     var files: std.ArrayList([]const u8) = .empty;
     for (options.ids) |id| {
         const item = ws.graph.find(id).?;
-        if (ws.project.schema.itemType(item.type_name) == null) return .{
+        const item_type = ws.project.schema.itemType(item.type_name) orelse return .{
             .text = try arena.print("skein: '{s}' is of a type the schema does not have\n", .{id}),
             .status = .misuse,
         };
-        try approvals.put(arena, &ws.graph, &ws.project.schema, item, by, on);
+        // a type that names roles is approved in one of them
+        const roles = item_type.approval_roles;
+        if (options.as) |role| {
+            if (!Schema.names.contains(roles, role)) return .{
+                .text = try arena.print("skein: '{s}' is no role that approves a '{s}'{s}{s}\n", .{ role, item.type_name, if (roles.len > 0) ": " else "", try std.mem.join(arena, ", ", roles) }),
+                .status = .misuse,
+            };
+        } else if (roles.len > 0) return .{
+            .text = try arena.print("skein: say in which role {s} approves '{s}': --as {s}\n", .{ by, id, try std.mem.join(arena, "|", roles) }),
+            .status = .misuse,
+        };
+        try approvals.put(arena, &ws.graph, &ws.project.schema, item, by, on, options.as);
         const file = try Approvals.fileOf(arena, item);
         if (!Schema.names.contains(files.items, file)) try files.append(arena, file);
     }
     try approvals.write(io, arena, ws.root, &ws.graph, files.items);
     const n = options.ids.len;
     return .{
-        .text = try arena.print("skein: {d} item{s} approved by {s} on {d:0>4}-{d:0>2}-{d:0>2}\n", .{ n, if (n == 1) "" else "s", by, on.year, on.month, on.day }),
+        .text = try arena.print("skein: {d} item{s} approved by {s}{s} on {d:0>4}-{d:0>2}-{d:0>2}\n", .{ n, if (n == 1) "" else "s", by, if (options.as) |r| try arena.print(" as {s}", .{r}) else "", on.year, on.month, on.day }),
     };
 }
 

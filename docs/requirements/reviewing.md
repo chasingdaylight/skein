@@ -33,7 +33,7 @@ When a record file is written, the records of links that no longer exist shall b
 ## Approvals
 
 %req[approval.record]
-`skein approve` shall record, for each named item, who approved it, on which day, and the fingerprint of the item at that moment. The name is the one given, or the user name configured in git. The day is the one given, or today.
+`skein approve` shall record, for each named item, who approved it, on which day, and the fingerprint of the item at that moment. The name is the one given, or the username configured in git. The day is the one given, or today.
 
 %req[approval.records]
 The approvals shall be kept under `.skein/approvals/`, in files named in the same way as the review records, with one line per item and approver. A new approval by the same approver replaces the earlier record.
@@ -43,3 +43,6 @@ An approval shall count as an approval of the current item only while the finger
 
 %req[approval.status]
 An item type may name statuses that require an approval. An item with such a status and no approval of its current content shall be reported.
+
+%req[approval.roles]
+An item type may also name the roles that must each approve its items (`[approval] statuses = [...]`, `roles = [...]`). Its approvals are then given in a role, `skein approve ID --as ROLE`, which is recorded with them; an approval without a role, or in a role the type does not name, is refused. An item with a status that needs approval is approved only when every role has a current approval of it, and `check` names the roles still missing; `trace` shows each approval's role and the roles still to approve. Who may act in a role is not checked: the records are in git, with their commits.

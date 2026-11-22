@@ -48,7 +48,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, ws: *Workspace, number: u64) !Works
         if (!(c.kind == .added or (c.kind == .changed and c.content))) continue;
         const item = after.graph.find(c.id) orelse continue;
         if (after.project.schema.itemType(item.type_name) == null) continue;
-        for (pull.approvers) |by| try approvals.put(arena, &after.graph, &after.project.schema, item, by, on);
+        for (pull.approvers) |by| try approvals.put(arena, &after.graph, &after.project.schema, item, by, on, null);
         const file = try Approvals.fileOf(arena, item);
         if (!Schema.names.contains(files.items, file)) try files.append(arena, file);
         approved += 1;
