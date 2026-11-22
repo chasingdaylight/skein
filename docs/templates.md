@@ -52,7 +52,9 @@ safety-critical = false
 
 | `nasa-std-8739.8b` | Software assurance and software safety under NASA-STD-8739.8B, with `npr7150.2d`: the standard's tasks for each requirement of the NPR and its IV&V requirements, read-only, and the assurance organization's mapping matrix. See below. |
 
-More are planned: NASA-STD-7009B (models and simulations), the systems engineering of NPR 7123.1D and the life cycle of NPR 7120.5, to go with `npr7150.2d`.
+| `nasa-std-7009b` | Models and simulations under NASA-STD-7009B: its 42 requirements (`MS-40` for `[M&S 40]`), read-only; each model (`MDL-001`) with its intended use, its criticality (consequence I to V, influence 1 to 5, red, yellow or green) and its eleven credibility factors at levels 0 to 4; the rows of the Requirements Identification Matrix (`ms-record`, linked by `meets`, with the model); skeletons of the register, the credibility tables, the matrix, the plan and the results report. With `npr7150.2d` or alone. |
+
+More are planned: the systems engineering of NPR 7123.1D and the life cycle of NPR 7120.5, to go with `npr7150.2d`.
 
 ## NPR 7150.2D
 

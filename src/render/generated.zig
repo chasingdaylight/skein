@@ -161,16 +161,36 @@ pub fn link(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
 
 fn list(ctx: Context, args: []const []const u8) Error![]const u8 {
     const a = ctx.arena;
+    // `columns=` chooses the columns, as for a matrix
+    var columns: ?[]const []const u8 = null;
+    var conditions: std.ArrayList([]const u8) = .empty;
+    for (args) |word| {
+        if (std.mem.startsWith(u8, word, "columns=")) columns = try splitList(a, word["columns=".len..]) else try conditions.append(a, word);
+    }
     var filter: Filter = .{ .profile = ctx.default_profile };
-    if (try readFilter(ctx, args, &filter, true)) |message| return message;
+    if (try readFilter(ctx, conditions.items, &filter, true)) |message| return message;
     var out: std.ArrayList(u8) = .empty;
-    try out.appendSlice(a, "| Item | Category | Status | Text |\n| --- | --- | --- | --- |\n");
+    if (columns) |cols| {
+        try out.appendSlice(a, "| Item |");
+        for (cols) |c| try out.print(a, " {s} |", .{try matrix_columns.heading(a, c)});
+        try out.appendSlice(a, "\n|");
+        for (0..cols.len + 1) |_| try out.appendSlice(a, " --- |");
+        try out.append(a, '\n');
+    } else try out.appendSlice(a, "| Item | Category | Status | Text |\n| --- | --- | --- | --- |\n");
     var n: usize = 0;
     for (ctx.graph.items) |*item| {
         if (!filter.passes(&ctx.project.schema, ctx.graph, item)) continue;
         n += 1;
         try out.appendSlice(a, "| ");
         try link(ctx, &out, item);
+        if (columns) |cols| {
+            for (cols) |c| {
+                try out.appendSlice(a, " | ");
+                try matrix_columns.value(ctx, &out, item, c);
+            }
+            try out.appendSlice(a, " |\n");
+            continue;
+        }
         try out.appendSlice(a, " | ");
         try cell(a, &out, item.category orelse "");
         try out.appendSlice(a, " | ");

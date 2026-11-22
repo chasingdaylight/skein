@@ -1,0 +1,15 @@
+description = "A row of the Requirements Identification Matrix (NASA-STD-7009B, Appendix A): how a model meets a requirement of the standard, with the record that shows it"
+# fully compliant, tailored, partially compliant, not compliant, not applicable
+categories = ["FC", "T", "PC", "NC", "NA"]
+
+# the model the row is for (its ID)
+[attributes.model]
+required = true
+
+# where the record is: a document and section, an item, a file
+[attributes.evidence]
+normative = false
+
+# why, for a row that is PC, NC or NA: the standard asks for a rationale for each requirement not met
+[attributes.rationale]
+normative = false
