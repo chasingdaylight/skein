@@ -69,6 +69,23 @@ The states between recorded ones can still be looked at, where links may be brok
 
 `check`, `trace`, `coverage`, `export` and `render` take them, and `--offline` too. A repository by url has no working tree, so `--working` reads it as `--current` does.
 
+## Reviews, trace and rendering
+
+A link type with `review = true` is reviewed across repositories as within one: `skein review` records the target's fingerprint, and `check` reports the link as suspect once the target has changed. Since the other repository is read at its recorded commit, a change there makes the link suspect when that change is pinned, which is when someone looks.
+
+`skein trace` shows a target in another repository with its type, the repository and the commit read.
+
+`skein render` links a reference into another repository to the item on that repository's site, when the repository gives one:
+
+```toml
+[[repositories]]
+name = "compiler"
+path = "../compiler"
+site = "https://example.org/compiler"
+```
+
+Without a site, the reference is its words. A reference that cannot be resolved, here or there, is rendered as its words marked as unresolved, which the site shows in red, so that a document can still be built, and read, while a link is broken.
+
 ## When a repository is not at hand
 
 A repository that is not pinned yet, whose checkout is not there, whose checkout does not have the recorded commit, or that could not be fetched (offline, or no answer for 30 seconds), is not read. Its targets are then not checked, and `check` says so with a warning rather than a problem:

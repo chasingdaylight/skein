@@ -7,10 +7,12 @@ const std = @import("std");
 const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Marker = @import("../markdown/Marker.zig");
+const Network = @import("../network/Network.zig");
 const Project = @import("../Project.zig");
 const Schema = @import("../schema/Schema.zig");
 const coverage = @import("../graph/coverage.zig");
 const generated = @import("generated.zig");
+const html = @import("../html/inline.zig");
 const markdown = @import("../markdown.zig");
 
 pub const Error = std.mem.Allocator.Error;
@@ -195,9 +197,18 @@ const Page = struct {
                 const close = std.mem.findScalarPos(u8, line, at, ']') orelse line.len - 1;
                 const inner = std.mem.trim(u8, line[at + 2 .. close], " ");
                 const words = if (std.mem.findScalar(u8, inner, ' ')) |s| std.mem.trim(u8, inner[s + 1 ..], " ") else target;
-                if (try self.href(target)) |link| {
-                    try out.print(a, "[{s}]({s})", .{ words, link });
-                } else try out.appendSlice(a, words);
+                switch (try self.resolve(target)) {
+                    .link => |link| try out.print(a, "[{s}]({s})", .{ words, link }),
+                    .plain => try out.appendSlice(a, words),
+                    // marked, so a reader sees what skein could not resolve
+                    .unresolved => {
+                        try out.appendSlice(a, "<span class=\"skein-unresolved\" title=\"unresolved: ");
+                        try html.attribute(a, &out, target);
+                        try out.appendSlice(a, "\">");
+                        try html.escape(a, &out, words);
+                        try out.appendSlice(a, "</span>");
+                    },
+                }
                 at = close + 1;
             }
         }
@@ -210,6 +221,28 @@ const Page = struct {
         const a = self.ctx.arena;
         try out.print(a, "<a id=\"{s}\"></a>**[{s}](#{s})**", .{ item.id, item.id, item.id });
         if (try describe(self.ctx, item)) |words| try out.print(a, " *({s})*", .{words});
+    }
+
+    const Resolved = union(enum) {
+        link: []const u8,
+        /// an item there is no page of to link to: left out, or of a
+        /// repository without a site
+        plain,
+        /// no item that can be found
+        unresolved,
+    };
+
+    /// What a reference to `id` becomes
+    fn resolve(self: *const Page, id: []const u8) Error!Resolved {
+        if (Network.split(id)) |parts| {
+            const n = self.ctx.graph.others orelse return .unresolved;
+            return switch (n.resolve(id)) {
+                .item => |f| if (f.member.repository.site) |site| .{ .link = try siteLink(self.ctx.arena, site, f.item, parts.id) } else .plain,
+                else => .unresolved,
+            };
+        }
+        if (self.ctx.graph.find(id) == null) return .unresolved;
+        return if (try self.href(id)) |link| .{ .link = link } else .plain;
     }
 
     /// Where a link to the item `id` leads, from this file; null when
@@ -226,6 +259,16 @@ const Page = struct {
         return if (in_document) try a.print("{s}#{s}", .{ path, id }) else path;
     }
 };
+
+/// The address of `item`, `id` in its repository, on that repository's
+/// site at `site`: its page, as `--format html` writes it, and its anchor
+/// when it is in a document
+fn siteLink(arena: std.mem.Allocator, site: []const u8, item: *const Item, id: []const u8) Error![]const u8 {
+    const file = item.file;
+    const page = if (std.mem.endsWith(u8, file, ".md")) try arena.print("{s}.html", .{file[0 .. file.len - 3]}) else file;
+    if (!item.in_document) return arena.print("{s}/{s}", .{ site, page });
+    return arena.print("{s}/{s}#{s}", .{ site, page, id });
+}
 
 /// The category and the status of `item`, as given: "syntax, final"
 fn describe(ctx: Context, item: *const Item) Error!?[]const u8 {

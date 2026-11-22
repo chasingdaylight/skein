@@ -7,6 +7,9 @@ const testing = std.testing;
 
 const check_command = @import("../../commands/check.zig");
 const pin_command = @import("../../commands/pin.zig");
+const render_command = @import("../../commands/render.zig");
+const review_command = @import("../../commands/review.zig");
+const trace_command = @import("../../commands/trace.zig");
 const git_program = @import("../../git.zig");
 const Network = @import("../Network.zig");
 
@@ -210,6 +213,64 @@ test "a record that does not match its commit is reported" {
     changed[at] = if (changed[at] == '0') '1' else '0';
     try f.write("site/.skein/network.toml", changed);
     try expectContains(try f.check(.recorded), ".skein/network.toml: error: other: its items at ");
+}
+
+// req: network.reviews
+test "a reviewed link into another repository is suspect when its target changes" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    try f.write("site/.skein/links/explains.toml", "from = [\"page\"]\nreview = true\n");
+    _ = try f.pin(null, null);
+    try expectContains(try f.check(.recorded), "intro: explains: the link to 'other:lex.token' was never reviewed");
+    const a = f.arena.allocator();
+    const reviewed = try review_command.run(testing.io, a, .{ .common = .{ .root = f.site }, .ids = &.{"intro"} }, .from);
+    try expectContains(reviewed.text, "1 link recorded as reviewed");
+    try expectContains(try f.check(.recorded), "no problems (");
+
+    try f.write("other/spec/lex.md",
+        \\# Lexing
+        \\
+        \\%rule[lex.token] A token, changed.
+        \\
+        \\%rule[lex.old removed]
+        \\
+    );
+    try f.commit("other");
+    // the record decides: nothing is suspect until the new commit is pinned
+    try expectContains(try f.check(.recorded), "no problems (");
+    _ = try f.pin(null, null);
+    try expectContains(try f.check(.recorded), "intro: explains: 'other:lex.token' has changed since the link was reviewed");
+    const traced = try trace_command.run(testing.io, a, .{ .common = .{ .root = f.site }, .id = "intro" });
+    try expectContains(traced.text, "other:lex.token (rule, in other at ");
+}
+
+// req: render.markdown.references, network.site
+test "render: links to another repository's site, and unresolved references marked" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    _ = try f.pin(null, null);
+    try f.write("site/pages/more.md", "%page[more] See %[other:lex.token] and %[other:lex.none].\n");
+    const a = f.arena.allocator();
+    const out_dir = try std.Io.Dir.path.join(a, &.{ f.site, "..", "out" });
+    const plain = try render_command.run(testing.io, a, .{ .common = .{ .root = f.site }, .out = out_dir });
+    try testing.expectEqual(.ok, plain.status);
+    try expectContains(try f.tmp.dir.readFileAlloc(testing.io, "out/pages/more.md", a, .limited(1 << 16)),
+        \\See other:lex.token and <span class="skein-unresolved" title="unresolved: other:lex.none">other:lex.none</span>.
+    );
+    try f.write("site/.skein/config.toml",
+        \\[[sources]]
+        \\path = "pages"
+        \\
+        \\[[repositories]]
+        \\name = "other"
+        \\path = "../other"
+        \\site = "https://example.org/other/"
+        \\
+    );
+    _ = try render_command.run(testing.io, a, .{ .common = .{ .root = f.site }, .out = out_dir });
+    try expectContains(try f.tmp.dir.readFileAlloc(testing.io, "out/pages/more.md", a, .limited(1 << 16)), "See [other:lex.token](https://example.org/other/spec/lex.html#lex.token) and <span");
 }
 
 // req: network.fetched, network.offline

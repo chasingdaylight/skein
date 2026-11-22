@@ -5,6 +5,7 @@ const std = @import("std");
 const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Json = @import("Json.zig");
+const Network = @import("../network/Network.zig");
 const Project = @import("../Project.zig");
 const fingerprint = @import("../graph/fingerprint.zig");
 const walk = @import("../graph/walk.zig");
@@ -214,7 +215,16 @@ pub fn text(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
 fn typeNote(ctx: Context, out: *std.ArrayList(u8), id: []const u8) Error!void {
     if (ctx.graph.find(id)) |target| {
         try out.print(ctx.arena, " ({s})", .{target.type_name});
-    } else if (std.mem.findScalar(u8, id, ':') == null) try out.appendSlice(ctx.arena, " (no such item)");
+        return;
+    }
+    if (Network.split(id) == null) return out.appendSlice(ctx.arena, " (no such item)");
+    const n = ctx.graph.others orelse return;
+    switch (n.resolve(id)) {
+        .item => |f| try out.print(ctx.arena, " ({s}, in {s} at {s})", .{ f.item.type_name, f.member.repository.name, f.member.at() }),
+        .missing => |m| try out.print(ctx.arena, " (no such item in {s} at {s})", .{ m.repository.name, m.at() }),
+        .unavailable => |m| try out.print(ctx.arena, " (not checked: {s})", .{m.unavailable.?}),
+        .undeclared => |name| try out.print(ctx.arena, " (no repository '{s}' is declared)", .{name}),
+    }
 }
 
 /// `label` and the IDs, on one line; nothing when there are none

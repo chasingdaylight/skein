@@ -17,13 +17,16 @@ url: ?[]const u8 = null,
 /// the branch or tag `--current` follows for a `url`; its default branch
 /// when not given
 ref: ?[]const u8 = null,
+/// the address of its site, as `skein render --format html` writes it, for
+/// links to its items; without it, its items are shown without links
+site: ?[]const u8 = null,
 
 /// The repositories declared in `[[repositories]]` of `r`, the root table
 /// of the configuration. Mistakes are reported, and those entries left out.
 pub fn readAll(r: Schema.Reader) Schema.Reader.Error![]const Repository {
     var out: std.ArrayList(Repository) = .empty;
     for (try r.children("repositories")) |c| {
-        try c.known(&.{ "name", "path", "url", "ref" });
+        try c.known(&.{ "name", "path", "url", "ref", "site" });
         const name = try c.string("name") orelse "";
         const path = try c.string("path");
         const url = try c.string("url");
@@ -46,6 +49,7 @@ pub fn readAll(r: Schema.Reader) Schema.Reader.Error![]const Repository {
                 .path = if (path) |p| std.mem.trimEnd(u8, p, "/") else null,
                 .url = url,
                 .ref = try c.string("ref"),
+                .site = if (try c.string("site")) |s| std.mem.trimEnd(u8, s, "/") else null,
             });
         }
     }
