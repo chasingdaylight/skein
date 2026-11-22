@@ -148,6 +148,12 @@ A fenced code block of the language `skein` in a document shall be a request for
 %req[render.burn]
 `burndown MILESTONE [weight] [from=DATE] [to=DATE]` and `burnup ...` shall give a milestone's charts, as GitLab draws them, as `mermaid` blocks: over its days (from the first start of its work, else `from`, to its finish, else `to`) up to today, the burndown shows what remains beside a straight guideline from the starting total to none on the last day; the burnup shows the scope and what is done. Under each, a table of the days with the scope, what is done and what remains. A milestone whose days are not known is said so.
 
+%req[render.board]
+`board [TYPE...] [conditions] [by=status|assignee|milestone]` shall give a board of the work items that pass the conditions, as a table with a column for each status (the work types' statuses in their order, the tombstone left out), assignee or milestone, headed with how many cards it has, and a card for each item in its column: its ID, linked, and the first line of its text. (Design, section 10.3.)
+
+%req[render.roadmap]
+`roadmap [MILESTONE...]` shall give the milestones (those named, else every work item that work names as its milestone), in the order of their finish: each with its start (its own, else the first start of its work), its finish, how many of its work items are done of how many, as a share and a bar, and its work items, linked. (Design, section 10.3.)
+
 %req[render.gantt]
 `gantt [TYPE...] [conditions] [by=parent|assignee] [baseline=NAME]` shall give the schedule of the work items that pass the conditions as a Gantt chart, a `mermaid` block drawn as `render.mermaid` says, as `skein schedule` computes it: a bar for each scheduled item, marked critical on the critical path, a milestone for work of no duration, the days that are not working days left out, in a section for each item with parts (with its parts) or, `by=assignee`, for each assignee; with `baseline=NAME`, each item's bar in the schedule stored at that baseline (a tag) drawn under its bar now, to show slippage. Under the chart, a table of each item with its start, finish, slack and predecessors, linked, and the items that cannot be scheduled. (Design, section 10.3.)
 
