@@ -40,6 +40,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.RewriteRefs) !Workspac
         }
     }
     try out.print(arena, "skein: {s} {d} reference{s} in {d} file{s}\n", .{ if (options.dry_run) "would rewrite" else "rewrote", total, if (total == 1) "" else "s", touched, if (touched == 1) "" else "s" });
+    // once the numbers are the new forge's, a new number that is also an old one in the map would be read as the old
+    if (!options.dry_run) try out.appendSlice(arena, "skein: every reference has the new numbers now: remove `formerly` from [forge] in .skein/config.toml, or a new number that is also an old one in the map is read as the old one\n");
     return .{ .text = out.items };
 }
 
@@ -128,6 +130,8 @@ test "the numbers of a former forge are rewritten only where they are references
         .moved = &.{
             .{ .from = "github:example/spec#24", .to = "gitlab:group/project#7" },
             .{ .from = "github:example/spec#25", .to = "gitlab:group/project#8" },
+            // the same number on both: nothing to rewrite
+            .{ .from = "github:example/spec#26", .to = "gitlab:group/project#26" },
         },
     };
     const text =
@@ -136,7 +140,7 @@ test "the numbers of a former forge are rewritten only where they are references
         \\derived-from = ["#24"]
         \\+++
         \\
-        \\%rule[lex.b tracked-by=#24,#9 introduced-by=#25] See %[#25 the issue] and issue #24 and the color #25 and %[#9].
+        \\%rule[lex.b tracked-by=#24,#9 introduced-by=#25] See %[#25 the issue] and issue #24 and the color #25 and %[#9] and %[#26].
         \\
         \\```text
         \\%rule[x tracked-by=#24] %[#24]
@@ -149,6 +153,6 @@ test "the numbers of a former forge are rewritten only where they are references
     try std.testing.expectEqual(4, n);
     try std.testing.expect(std.mem.find(u8, got, "derived-from = [\"#7\"]") != null);
     try std.testing.expect(std.mem.find(u8, got, "tracked-by=#7,#9 introduced-by=#8]") != null);
-    try std.testing.expect(std.mem.find(u8, got, "See %[#8 the issue] and issue #24 and the color #25 and %[#9].") != null);
+    try std.testing.expect(std.mem.find(u8, got, "See %[#8 the issue] and issue #24 and the color #25 and %[#9] and %[#26].") != null);
     try std.testing.expect(std.mem.find(u8, got, "%rule[x tracked-by=#24] %[#24]") != null);
 }
