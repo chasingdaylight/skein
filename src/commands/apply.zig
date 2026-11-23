@@ -88,9 +88,10 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Apply) !Workspace.Outc
                 continue;
             }
         }
+        // a dry run counts what it would write
+        written += done.items.len;
         if (!options.dry_run) for (done.items) |f| {
             _ = overlay.remove(key, f);
-            written += 1;
         };
     }
     if (!options.dry_run) try overlay.save(io, arena, ws.root);
