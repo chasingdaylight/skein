@@ -33,8 +33,7 @@ pub fn lookup(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Re
 pub fn api(io: Io, arena: std.mem.Allocator, forge: *const Forge, path: []const u8) !github.Reply {
     var argv: std.ArrayList([]const u8) = .empty;
     try argv.appendSlice(arena, &.{ "glab", "api", path });
-    if (forge.url != null) try argv.appendSlice(arena, &.{ "--hostname", forge.host() });
-    if (try tool.cli(io, arena, argv.items)) |reply| return reply;
+    if (try tool.cli(io, arena, argv.items, forge.url)) |reply| return reply;
     const base = forge.url orelse try arena.print("https://{s}", .{forge.host()});
     var headers: std.ArrayList(std.http.Header) = .empty;
     try headers.append(arena, .{ .name = "User-Agent", .value = "skein" });
@@ -109,8 +108,7 @@ pub fn update(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Re
 
     var argv: std.ArrayList([]const u8) = .empty;
     try argv.appendSlice(arena, &.{ "glab", "api", "--method", "PUT", try arena.print("projects/{s}/issues/{d}", .{ proj, r.number }), "--input", body_path, "-H", "Content-Type: application/json" });
-    if (forge.url != null) try argv.appendSlice(arena, &.{ "--hostname", forge.host() });
-    const reply = (try tool.cli(io, arena, argv.items)) orelse return "glab is not installed: writing to the forge needs it, signed in";
+    const reply = (try tool.cli(io, arena, argv.items, forge.url)) orelse return "glab is not installed: writing to the forge needs it, signed in";
     return switch (reply) {
         .body => null,
         .missing => "the forge has no such issue",
@@ -120,7 +118,7 @@ pub fn update(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Re
 
 /// Sends `json` to `path` of the forge's REST API, through `glab`
 pub fn send(io: Io, arena: std.mem.Allocator, forge: *const Forge, method: []const u8, path: []const u8, json: []const u8, body_path: []const u8) !github.Reply {
-    return tool.send(io, arena, "glab", if (forge.url != null) forge.host() else null, &.{"Content-Type: application/json"}, method, path, json, body_path);
+    return tool.send(io, arena, "glab", null, forge.url, &.{"Content-Type: application/json"}, method, path, json, body_path);
 }
 
 /// The id of the user `username`

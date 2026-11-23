@@ -4,15 +4,25 @@
 const std = @import("std");
 const Io = std.Io;
 
+const env = @import("../env.zig");
 const github = @import("github.zig");
 
 /// How long a forge's program may take to answer
 pub const idle_seconds = 30;
 
-/// Runs `argv` (a forge's program, `argv[0]`); null when it is not installed
-pub fn cli(io: Io, arena: std.mem.Allocator, argv: []const []const u8) !?github.Reply {
+/// Runs `argv` (a forge's program, `argv[0]`); null when it is not installed.
+/// `gitlab_host` is the server for `glab`, given as `GITLAB_HOST`: its
+/// `--hostname` refuses a host with a port.
+pub fn cli(io: Io, arena: std.mem.Allocator, argv: []const []const u8, gitlab_host: ?[]const u8) !?github.Reply {
+    var environ: std.process.Environ.Map = undefined;
+    const environ_map: ?*const std.process.Environ.Map = if (gitlab_host) |h| blk: {
+        environ = if (env.map) |m| try m.clone(arena) else .init(arena);
+        try environ.put("GITLAB_HOST", h);
+        break :blk &environ;
+    } else null;
     const result = std.process.run(arena, io, .{
         .argv = argv,
+        .environ_map = environ_map,
         .stdout_limit = .limited(1 << 22),
         .timeout = .{ .duration = .{ .raw = .fromSeconds(idle_seconds), .clock = .awake } },
     }) catch |e| switch (e) {
@@ -29,8 +39,9 @@ pub fn cli(io: Io, arena: std.mem.Allocator, argv: []const []const u8) !?github.
 /// Sends `json` with `method` (POST, PUT, PATCH) to `path` through a forge's
 /// program (`gh`, `glab`), which holds the sign-in; `body_path` is a file skein
 /// may write the request in. `hostname` is for a server other than the public
-/// one, `headers` extra header arguments (`-H`, text).
-pub fn send(io: Io, arena: std.mem.Allocator, program: []const u8, hostname: ?[]const u8, headers: []const []const u8, method: []const u8, path: []const u8, json: []const u8, body_path: []const u8) !github.Reply {
+/// one (`gh --hostname`), `gitlab_host` the same for `glab`, `headers` extra
+/// header arguments (`-H`, text).
+pub fn send(io: Io, arena: std.mem.Allocator, program: []const u8, hostname: ?[]const u8, gitlab_host: ?[]const u8, headers: []const []const u8, method: []const u8, path: []const u8, json: []const u8, body_path: []const u8) !github.Reply {
     if (Io.Dir.path.dirname(body_path)) |d| Io.Dir.cwd().createDirPath(io, d) catch {};
     Io.Dir.cwd().writeFile(io, .{ .sub_path = body_path, .data = json }) catch return .{ .unreachable_ = "the request could not be written" };
     defer Io.Dir.cwd().deleteFile(io, body_path) catch {};
@@ -38,7 +49,7 @@ pub fn send(io: Io, arena: std.mem.Allocator, program: []const u8, hostname: ?[]
     try argv.appendSlice(arena, &.{ program, "api", "--method", method, path, "--input", body_path });
     for (headers) |h| try argv.appendSlice(arena, &.{ "-H", h });
     if (hostname) |h| try argv.appendSlice(arena, &.{ "--hostname", h });
-    return (try cli(io, arena, argv.items)) orelse .{ .unreachable_ = try arena.print("{s} is not installed: writing to the forge needs it, signed in", .{program}) };
+    return (try cli(io, arena, argv.items, gitlab_host)) orelse .{ .unreachable_ = try arena.print("{s} is not installed: writing to the forge needs it, signed in", .{program}) };
 }
 
 /// GET `url` with `headers`; `host` and `name` are for the reasons
