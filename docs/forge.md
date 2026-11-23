@@ -47,7 +47,7 @@ Everything above works the same: `#97` is issue 97 of the project, a merge reque
 
 ## Approvals from a merged pull request
 
-A review that approved a pull request is an approval of what it changed. After the merge, `skein approve --from-pull-request 97` records it: every item the pull request added or changed in content is approved, as it was at the merge, by each reviewer whose last review approved, on the day of the merge. A workflow can run it when a pull request is merged; `check` never does.
+A review that approved a pull request is an approval of what it changed. After the merge, `skein approve --from-pull-request 97` records it: every item the pull request added or changed in content is approved, as it was at the merge, by each reviewer whose last review approved, on the day of the merge. An approval given after the merge counts as well: a retroactive approval is still an approval. A workflow can run it when a pull request is merged; `check` never does.
 
 ```text
 $ skein approve --from-pull-request 97
