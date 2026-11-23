@@ -94,6 +94,8 @@ test "a what-if plan: deviations recorded, applied in views, checked, and writte
     try testing.expectEqual(null, written);
     const dry = (try apply_command.run(testing.io, a, .{ .common = common, .force = true, .dry_run = true })).text;
     try expectContains(dry, "example/plan#1 assignees: 'carol' -> 'bob' (dry run)");
+    // it counts what it would write, and writes nothing
+    try expectContains(dry, "skein: 1 deviation would be written to the forge, 0 left in the overlay");
     try testing.expectEqual(null, written);
     fail_write = true;
     try expectContains((try apply_command.run(testing.io, a, .{ .common = common, .force = true })).text, "not written: denied; left in the overlay");
