@@ -64,7 +64,7 @@ fn viaGh(io: Io, arena: std.mem.Allocator, forge: *const Forge, path: []const u8
     var argv: std.ArrayList([]const u8) = .empty;
     try argv.appendSlice(arena, &.{ "gh", "api", path });
     if (forge.url != null) try argv.appendSlice(arena, &.{ "--hostname", forge.host() });
-    return tool.cli(io, arena, argv.items);
+    return tool.cli(io, arena, argv.items, null);
 }
 
 /// Through GitHub's API, over HTTPS
@@ -141,7 +141,7 @@ pub fn update(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Re
 
 /// Sends `json` to `path` of the forge's REST API, through `gh`
 pub fn send(io: Io, arena: std.mem.Allocator, forge: *const Forge, method: []const u8, path: []const u8, json: []const u8, body_path: []const u8) !Reply {
-    return tool.send(io, arena, "gh", if (forge.url != null) forge.host() else null, &.{}, method, path, json, body_path);
+    return tool.send(io, arena, "gh", if (forge.url != null) forge.host() else null, null, &.{}, method, path, json, body_path);
 }
 
 /// The number of the milestone titled `title` of `repository`
