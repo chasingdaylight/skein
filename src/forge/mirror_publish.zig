@@ -15,6 +15,9 @@ const github = @import("github.zig");
 /// How a request is sent: the forge itself, or something else in tests
 pub var send: *const fn (Io, std.mem.Allocator, *const Forge, []const u8, []const u8, []const u8, []const u8) anyerror!github.Reply = adapter.send;
 
+/// The wait after each write to GitHub, which takes at most 80 new things a minute
+pub var pause: Io.Duration = .fromSeconds(1);
+
 pub const Published = struct {
     labels: usize = 0,
     milestones: usize = 0,
@@ -45,7 +48,7 @@ pub fn publish(io: Io, arena: std.mem.Allocator, data: Mirror.Data, target: *con
         else
             try arena.print("{{\"name\":{f},\"color\":{f},\"description\":{f}}}", .{ js(l.name), js(if (l.color.len > 0) l.color else "cccccc"), js(l.description) });
         // a label the forge has already is no failure
-        switch (try send(io, arena, target, "POST", try arena.print("{s}/labels", .{base}), body, body_path)) {
+        switch (try write(io, arena, target, "POST", try arena.print("{s}/labels", .{base}), body, body_path)) {
             .body, .missing => {},
             .unreachable_ => |why| if (!exists(why)) return stop(&out, map.items, why),
         }
@@ -60,7 +63,7 @@ pub fn publish(io: Io, arena: std.mem.Allocator, data: Mirror.Data, target: *con
             try arena.print("{{\"title\":{f},\"description\":{f}{s}}}", .{ js(m.title), js(m.description), try dueField(arena, m.due, true) })
         else
             try arena.print("{{\"title\":{f},\"description\":{f},\"state\":\"{s}\"{s}}}", .{ js(m.title), js(m.description), if (m.open) "open" else "closed", try dueField(arena, m.due, false) });
-        switch (try send(io, arena, target, "POST", try arena.print("{s}/milestones", .{base}), body, body_path)) {
+        switch (try write(io, arena, target, "POST", try arena.print("{s}/milestones", .{base}), body, body_path)) {
             .body => |t| if (idOf(arena, t, if (lab) "id" else "number")) |n| try numbers.put(arena, m.title, n),
             .missing => {},
             .unreachable_ => |why| return stop(&out, map.items, why),
@@ -90,7 +93,7 @@ pub fn publish(io: Io, arena: std.mem.Allocator, data: Mirror.Data, target: *con
             if (i.milestone) |m| if (numbers.get(m)) |n| try body.print(arena, ",\"milestone\":{d}", .{n});
         }
         try body.append(arena, '}');
-        const created = switch (try send(io, arena, target, "POST", try arena.print("{s}/issues", .{base}), body.items, body_path)) {
+        const created = switch (try write(io, arena, target, "POST", try arena.print("{s}/issues", .{base}), body.items, body_path)) {
             .body => |t| idOf(arena, t, if (lab) "iid" else "number") orelse return stop(&out, map.items, "the forge's answer to a new issue cannot be read"),
             .missing => return stop(&out, map.items, "the forge has no such place for issues"),
             .unreachable_ => |why| return stop(&out, map.items, why),
@@ -102,7 +105,7 @@ pub fn publish(io: Io, arena: std.mem.Allocator, data: Mirror.Data, target: *con
         for (i.comments) |c| {
             const note = try arena.print("{{\"body\":{f}}}", .{js(try arena.print("**{s}** on {s}:\n\n{s}", .{ c.author, c.created, c.body }))});
             const path = try arena.print("{s}/issues/{d}/{s}", .{ base, created, if (lab) "notes" else "comments" });
-            switch (try send(io, arena, target, "POST", path, note, body_path)) {
+            switch (try write(io, arena, target, "POST", path, note, body_path)) {
                 .body, .missing => out.comments += 1,
                 .unreachable_ => |why| return stop(&out, map.items, why),
             }
@@ -110,7 +113,7 @@ pub fn publish(io: Io, arena: std.mem.Allocator, data: Mirror.Data, target: *con
         if (!i.open) {
             const close = if (lab) "{\"state_event\":\"close\"}" else "{\"state\":\"closed\"}";
             const method: []const u8 = if (lab) "PUT" else "PATCH";
-            switch (try send(io, arena, target, method, try arena.print("{s}/issues/{d}", .{ base, created }), close, body_path)) {
+            switch (try write(io, arena, target, method, try arena.print("{s}/issues/{d}", .{ base, created }), close, body_path)) {
                 .body, .missing => {},
                 .unreachable_ => |why| return stop(&out, map.items, why),
             }
@@ -118,6 +121,13 @@ pub fn publish(io: Io, arena: std.mem.Allocator, data: Mirror.Data, target: *con
     }
     out.map = map.items;
     return out;
+}
+
+/// One write, paced on GitHub
+fn write(io: Io, arena: std.mem.Allocator, target: *const Forge, method: []const u8, path: []const u8, body: []const u8, body_path: []const u8) !github.Reply {
+    const reply = try send(io, arena, target, method, path, body, body_path);
+    if (target.kind == .github) try io.sleep(pause, .awake);
+    return reply;
 }
 
 fn stop(out: *Published, map: []const Mapped, why: []const u8) Published {
@@ -133,7 +143,8 @@ fn exists(why: []const u8) bool {
 
 fn dueField(arena: std.mem.Allocator, due: ?[]const u8, lab: bool) ![]const u8 {
     const d = due orelse return "";
-    return if (lab) try arena.print(",\"due_date\":\"{s}\"", .{d}) else try arena.print(",\"due_on\":\"{s}T00:00:00Z\"", .{d});
+    // GitHub keeps the day of the time in US Pacific time: noon UTC is the same day there
+    return if (lab) try arena.print(",\"due_date\":\"{s}\"", .{d}) else try arena.print(",\"due_on\":\"{s}T12:00:00Z\"", .{d});
 }
 
 /// The number the target gave a new thing, from its JSON answer

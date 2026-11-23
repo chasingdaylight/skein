@@ -33,7 +33,11 @@ pub fn cli(io: Io, arena: std.mem.Allocator, argv: []const []const u8, gitlab_ho
     };
     if (result.term.success()) return .{ .body = result.stdout };
     if (std.mem.find(u8, result.stderr, "Not Found") != null or std.mem.find(u8, result.stdout, "Not Found") != null) return .missing;
-    return .{ .unreachable_ = try arena.print("{s}: {s}", .{ argv[0], std.mem.trim(u8, result.stderr, " \r\n") }) };
+    // the forge's answer says why (`gh` prints only "Validation Failed" of an `already_exists`)
+    const answer = std.mem.trim(u8, result.stdout, " \r\n");
+    const why = std.mem.trim(u8, result.stderr, " \r\n");
+    if (answer.len == 0) return .{ .unreachable_ = try arena.print("{s}: {s}", .{ argv[0], why }) };
+    return .{ .unreachable_ = try arena.print("{s}: {s}: {s}", .{ argv[0], why, answer[0..@min(answer.len, 400)] }) };
 }
 
 /// Sends `json` with `method` (POST, PUT, PATCH) to `path` through a forge's

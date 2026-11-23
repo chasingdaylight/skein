@@ -127,10 +127,10 @@ var created: u64 = 0;
 
 fn fakeSend(_: std.Io, arena: std.mem.Allocator, _: *const Forge, method: []const u8, path: []const u8, json: []const u8, _: []const u8) anyerror!github.Reply {
     try sent.append(testing.allocator, try std.fmt.allocPrint(testing.allocator, "{s} {s} {s}", .{ method, path, json }));
-    if (std.mem.endsWith(u8, path, "/milestones")) return .{ .body = "{\"id\": 7, \"iid\": 1}" };
+    if (std.mem.endsWith(u8, path, "/milestones")) return .{ .body = "{\"id\": 7, \"iid\": 1, \"number\": 1}" };
     if (std.mem.endsWith(u8, path, "/issues")) {
         created += 1;
-        return .{ .body = try arena.print("{{\"iid\": {d}}}", .{created}) };
+        return .{ .body = try arena.print("{{\"iid\": {d}, \"number\": {d}}}", .{ created, created }) };
     }
     return .{ .body = "{}" };
 }
@@ -176,6 +176,19 @@ test "publishing the mirror to another forge: what is created, and the map of re
 
     const map = try tmp.dir.readFileAlloc(testing.io, ".skein/forge-map.toml", a, .limited(1 << 16));
     try expectContains(map, "\"github:example/spec#1\" = \"gitlab:group/new#1\"\n\"github:example/spec#3\" = \"gitlab:group/new#2\"\n");
+
+    // to GitHub: its paths and fields; each write waits (not here)
+    const saved_pause = publisher.pause;
+    defer publisher.pause = saved_pause;
+    publisher.pause = .zero;
+    const first = sent.items.len;
+    const hub = (try publish_command.run(testing.io, a, .{ .common = .{ .root = root }, .to = "github:example/moved" })).text;
+    try expectContains(hub, "created 1 label, 1 milestone, 2 issues and 1 comment on github:example/moved");
+    try expectContains(sent.items[first], "POST repos/example/moved/labels {\"name\":\"bug\",\"color\":\"d73a4a\"");
+    try expectContains(sent.items[first + 1], "\"due_on\":\"2027-03-12T12:00:00Z\"}");
+    try expectContains(sent.items[first + 2], "\"labels\":[\"bug\"],\"milestone\":1}");
+    try expectContains(sent.items[first + 3], "POST repos/example/moved/issues/3/comments");
+    try expectContains(sent.items[first + 5], "PATCH repos/example/moved/issues/4 {\"state\":\"closed\"}");
 
     // a forge that cannot be named, and no mirror
     try testing.expectEqual(.misuse, (try publish_command.run(testing.io, a, .{ .common = .{ .root = root }, .to = "nowhere" })).status);
