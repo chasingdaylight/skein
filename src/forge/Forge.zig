@@ -125,6 +125,8 @@ fn movedTo(self: *const Forge, former: []const u8, number: u64) ?Ref {
         const to_hash = std.mem.findScalarLast(u8, m.to, '#') orelse continue;
         if (!self.isOwn(m.to[0..to_hash])) continue;
         const now = std.fmt.parseInt(u64, m.to[to_hash + 1 ..], 10) catch continue;
+        // the same number on both forges: the reference means the same either way
+        if (now == number) return .{ .repository = self.repository, .number = now };
         return .{ .repository = self.repository, .number = now, .former = former, .former_number = number };
     }
     return null;

@@ -462,6 +462,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--force", .takes_value = false },
     .{ .name = "--skill", .takes_value = false },
     .{ .name = "--file", .takes_value = true },
+    .{ .name = "--url", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -909,6 +910,18 @@ test "link takes two items and a type" {
     try testing.expectEqualStrings("verifies", l.type_name);
     try testing.expectEqualStrings("lex.a", l.to);
     try testing.expectEqualStrings("link takes the item, the link type, and the item to link to", (try f.run(&.{ "link", "c.one" })).misuse);
+}
+
+test "the forge commands: mirror, sync, publish with its forge and address, rewrite-refs" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    try testing.expectEqual(false, (try f.run(&.{"mirror"})).mirror.common.offline);
+    try testing.expect((try f.run(&.{ "sync", "--dry-run" })).sync.dry_run);
+    const p = (try f.run(&.{ "publish", "--to", "gitlab:group/project", "--url", "http://gitlab.example:8080", "--dry-run" })).publish;
+    try testing.expectEqualStrings("gitlab:group/project", p.to.?);
+    try testing.expectEqualStrings("http://gitlab.example:8080", p.url.?);
+    try testing.expect(p.dry_run);
+    try testing.expect((try f.run(&.{ "rewrite-refs", "--dry-run" })).rewrite_refs.dry_run);
 }
 
 test "new takes a type, and maybe an ID" {
