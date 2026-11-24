@@ -60,6 +60,12 @@ pub fn integer(self: *Json, value: i64) Error!void {
     try self.out.print(self.arena, "{d}", .{value});
 }
 
+/// A number with one decimal: hours
+pub fn tenths(self: *Json, value: f64) Error!void {
+    try self.separate();
+    try self.out.print(self.arena, "{d:.1}", .{value});
+}
+
 pub fn boolean(self: *Json, value: bool) Error!void {
     try self.separate();
     try self.out.appendSlice(self.arena, if (value) "true" else "false");

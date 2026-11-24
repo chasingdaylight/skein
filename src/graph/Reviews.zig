@@ -7,6 +7,7 @@
 const std = @import("std");
 const Io = std.Io;
 
+const Citations = @import("Citations.zig");
 const Graph = @import("Graph.zig");
 const Item = @import("Item.zig");
 const Project = @import("../Project.zig");
@@ -79,11 +80,70 @@ pub const State = enum { reviewed, never_reviewed, suspect };
 pub fn stateOf(self: *const Reviews, arena: std.mem.Allocator, schema: *const Schema, graph: *const Graph, item: *const Item, link: Item.Link) !?State {
     const link_type = schema.linkType(link.type_name) orelse return null;
     if (!link_type.review) return null;
-    const target = graph.find(link.target) orelse return null;
-    if (schema.itemType(target.type_name) == null) return null;
+    const now = try targetFingerprint(arena, schema, graph, link.target) orelse return null;
     const recorded = try self.get(arena, item.id, link.type_name, link.target) orelse return .never_reviewed;
-    const now = try fingerprint.of(arena, graph, schema, target);
     return if (std.mem.eql(u8, recorded, &now)) .reviewed else .suspect;
+}
+
+/// The fingerprint of the item `id` names, in this repository or another;
+/// null when there is none, or its type is unknown
+pub fn targetFingerprint(arena: std.mem.Allocator, schema: *const Schema, graph: *const Graph, id: []const u8) !?fingerprint.Fingerprint {
+    const t = graph.target(schema, id) orelse return null;
+    if (t.schema.itemType(t.item.type_name) == null) return null;
+    return try fingerprint.of(arena, t.graph, t.schema, t.item);
+}
+
+/// The link type a citation of `set` is recorded under: no link type has a colon
+fn citationLink(arena: std.mem.Allocator, set: []const u8) ![]const u8 {
+    return arena.print("cite:{s}", .{set});
+}
+
+/// The file that holds the records of the citations in `file`
+pub fn citationFileOf(arena: std.mem.Allocator, file: []const u8) ![]const u8 {
+    return arena.print("{s}/citations/{s}.toml", .{ dir, file });
+}
+
+/// What a citation is, held against its record; null when its citation set is
+/// not reviewed or the item it names does not exist
+pub fn citationState(self: *const Reviews, arena: std.mem.Allocator, project: *const Project, graph: *const Graph, c: Citations.Citation) !?State {
+    const set = project.citationSet(c.set) orelse return null;
+    if (!set.review) return null;
+    const now = try targetFingerprint(arena, &project.schema, graph, c.target) orelse return null;
+    const recorded = try self.get(arena, c.file, try citationLink(arena, c.set), c.target) orelse return .never_reviewed;
+    return if (std.mem.eql(u8, recorded, &now)) .reviewed else .suspect;
+}
+
+/// Records that the citation `c` was reviewed against the item as it is now
+pub fn putCitation(self: *Reviews, arena: std.mem.Allocator, c: Citations.Citation, fp: []const u8) !void {
+    try self.put(arena, c.file, try citationLink(arena, c.set), c.target, fp);
+}
+
+/// Reports the citations of reviewed sets that were never reviewed, and the
+/// suspect ones: those whose item has changed since.
+pub fn checkCitations(self: *const Reviews, arena: std.mem.Allocator, project: *const Project, graph: *const Graph, citations: *const Citations, report: *Report) std.mem.Allocator.Error!void {
+    for (citations.all) |c| {
+        const state = try self.citationState(arena, project, graph, c) orelse continue;
+        switch (state) {
+            .reviewed => {},
+            .never_reviewed => try report.add(c.file, c.line, c.column, "the citation of '{s}' was never reviewed ('skein review {s}')", .{ c.target, c.file }),
+            .suspect => try report.add(c.file, c.line, c.column, "'{s}' has changed since the citation was reviewed ('skein clear {s}')", .{ c.target, c.target }),
+        }
+    }
+}
+
+/// Writes the record files named in `files` again, from the records held of
+/// the citations that still exist
+pub fn writeCitations(self: *const Reviews, io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, citations: *const Citations, files: []const []const u8) !void {
+    var buckets: std.array_hash_map.String(std.ArrayList([]const u8)) = .empty;
+    for (files) |file| try buckets.put(arena, file, .empty);
+    for (citations.all) |c| {
+        const set = project.citationSet(c.set) orelse continue;
+        if (!set.review) continue;
+        const lines = buckets.getPtr(try citationFileOf(arena, c.file)) orelse continue;
+        const fp = try self.get(arena, c.file, try citationLink(arena, c.set), c.target) orelse continue;
+        try lines.append(arena, try arena.print("\"{s}\".\"{s}\".\"{s}\" = \"{s}\"\n", .{ try record_files.escape(arena, c.file), try citationLink(arena, c.set), c.target, fp }));
+    }
+    for (buckets.keys(), buckets.values()) |file, *lines| try record_files.write(io, arena, root, file, header, lines.items);
 }
 
 /// Reports the reviewed links that were never reviewed, and the suspect
@@ -124,4 +184,5 @@ pub fn write(self: *const Reviews, io: Io, arena: std.mem.Allocator, root: Io.Di
 test {
     _ = fingerprint;
     _ = @import("_test/reviews.zig");
+    _ = @import("_test/cite_reviews.zig");
 }

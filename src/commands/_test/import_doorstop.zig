@@ -147,7 +147,7 @@ test "Doorstop documents become a skein project that checks clean but for the li
     // the link Doorstop had a review of is reviewed; the other is to be
     const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
     try testing.expectEqualStrings(
-        \\docs/srs/SRS-001.md:1:1: error: SRS-001: parent: the link to 'SYS-002' was never reviewed ('skein review SRS-001')
+        \\docs/srs/SRS-001.md:3:1: error: SRS-001: parent: the link to 'SYS-002' was never reviewed ('skein review SRS-001')
         \\skein: 1 problem
         \\
     , (try check.run(testing.io, a, .{ .root = root })).text);
@@ -192,4 +192,51 @@ test "what is not a Doorstop document" {
     try testing.expectEqualStrings("skein: 'docs/plain' is no Doorstop document: it has no .doorstop.yml\n", try run(a, tmp.dir, &.{"docs/plain"}));
     try testing.expectEqualStrings("skein: cannot open the directory 'docs/none'\n", try run(a, tmp.dir, &.{"docs/none"}));
     try testing.expectEqualStrings("skein: docs/bad/BAD-001.md:0: this is not what Doorstop writes\n", try run(a, tmp.dir, &.{"docs/bad"}));
+}
+
+// req: import.doorstop.headings, import.doorstop.statuses
+test "headings as text, and statuses and verification methods from attributes" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const dir = tmp.dir;
+    try write(dir, "docs/srs/.doorstop.yml", "settings:\n  digits: 3\n  prefix: SRS\n  sep: '-'\n");
+    try write(dir, "docs/srs/SRS-001.md", "---\nactive: true\nnormative: false\nlinks: []\n---\n\n# Purpose\n\nWhy this exists.\n");
+    try write(dir, "docs/srs/SRS-002.md", "---\nactive: true\ncategory: functional\nstatus: In Review\nverification-method: Test\nlinks:\n- SRS-004\n---\n\nThe software **shall** read.\n");
+    try write(dir, "docs/srs/SRS-003.md", "---\nactive: true\ncategory: functional\nstatus: Approved\nverification-method: Analysis\nlinks: []\n---\n\nThe software **shall** write.\n");
+    // a heading that an item links to stays an item
+    try write(dir, "docs/srs/SRS-004.md", "---\nactive: true\nnormative: false\ncategory: functional\nlinks: []\n---\n\n# Interfaces\n");
+    try write(dir, "docs/srs/SRS-005.md", "---\nactive: false\ncategory: functional\nstatus: Approved\nlinks: []\n---\n\nGone.\n");
+    const root = try dir.realPathFileAlloc(testing.io, ".", a);
+    const out = try import_doorstop.run(testing.io, a, .{
+        .common = .{ .root = root },
+        .paths = &.{"docs/srs"},
+        .headings_as_text = true,
+        .status_from = "status",
+        .verification_from = "verification-method",
+    });
+    try testing.expect(std.mem.startsWith(u8, out.text, "skein: imported 4 items of 1 Doorstop document, and 1 heading as text;"));
+
+    // the heading is plain Markdown, which is no item
+    try testing.expectEqualStrings("# Purpose\n\nWhy this exists.\n", try read(a, dir, "docs/srs/SRS-001.md"));
+    try testing.expectEqualStrings(
+        \\+++
+        \\id = "SRS-002"
+        \\status = "in-review"
+        \\verification = "test"
+        \\category = "functional"
+        \\parent = ["SRS-004"]
+        \\+++
+        \\
+        \\The software **shall** read.
+        \\
+    , try read(a, dir, "docs/srs/SRS-002.md"));
+    const type_file = try read(a, dir, ".skein/types/srs.toml");
+    try testing.expect(std.mem.find(u8, type_file, "categories = [\"functional\"]\nstatuses = [\"in-review\", \"approved\", \"removed\"]\ntombstone = \"removed\"\nverification = [\"test\", \"analysis\"]\n") != null);
+    // the attributes that became the status and the method are not kept
+    try testing.expect(std.mem.find(u8, type_file, "[attributes.doorstop-status]") == null);
+    try testing.expect(std.mem.find(u8, type_file, "[attributes.verification-method]") == null);
+    try testing.expect(std.mem.find(u8, try read(a, dir, "docs/srs/SRS-005.md"), "status = \"removed\"") != null);
 }

@@ -1,0 +1,16 @@
+description = "A key decision point of the project's life cycle (NPR 7120.5F, chapter 2): the gate into a phase (KDP-B, into Phase B), with its date, a milestone of the project's schedule"
+id = "numbered"
+prefix = "KDP"
+names = true
+statuses = ["planned", "passed", "deferred"]
+
+# the phase it opens: Pre-Phase A to Phase F
+[attributes.phase]
+values = ["Pre-A", "A", "B", "C", "D", "E", "F"]
+
+[attributes.date]
+type = "date"
+
+# who decides: the Decision Authority
+[attributes.authority]
+normative = false

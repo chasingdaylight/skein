@@ -1,0 +1,3 @@
+description = "A software requirement is allocated from a system requirement; other system requirements go to hardware or people, so none is expected of each"
+from = ["software"]
+to = ["system"]

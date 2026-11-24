@@ -150,7 +150,7 @@ test "a status that needs approval must be one of the statuses" {
     const root = try tmp.dir.realPathFileAlloc(testing.io, ".", arena.allocator());
     const text = (try check_command.run(testing.io, arena.allocator(), .{ .root = root })).text;
     try testing.expectEqualStrings(
-        \\.skein/types/srs.toml: error: approval: 'signed' is not one of the statuses
+        \\.skein/types/srs.toml:1:1: error: approval: 'signed' is not one of the statuses
         \\skein: 1 problem
         \\
     , text);

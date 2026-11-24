@@ -1,0 +1,5 @@
+
+# NASA-STD-8739.8B's tasks and IV&V requirements: read-only, written by skein init from the template
+[[sources]]
+path = "standards/nasa-std-8739.8b"
+read_only = true

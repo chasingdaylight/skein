@@ -1,6 +1,6 @@
 # Fingerprints, reviews, suspect links and approvals
 
-When a requirement changes, the items derived from it and the tests that verify it may no longer be correct. skein finds those places: a link can record the content of its target at the time the link was last reviewed, and `skein check` reports the link as suspect once the content of the target has changed.
+When a requirement changes, the items derived from it and the tests that verify it may no longer be correct. Skein finds those places: a link can record the content of its target at the time the link was last reviewed, and `skein check` reports the link as suspect once the content of the target has changed.
 
 ## Fingerprints
 
@@ -42,6 +42,22 @@ Two commands record a review. Both take IDs, or `--all`:
 
 Link types without `review = true` are never reported, so a project chooses which relations need this care.
 
+### Reviewed citations
+
+A test that cites a rule (`// spec: lex.comment.line`) is as much a dependent of the rule as a test linked by `verifies`. A citation set asks for the same care:
+
+```toml
+# .skein/config.toml
+[[citations]]
+name = "test"
+path = "tests"
+files = [".zig"]
+marker = "// spec:"
+review = true
+```
+
+`skein check` then reports a citation that was never reviewed, and one whose item has changed since it was. `skein review tests/lex.zig` records the citations in that file as reviewed (it takes files that cite, beside items), and `skein clear lex.comment.line` those of the rule that changed, after you have looked at the tests that cite it. The records are in `.skein/reviews/citations/`, one file for each citing file, like the others committed with the change.
+
 ## Where the records are
 
 Under `.skein/reviews/`, never in the items or beside the documents, so the sources hold no hashes. There is one file per document, and one per directory of item files, each with one sorted line per link:
@@ -51,7 +67,7 @@ Under `.skein/reviews/`, never in the items or beside the documents, so the sour
 "t.lex.comment".verifies."lex.comment.line" = "9f2c41d0a6b7c8e9f0a1b2c3d4e5f607"
 ```
 
-skein writes these files; no one edits them by hand. They are committed with the change that was reviewed, so a pull request shows which links its author looked at. Two branches conflict in them only where both reviewed links of the same document. A record of a link that no longer exists is dropped when its file is next written.
+Skein writes these files; no one edits them by hand. They are committed with the change that was reviewed, so a pull request shows which links its author looked at. Two branches conflict in them only where both reviewed links of the same document. A record of a link that no longer exists is dropped when its file is next written.
 
 ## Approvals
 
@@ -82,3 +98,48 @@ The records are under `.skein/approvals/`, in files named as the review records 
 ```
 
 Several people can approve one item. Approving again replaces that person's earlier record; git keeps the history. Because the records are files in the repository, they are reviewed and merged with the change they belong to, they survive a move to another forge, and they can be shown to an auditor without the forge.
+
+### Approvals by role
+
+Some approvals need several signatures: a tailoring of a requirement, approved by the engineering and the safety and mission assurance authorities. The item type names the roles:
+
+```toml
+# .skein/types/tailoring.toml
+[approval]
+statuses = ["approved"]
+roles = ["engineering-ta", "sma-ta"]
+```
+
+Each approval is then given in a role:
+
+```text
+skein approve t.cost --as engineering-ta --by "A. Engineer"
+```
+
+An item is approved only when every role has approved what it says now; `check` names the roles still missing, and `trace` shows who approved in which role.
+
+### Who may approve
+
+Skein has no sign-in of its own, so by default anyone can record an approval: the records are in git, with their commits. A type can say whose approval counts:
+
+```toml
+# .skein/types/proposal.toml
+[approval]
+statuses = ["accepted", "rejected"]
+approvers = ["emanspeaks"]
+
+# .skein/types/tailoring.toml: a list for each role
+[approval]
+statuses = ["approved"]
+roles = ["engineering-ta", "sma-ta"]
+
+[approval.approvers]
+engineering-ta = ["A. Engineer"]
+sma-ta = ["B. Assurance", "C. Assurance"]
+```
+
+The names are the ones an approval carries: `--by` (by default git's `user.name`), or a reviewer's login for `--from-pull-request`. `skein approve` refuses an approval that would not count, `check` reports an item whose only approval is by someone else, and `--from-pull-request` records a reviewer in the role they may act in, or not at all. The list is a file of the project, so who may change it is a matter of the project's own review of `.skein/types/` (a code owners file on that directory, say).
+
+### From a merged pull request
+
+`skein approve --from-pull-request N` records the approvals a merged pull request had in review: see [the forge](forge.md). Where an item's type names who may approve, only those reviewers are recorded.

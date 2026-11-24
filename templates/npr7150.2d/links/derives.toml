@@ -1,0 +1,5 @@
+description = "A software requirement comes from a higher-level requirement (SWE-052)"
+from = ["requirement"]
+to = ["system"]
+# every higher-level requirement is traced to software requirements, for classes A, B, C and F
+expected = {{trace_higher}}

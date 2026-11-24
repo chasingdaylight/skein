@@ -1,0 +1,35 @@
+# The forge: issues and pull requests
+
+The user documentation is in `docs/forge.md`.
+
+Items can name the issues and pull requests that introduced them, track them, or are tracked by them. Those are the forge's, so Skein asks the forge about them; it keeps none of them itself.
+
+%req[forge.refs]
+`.skein/config.toml` shall name the project's forge under `[forge]`: its `kind` (`github` or `gitlab`; `forgejo` later), its `repository` (`owner/repo`), and the `url` of a server other than the public one. A link, reference or citation whose target is `#N` names issue or pull request N of that repository, and `owner/repo#N` one of another. Without `[forge]`, such targets are accepted unchecked.
+
+%req[forge.check]
+`skein check` shall report a target that the forge says does not exist, and one that a link of a type with `open = true` points to while it is closed. It asks the forge through the `gh` program when it is installed, so that its sign-in is used, and otherwise through the forge's HTTPS API with a token from `GH_TOKEN` or `GITHUB_TOKEN` when one is set; each issue or pull request is asked about once per run.
+
+%req[forge.render]
+`skein render` shall render a reference to an issue or pull request as a link to its page on the forge, followed, when the reference gives no words of its own, by its title and whether it is open or closed, as the forge or the cache gives them. One the forge says does not exist is marked unresolved; without `[forge]`, it is its words.
+
+%req[forge.approvals]
+`skein approve --from-pull-request N` shall record the approvals that merged pull request N had in review: each item it added or changed in content, between its base and its merge commit, approved as it was at the merge by each reviewer whose last review approved it (comments count for neither; a review given after the merge counts), on the day of the merge. It refuses a pull request that does not exist or is not merged, and a project that names no forge. It is run by hand or by a workflow after a merge, never by `check`.
+
+%req[forge.gitlab]
+With `kind = "gitlab"`, Skein shall give the same answers from GitLab (gitlab.com, or the `url` of a self-managed server) as from GitHub: an issue's title, whether it is open, its assignees, its milestone and when it is due, writing them back for `skein apply`, and the merge request and its approvals for `skein approve --from-pull-request`. It asks through the `glab` program when it is installed, so that its sign-in is used, and otherwise through GitLab's HTTPS API with a token from `GITLAB_TOKEN` when one is set. A reference `#N` is an issue; its page is `/-/issues/N`; a repository may be a nested group, `group/sub/project`. (Issue #99; `principle.forge-neutral`.)
+
+%req[forge.mirror]
+`skein mirror` shall copy everything the forge holds of the project's repository into a forge-neutral plain-text mirror under `.skein/mirror/`: every issue and every pull or merge request (title, state, author, dates, labels, assignees, milestone, body, and its comments in order; for a pull or merge request also the day it was merged and who approved it), every milestone (title, description, state, due day) and the labels. One file is written for each, in order, so the same forge data gives the same bytes. The mirror is per checkout, which git ignores, unless `[forge]` says `mirror = "committed"`. Offline, or when the forge cannot be reached and the cache has nothing, what the mirror says of an issue is what is known of it. It reads GitHub and GitLab through their adapters and is refused with `--offline`. (Design, section 10.4; emanspeaks, 2026-11-21.)
+
+%req[forge.sync]
+`skein sync` shall write the overlay to the forge as `skein apply` does (a field that changed on both sides is reported and left, not overwritten; `--dry-run` and `--force` as there) and then refresh the mirror from the forge, so that work done offline on the mirror goes back and the mirror is current again. (Design, section 10.4.)
+
+%req[forge.publish]
+`skein publish --to KIND:OWNER/REPO` (with `--url` for a server other than the public one, and `--dry-run` to count what would be created) shall re-create the mirror's labels, milestones, issues and their comments on another forge (GitHub or GitLab), through its adapter, each issue saying where it was mirrored from and who opened it, and close the ones that were closed. Pull and merge requests are not re-created, as no forge can make one without its branches, and nobody is assigned, as the other forge may not know the people. It records where each issue went in `.skein/forge-map.toml`, from the old reference (`github:owner/repo#24`) to the new (`gitlab:group/project#7`), which the project commits, keeping every earlier move. It stops at the first request the forge refuses, with its reason, and keeps the map of what it created. (Design, section 10.4; emanspeaks, 2026-11-21.)
+
+%req[forge.moved]
+After a move between forges (`skein publish`), `[forge] formerly = ["kind:owner/repo", ...]` shall name the forges the project was on, so that a reference written with a former forge's number, `#24`, resolves through `.skein/forge-map.toml` to the issue it became on the current forge, whenever the map has it (a number the map does not have is the current forge's own), and `kind:owner/repo#24` always names the issue of that former forge, resolved the same way, or reported as not found when the map does not have it. `skein check` warns of each reference that resolved through the map, with the new number, and the rendered pages link to the new issue. `skein rewrite-refs` (`--dry-run` says what it would write) shall write the new number into those references, and only where they are references: after `%[`, as a link or attribute value in a marker, and as a string of front matter, never in prose, a code block or a color, and never in a read-only source. An issue that kept its number on the new forge is not warned of and not rewritten. When it has rewritten them, `rewrite-refs` says to remove `formerly`, as a new number that is also an old one in the map is read as the old one while it stays. (emanspeaks, 2026-11-22, on #215: option 3, the transition and the rewrite.)
+
+%req[forge.offline]
+What the forge said of each issue and pull request shall be kept in a cache under this repository's git directory, never committed. With `--offline` nothing is asked and the cache is used; when the forge cannot be asked or does not answer, the cache is used too. What neither knows is not checked, and that is a warning.

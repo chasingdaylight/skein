@@ -35,5 +35,14 @@ A citation of an item that does not exist, is removed, or has an item type the c
 %req[check.removed-exempt]
 A removed item shall not be required to have a category, required attributes, required links or text.
 
+%req[check.aliases]
+A link, reference or citation that names an item by a former ID (`items.aliases`) shall be checked as if it named the item, and reported as a warning that says the item's ID now, so that it is followed; within the project and into another repository alike. An item's own ID given as a former one, a former ID that is another item's ID, and one former ID of two items are reported.
+
 %req[check.other-repositories]
-A link, reference or citation whose target has a colon (`name:id`) names an item of another repository. Until repositories are linked, it shall be accepted and not checked.
+A link, reference or citation whose target has a colon (`name:id`) names an item of another repository, and shall be checked against that repository's items in the state read (`network.states`): a repository that is not declared, an item it does not have, a removed item, and an item of a type the link type or citation set may not point to are reported. When the repository's items could not be read, its targets are not checked, and that is a warning.
+
+%req[check.warnings]
+A warning shall say what could not be checked. It is shown with the problems, as `warning:` where they have `error:`, and counted apart from them; warnings alone do not fail a check.
+
+%req[check.formats]
+`skein check --format github` shall write each problem and warning as a GitHub Actions workflow command (`::error file=...,line=...,col=...::message`), which shows it on its line of a pull request, and `--format gitlab` as a GitLab Code Quality report, a JSON array of findings with a description, a severity (`major` for a problem, `minor` for a warning), a fingerprint and the file and line, which a job keeps as an artifact. Both go to standard output, and the exit status is that of `check`.

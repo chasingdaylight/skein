@@ -8,6 +8,8 @@ const Item = @This();
 
 id: []const u8,
 type_name: []const u8,
+/// the IDs it had before, which still name it (`aliases`)
+aliases: []const []const u8 = &.{},
 /// as written; null when the item names none (`effectiveStatus`)
 status: ?[]const u8 = null,
 category: ?[]const u8 = null,
@@ -27,12 +29,18 @@ parts: []const []const u8 = &.{},
 file: []const u8,
 /// where the item is declared: its marker, or 1 for an item file
 line: u32,
+/// the last line of the item in its file, its parts included: the line
+/// of its marker for a removed item
+last_line: u32 = 0,
 /// whether the item is a paragraph of a document, not a file of its own
 in_document: bool = true,
 
 pub const Attribute = struct {
     name: []const u8,
+    /// for an attribute with several values (`list = true`), them joined by ", "
     value: []const u8,
+    /// an attribute with several values: each; empty for one with one
+    values: []const []const u8 = &.{},
     /// 0 when the place is not known (front matter)
     line: u32 = 0,
 };
@@ -66,4 +74,16 @@ pub fn attribute(self: *const Item, name: []const u8) ?[]const u8 {
         if (std.mem.eql(u8, a.name, name)) return a.value;
     }
     return null;
+}
+
+/// Whether the attribute `name` has the value `value`: is it, or, for one
+/// with several values, has it among them
+pub fn hasValue(self: *const Item, name: []const u8, value: []const u8) bool {
+    for (self.attributes) |a| {
+        if (!std.mem.eql(u8, a.name, name)) continue;
+        if (a.values.len == 0) return std.mem.eql(u8, a.value, value);
+        for (a.values) |v| if (std.mem.eql(u8, v, value)) return true;
+        return false;
+    }
+    return false;
 }

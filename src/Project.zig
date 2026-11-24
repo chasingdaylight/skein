@@ -4,6 +4,8 @@
 //! - `.skein/types/<name>.toml`: one item type each
 //! - `.skein/links/<name>.toml`: one link type each
 //! - `.skein/profiles/<name>.toml`: one profile each
+//! - `.skein/network.toml`: the recorded state of the other repositories
+//!   (`network/record.zig`)
 
 const std = @import("std");
 const Io = std.Io;
@@ -18,9 +20,53 @@ pub const dir_name = ".skein";
 pub const config_file = dir_name ++ "/config.toml";
 
 name: []const u8 = "",
+/// what other projects know this one by, whatever short name they give it
+id: ?[]const u8 = null,
 sources: []const Source = &.{},
 citations: []const CitationSet = &.{},
+/// the other repositories its items refer to (`name:id`)
+repositories: []const Repository = &.{},
+/// the results files it keeps, or directories of them, from its root
+results: []const []const u8 = &.{},
+/// where its issues and pull requests are
+forge: ?Forge = null,
+/// the templates it uses, with their options
+templates: []const template_use.Use = &.{},
+/// how mature its documents are expected to be, at which milestone
+maturity: Maturity = .{},
+/// the planning repository of a project of several repositories (`[planning]
+/// repository`): one of `repositories`, whose resources and calendar are
+/// used when the project has none of its own
+planning_repository: ?[]const u8 = null,
+/// whether this project is a planning repository (`[planning] span`): its
+/// schedule and views span the work of the repositories it declares
+planning_span: bool = false,
+/// the formats the schedule is also written in (`[schedule] also`), besides
+/// `.skein/schedule.toml`
+schedule_also: []const []const u8 = &.{},
 schema: Schema = .{},
+
+/// `[maturity]`: the maturities a document may be at, lowest first
+/// (`order = ["D", "P", "B", "U", "F"]`), and the milestone the project is
+/// at (`milestone = "pdr"`): a document whose front matter names an item
+/// (`item = "PRD-02"`) is expected at least at that item's value of the
+/// attribute the milestone names
+pub const Maturity = struct {
+    order: []const []const u8 = &.{},
+    milestone: ?[]const u8 = null,
+
+    /// The rank of `value` in the order; null for one outside it (X, PPS)
+    pub fn rank(self: Maturity, value: []const u8) ?usize {
+        for (self.order, 0..) |o, i| if (std.mem.eql(u8, o, value)) return i;
+        return null;
+    }
+};
+
+pub const Repository = @import("network/Repository.zig");
+pub const Forge = @import("forge/Forge.zig");
+const ForgeMap = @import("forge/Map.zig");
+pub const Template = @import("template/Template.zig");
+const template_use = @import("template/use.zig");
 
 /// A place whose files cite items in comments
 pub const CitationSet = struct {
@@ -37,6 +83,11 @@ pub const CitationSet = struct {
     /// every item of a `to` type should be cited by the set: coverage
     /// counts the ones that are not
     expected: bool = false,
+    /// which of the `to` items it is expected of, when not all
+    expected_of: Schema.Profile.Expected = .{},
+    /// whether its citations are reviewed, as the links of a reviewed link
+    /// type are: one of an item that has changed since is suspect
+    review: bool = false,
 };
 
 pub fn citationSet(self: *const Project, name: []const u8) ?*const CitationSet {
@@ -53,6 +104,12 @@ pub const Source = struct {
     kind: Kind,
     /// items: the type of an item that names none
     item_type: ?[]const u8 = null,
+    /// what skein's editing commands do not change: an external standard,
+    /// which is imported again, not edited
+    read_only: bool = false,
+    /// items: the attribute whose values give the order the files are
+    /// rendered in, such as Doorstop's `level`
+    order_by: ?[]const u8 = null,
 
     pub const Kind = enum {
         /// Markdown documents whose paragraphs can be items
@@ -69,10 +126,13 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
     if (try readToml(io, arena, root, config_file, report)) |table| {
         try out.readConfig(.{ .report = report, .arena = arena, .file = config_file, .table = table });
     }
+    if (out.forge) |*f| if (f.formerly.len > 0) {
+        f.moved = try ForgeMap.load(io, arena, root);
+    };
     out.schema = .{
-        .types = try loadEach(Schema.ItemType, io, arena, root, "types", report),
-        .links = try loadEach(Schema.LinkType, io, arena, root, "links", report),
-        .profiles = try loadEach(Schema.Profile, io, arena, root, "profiles", report),
+        .types = try loadEach(Schema.ItemType, io, arena, root, "types", out.templates, report),
+        .links = try loadEach(Schema.LinkType, io, arena, root, "links", out.templates, report),
+        .profiles = try loadEach(Schema.Profile, io, arena, root, "profiles", out.templates, report),
     };
     try out.schema.validate(report, dir_name);
     for (out.sources) |s| {
@@ -84,18 +144,54 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
             if (out.schema.itemType(t) == null) try report.add(config_file, 0, 0, "citations: there is no item type '{s}'", .{t});
         }
     }
+    if (out.planning_repository) |name| {
+        const declared = for (out.repositories) |repo| {
+            if (std.mem.eql(u8, repo.name, name)) break true;
+        } else false;
+        if (!declared) try report.add(config_file, 0, 0, "planning: '{s}' is no repository declared under [[repositories]]", .{name});
+    }
     return out;
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources", "citations" });
-    if (try r.child("project")) |project| {
-        try project.known(&.{"name"});
-        self.name = try project.string("name") orelse "";
+    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template", "maturity", "schedule", "planning" });
+    if (try r.child("planning")) |p| {
+        try p.known(&.{ "repository", "span" });
+        self.planning_repository = try p.string("repository");
+        self.planning_span = try p.boolean("span", false);
     }
+    self.templates = try template_use.readAll(r);
+    self.forge = try Forge.read(r);
+    if (try r.child("maturity")) |m| {
+        try m.known(&.{ "order", "milestone" });
+        self.maturity = .{ .order = try m.strings("order"), .milestone = try m.string("milestone") };
+    }
+    if (try r.child("schedule")) |s| {
+        try s.known(&.{"also"});
+        self.schedule_also = try s.strings("also");
+        for (self.schedule_also) |f| {
+            if (!std.mem.eql(u8, f, "json") and !std.mem.eql(u8, f, "csv")) try s.complain("also", "'{s}' is no format skein writes the schedule in: \"json\" or \"csv\"", .{f});
+        }
+    }
+    if (try r.child("results")) |results| {
+        try results.known(&.{"paths"});
+        for (try results.strings("paths")) |p| {
+            if (!try pathOk(results, p)) continue;
+            const kept = try r.arena.alloc([]const u8, self.results.len + 1);
+            @memcpy(kept[0..self.results.len], self.results);
+            kept[self.results.len] = std.mem.trimEnd(u8, p, "/");
+            self.results = kept;
+        }
+    }
+    if (try r.child("project")) |project| {
+        try project.known(&.{ "name", "id" });
+        self.name = try project.string("name") orelse "";
+        self.id = try project.string("id");
+    }
+    self.repositories = try Repository.readAll(r);
     var sources: std.ArrayList(Source) = .empty;
     for (try r.children("sources")) |s| {
-        try s.known(&.{ "path", "kind", "type" });
+        try s.known(&.{ "path", "kind", "type", "read_only", "order_by" });
         const path = try s.string("path") orelse {
             try s.complain("path", "a source needs a path", .{});
             continue;
@@ -110,13 +206,16 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
             .path = std.mem.trimEnd(u8, path, "/"),
             .kind = kind,
             .item_type = try s.string("type"),
+            .read_only = try s.boolean("read_only", false),
+            .order_by = try s.string("order_by"),
         });
     }
     self.sources = sources.items;
 
     var citations: std.ArrayList(CitationSet) = .empty;
     for (try r.children("citations")) |c| {
-        try c.known(&.{ "name", "path", "files", "marker", "to", "expected" });
+        try c.known(&.{ "name", "path", "files", "marker", "to", "expected", "review" });
+        const expected = try Schema.Profile.readExpected(c);
         const name = try c.string("name") orelse "";
         const path = try c.string("path") orelse "";
         const marker = try c.string("marker") orelse "";
@@ -136,7 +235,9 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
             .files = files,
             .marker = marker,
             .to = try c.strings("to"),
-            .expected = try c.boolean("expected", false),
+            .expected = expected.on,
+            .expected_of = expected,
+            .review = try c.boolean("review", false),
         });
     }
     self.citations = citations.items;
@@ -149,49 +250,83 @@ fn pathOk(r: Schema.Reader, path: []const u8) Schema.Reader.Error!bool {
     return false;
 }
 
-/// The things declared by the TOML files of `.skein/<sub>/`, by name
+/// The things declared by the TOML files of `.skein/<sub>/`, and of the
+/// templates used, by name: a project's own file of a name replaces a
+/// template's, and two templates that declare one name are reported
 fn loadEach(
     comptime T: type,
     io: Io,
     arena: std.mem.Allocator,
     root: Io.Dir,
     comptime sub: []const u8,
+    templates: []const template_use.Use,
     report: *Report,
 ) std.mem.Allocator.Error![]const T {
-    const dir_path = dir_name ++ "/" ++ sub;
-    var dir = root.openDir(io, dir_path, .{ .iterate = true }) catch return &.{};
-    defer dir.close(io);
-
-    var files: std.ArrayList([]const u8) = .empty;
-    var it = dir.iterate();
-    while (it.next(io) catch null) |entry| {
-        if (entry.kind != .file or !std.mem.endsWith(u8, entry.name, ".toml")) continue;
-        try files.append(arena, try arena.dupe(u8, entry.name));
+    const Source_ = struct { name: []const u8, path: []const u8, text: ?[]const u8 };
+    var sources: std.ArrayList(Source_) = .empty;
+    for (templates) |use| {
+        for (try Template.filesOf(arena, use.name, sub ++ "/")) |f| {
+            if (!std.mem.endsWith(u8, f.path, ".toml") or std.mem.findScalar(u8, f.path[sub.len + 1 ..], '/') != null) continue;
+            const name = f.path[sub.len + 1 .. f.path.len - ".toml".len];
+            const path = try arena.print("template {s}: {s}", .{ use.name, f.path });
+            const text = try Template.substitute(arena, f.data, use.options);
+            for (sources.items) |s| {
+                if (std.mem.eql(u8, s.name, name)) try report.add(config_file, 0, 0, "template: '{s}' is declared by two templates ({s}, and {s}); declare it in .skein/{s}/ to choose", .{ name, s.path, path, sub });
+            } else try sources.append(arena, .{ .name = name, .path = path, .text = text });
+        }
     }
+    const dir_path = dir_name ++ "/" ++ sub;
+    if (root.openDir(io, dir_path, .{ .iterate = true })) |opened| {
+        var dir = opened;
+        defer dir.close(io);
+        var it = dir.iterate();
+        while (it.next(io) catch null) |entry| {
+            if (entry.kind != .file or !std.mem.endsWith(u8, entry.name, ".toml")) continue;
+            const file = try arena.dupe(u8, entry.name);
+            const name = file[0 .. file.len - ".toml".len];
+            const own: Source_ = .{ .name = name, .path = try arena.print("{s}/{s}", .{ dir_path, file }), .text = null };
+            // the project's own file replaces a template's of the same name
+            for (sources.items) |*s| {
+                if (std.mem.eql(u8, s.name, name)) {
+                    s.* = own;
+                    break;
+                }
+            } else try sources.append(arena, own);
+        }
+    } else |_| {}
     // the same order everywhere
-    std.mem.sort([]const u8, files.items, {}, struct {
-        fn lt(_: void, a: []const u8, b: []const u8) bool {
-            return std.mem.lessThan(u8, a, b);
+    std.mem.sort(Source_, sources.items, {}, struct {
+        fn lt(_: void, a: Source_, b: Source_) bool {
+            return std.mem.lessThan(u8, a.name, b.name);
         }
     }.lt);
 
     var out: std.ArrayList(T) = .empty;
-    for (files.items) |file| {
-        const path = try arena.print("{s}/{s}", .{ dir_path, file });
-        const name = file[0 .. file.len - ".toml".len];
-        if (!Schema.names.valid(name)) {
-            try report.add(path, 0, 0, "the file's name is the name it declares: {s}", .{Schema.names.rule});
+    for (sources.items) |s| {
+        if (!Schema.names.valid(s.name)) {
+            try report.add(s.path, 0, 0, "the file's name is the name it declares: {s}", .{Schema.names.rule});
             continue;
         }
-        const table = try readToml(io, arena, root, path, report) orelse continue;
-        try out.append(arena, try T.read(.{ .report = report, .arena = arena, .file = path, .table = table }, name));
+        const table = (if (s.text) |text| try parseToml(arena, s.path, text, report) else try readToml(io, arena, root, s.path, report)) orelse continue;
+        try out.append(arena, try T.read(.{ .report = report, .arena = arena, .file = s.path, .table = table }, s.name));
     }
     return out.items;
 }
 
+fn parseToml(arena: std.mem.Allocator, path: []const u8, text: []const u8, report: *Report) std.mem.Allocator.Error!?*toml.Table {
+    var diag: toml.Diagnostic = .{};
+    return toml.parse(arena, text, &diag) catch |e| switch (e) {
+        error.OutOfMemory => return error.OutOfMemory,
+        error.InvalidToml => {
+            try report.add(path, diag.line, diag.column, "{s}", .{diag.message});
+            return null;
+        },
+    };
+}
+
 /// The root table of the TOML file at `path`; null, with the reason
 /// reported, when it cannot be read
-fn readToml(io: Io, arena: std.mem.Allocator, root: Io.Dir, path: []const u8, report: *Report) std.mem.Allocator.Error!?*toml.Table {
+pub fn readToml(io: Io, arena: std.mem.Allocator, root: Io.Dir, path: []const u8, report: *Report) std.mem.Allocator.Error!?*toml.Table {
     const text = root.readFileAlloc(io, path, arena, .limited(1 << 24)) catch |e| switch (e) {
         error.OutOfMemory => return error.OutOfMemory,
         else => {
@@ -222,4 +357,14 @@ pub fn findRoot(io: Io, arena: std.mem.Allocator, start: []const u8) !?[]const u
 
 test {
     _ = @import("_test/project.zig");
+}
+
+/// The read-only source the file `file` (a path from the root) is in;
+/// null when it is in none
+pub fn readOnlySource(self: *const Project, file: []const u8) ?Source {
+    for (self.sources) |s| {
+        if (!s.read_only) continue;
+        if (std.mem.eql(u8, s.path, ".") or (file.len > s.path.len and std.mem.startsWith(u8, file, s.path) and file[s.path.len] == '/')) return s;
+    }
+    return null;
 }

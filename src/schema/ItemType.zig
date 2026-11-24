@@ -20,7 +20,24 @@ tombstone: ?[]const u8 = "removed",
 verification: []const []const u8 = &.{},
 /// the statuses an item may have only while it is approved as it is
 approval: []const []const u8 = &.{},
+/// the roles that must each approve it, for those statuses; none when any
+/// one approval will do
+approval_roles: []const []const u8 = &.{},
+/// who may approve it, by the name an approval records (`--by`, a reviewer's
+/// login); none when anyone may
+approvers: []const []const u8 = &.{},
+/// who may approve it in a role; a role with no entry is open to those of `approvers`, or anyone
+role_approvers: []const RoleApprovers = &.{},
 attributes: []const Attribute = &.{},
+/// when the type's items are tested examples: how
+example: ?Example = null,
+/// which attribute holds each planning role; null for a type that is not work
+planning: ?Planning = null,
+
+pub const RoleApprovers = struct { role: []const u8, people: []const []const u8 };
+
+pub const Example = @import("Example.zig");
+pub const Planning = @import("Planning.zig");
 
 pub const default_statuses = [_][]const u8{ "draft", "approved", "deprecated", "removed" };
 
@@ -48,18 +65,42 @@ pub const Attribute = struct {
     required: bool = false,
     /// whether a change to it changes the item's fingerprint
     normative: bool = false,
+    /// whether it holds several values: `classes=A,B,C`
+    list: bool = false,
 
     pub const Kind = enum { string, integer, boolean, date };
 };
 
 /// The type that the table of `r` declares; problems go to its report.
 pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
-    try r.known(&.{ "description", "id", "prefix", "digits", "separator", "names", "categories", "statuses", "tombstone", "verification", "approval", "attributes" });
+    try r.known(&.{ "description", "id", "prefix", "digits", "separator", "names", "categories", "statuses", "tombstone", "verification", "approval", "attributes", "example", "planning" });
     var out: ItemType = .{ .name = name };
     out.description = try r.string("description") orelse "";
     out.categories = try r.strings("categories");
     out.verification = try r.strings("verification");
-    out.approval = try r.strings("approval");
+    // `approval = [statuses]`, or `[approval]` with `statuses` and the `roles` that approve
+    if (r.table.get("approval")) |v| if (v == .table) {
+        const t = (try r.child("approval")).?;
+        try t.known(&.{ "statuses", "roles", "approvers" });
+        out.approval = try t.strings("statuses");
+        out.approval_roles = try t.strings("roles");
+        // `approvers = [people]`, or `[approval.approvers]` with the people of each role
+        if (t.table.get("approvers")) |a| switch (a) {
+            .array => out.approvers = try t.strings("approvers"),
+            .table => {
+                const by_role = (try t.child("approvers")).?;
+                var list: std.ArrayList(RoleApprovers) = .empty;
+                for (by_role.table.keys()) |role| {
+                    if (!names.contains(out.approval_roles, role)) try by_role.complain(role, "'{s}' is not one of the roles", .{role});
+                    try list.append(by_role.arena, .{ .role = role, .people = try by_role.strings(role) });
+                }
+                out.role_approvers = list.items;
+            },
+            else => try t.complain("approvers", "expected a list of people, or a table of lists by role", .{}),
+        };
+    } else {
+        out.approval = try r.strings("approval");
+    };
 
     const statuses = try r.strings("statuses");
     if (statuses.len > 0) out.statuses = statuses;
@@ -102,11 +143,19 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
         }
         out.attributes = list.items;
     }
+    if (try r.child("example")) |e| {
+        out.example = try Example.read(e);
+        if (out.categories.len > 0 and !names.contains(out.categories, out.example.?.rejects)) try e.complain("rejects", "'{s}' is not one of the categories", .{out.example.?.rejects});
+    }
+    if (try r.child("planning")) |p| {
+        out.planning = try Planning.read(p, out.attributes);
+        for (out.planning.?.done) |d| if (!names.contains(out.statuses, d)) try p.complain("done", "'{s}' is not one of the statuses", .{d});
+    }
     return out;
 }
 
 fn readAttribute(r: Reader, name: []const u8) Reader.Error!Attribute {
-    try r.known(&.{ "type", "values", "required", "normative" });
+    try r.known(&.{ "type", "values", "required", "normative", "list" });
     var out: Attribute = .{ .name = name };
     if (try r.string("type")) |t| {
         out.kind = std.meta.stringToEnum(Attribute.Kind, t) orelse blk: {
@@ -118,6 +167,7 @@ fn readAttribute(r: Reader, name: []const u8) Reader.Error!Attribute {
     if (out.values.len > 0 and out.kind != .string) try r.complain("values", "only a string attribute lists its values", .{});
     out.required = try r.boolean("required", false);
     out.normative = try r.boolean("normative", false);
+    out.list = try r.boolean("list", false);
     return out;
 }
 
@@ -145,7 +195,16 @@ pub fn idMatches(self: *const ItemType, id: []const u8) bool {
             if (!std.mem.startsWith(u8, id, n.prefix)) return false;
             const after = id[n.prefix.len..];
             if (!std.mem.startsWith(u8, after, n.separator)) return false;
-            const rest = after[n.separator.len..];
+            var rest = after[n.separator.len..];
+            // a part's name after the number: `SWE-134.a`
+            if (std.mem.findScalar(u8, rest, '.')) |dot| {
+                var parts = std.mem.splitScalar(u8, rest[dot + 1 ..], '.');
+                while (parts.next()) |part| {
+                    if (part.len == 0) return false;
+                    for (part) |c| if (!std.ascii.isLower(c) and !std.ascii.isDigit(c) and c != '_' and c != '-') return false;
+                }
+                rest = rest[0..dot];
+            }
             if (rest.len == 0) return false;
             var digits = true;
             for (rest) |c| {
@@ -176,6 +235,12 @@ test "IDs are matched against the type's scheme" {
     try std.testing.expect(!srs.idMatches("SRS012"));
     try std.testing.expect(!srs.idMatches("SYS-012"));
     try std.testing.expect(!srs.idMatches("SRS-01a"));
+    // a part of a numbered item extends its number
+    try std.testing.expect(srs.idMatches("SRS-012.a"));
+    try std.testing.expect(srs.idMatches("SRS-012.b.2"));
+    try std.testing.expect(!srs.idMatches("SRS-012."));
+    try std.testing.expect(!srs.idMatches("SRS-012.A"));
+    try std.testing.expect(!srs.idMatches("SRS-.a"));
 }
 
 test "numbered IDs with another separator, or none" {

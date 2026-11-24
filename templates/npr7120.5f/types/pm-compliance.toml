@@ -1,0 +1,9 @@
+description = "A row of the project's compliance matrix for NPR 7120.5F (Table C-1): whether it complies with a requirement, the justification, and the approval of tailoring"
+# fully compliant, tailored, not applicable
+categories = ["FC", "T", "NA"]
+
+[attributes.evidence]
+normative = false
+
+[attributes.rationale]
+normative = false

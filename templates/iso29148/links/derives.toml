@@ -1,0 +1,5 @@
+description = "A system requirement is derived from stakeholder requirements"
+from = ["system"]
+to = ["stakeholder"]
+# every stakeholder requirement is met by system requirements
+expected = true

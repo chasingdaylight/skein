@@ -1,0 +1,25 @@
+description = "A software requirement: what the software shall do or be, allocated from system requirements (29148, the SRS)"
+id = "numbered"
+prefix = "SRS"
+categories = ["functional", "performance", "usability", "interface", "data", "constraint", "standards", "reliability", "availability", "security", "maintainability", "portability"]
+verification = ["inspection", "analysis", "demonstration", "test"]
+
+[attributes.priority]
+values = ["high", "medium", "low"]
+
+[attributes.difficulty]
+values = ["high", "medium", "low"]
+normative = false
+
+[attributes.owner]
+normative = false
+
+[attributes.rationale]
+normative = false
+
+[attributes.risk]
+values = ["high", "medium", "low"]
+normative = false
+
+[attributes.acceptance]
+normative = false

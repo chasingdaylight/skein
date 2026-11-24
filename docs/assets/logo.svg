@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="256" height="256" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">skein</title>
+  <defs>
+    <g id="note-marks" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="5" stroke-linecap="round">
+      <path d="M16,44 H94"/>
+      <path d="M16,62 H86"/>
+      <path d="M16,80 H64"/>
+    </g>
+    <g id="pin">
+      <circle r="10" fill="#1f2a44"/>
+      <circle cx="-3" cy="-3" r="3" fill="#fff" fill-opacity="0.7"/>
+    </g>
+    <!-- oblong skein, pinched in the middle by its band -->
+    <path id="skein-shape" d="M-140,0 C-140,-44 -112,-66 -78,-66 C-48,-66 -30,-52 0,-52 C30,-52 48,-66 78,-66 C112,-66 140,-44 140,0 C140,44 112,66 78,66 C48,66 30,52 0,52 C-30,52 -48,66 -78,66 C-112,66 -140,44 -140,0 Z"/>
+    <clipPath id="skein-body">
+      <use xlink:href="#skein-shape" href="#skein-shape"/>
+    </clipPath>
+  </defs>
+
+  <!-- board -->
+  <rect x="16" y="16" width="480" height="480" rx="72" fill="#d6a565" stroke="#7a4e24" stroke-width="20"/>
+  <g fill="#b98848">
+    <circle cx="208" cy="64" r="4"/>
+    <circle cx="262" cy="98" r="3"/>
+    <circle cx="300" cy="52" r="3"/>
+    <circle cx="470" cy="210" r="4"/>
+    <circle cx="452" cy="286" r="3"/>
+    <circle cx="48" cy="212" r="3"/>
+    <circle cx="66" cy="272" r="4"/>
+    <circle cx="218" cy="452" r="4"/>
+    <circle cx="286" cy="430" r="3"/>
+    <circle cx="322" cy="468" r="3"/>
+    <circle cx="196" cy="140" r="3"/>
+    <circle cx="330" cy="396" r="3"/>
+  </g>
+
+  <!-- notes -->
+  <g transform="translate(62,58) rotate(-6)">
+    <rect x="4" y="6" width="110" height="110" fill="#000" fill-opacity="0.2"/>
+    <rect width="110" height="110" fill="#ffe066"/>
+    <use xlink:href="#note-marks" href="#note-marks"/>
+  </g>
+  <g transform="translate(334,50) rotate(5)">
+    <rect x="4" y="6" width="110" height="110" fill="#000" fill-opacity="0.2"/>
+    <rect width="110" height="110" fill="#ff9ec4"/>
+    <use xlink:href="#note-marks" href="#note-marks"/>
+  </g>
+  <g transform="translate(352,338) rotate(-4)">
+    <rect x="4" y="6" width="110" height="110" fill="#000" fill-opacity="0.2"/>
+    <rect width="110" height="110" fill="#8fd3f4"/>
+    <use xlink:href="#note-marks" href="#note-marks"/>
+  </g>
+  <g transform="translate(52,344) rotate(7)">
+    <rect x="4" y="6" width="110" height="110" fill="#000" fill-opacity="0.2"/>
+    <rect width="110" height="110" fill="#b5e48c"/>
+    <use xlink:href="#note-marks" href="#note-marks"/>
+  </g>
+
+  <!-- yarn between the pins -->
+  <g fill="none" stroke="#c8102e" stroke-width="6" stroke-linecap="round">
+    <path d="M118.2,66.2 L387.6,68.7"/>
+    <path d="M387.6,68.7 L407.8,348.1"/>
+    <path d="M407.8,348.1 L104.9,364.6"/>
+    <path d="M104.9,364.6 L118.2,66.2"/>
+    <path d="M118.2,66.2 L407.8,348.1"/>
+  </g>
+
+  <!-- skein -->
+  <g transform="translate(263,274) rotate(-32)">
+    <use xlink:href="#skein-shape" href="#skein-shape" fill="#000" fill-opacity="0.28"/>
+  </g>
+  <path d="M370,190 C428,176 434,116 387.6,68.7" fill="none" stroke="#c8102e" stroke-width="6" stroke-linecap="round"/>
+  <g transform="translate(256,262) rotate(-32)">
+    <use xlink:href="#skein-shape" href="#skein-shape" fill="#c8102e"/>
+    <g clip-path="url(#skein-body)" fill="none" stroke-linecap="round">
+      <!-- strands running end to end -->
+      <g stroke="#8f0b21" stroke-width="3.5">
+        <path d="M-150,-40 C-90,-62 40,-50 150,-30"/>
+        <path d="M-150,-18 C-80,-46 50,-40 150,-8"/>
+        <path d="M-150,6 C-70,-28 60,-22 150,14"/>
+        <path d="M-150,30 C-60,-6 70,-2 150,36"/>
+        <path d="M-150,52 C-60,18 80,22 150,56"/>
+        <path d="M-120,72 C-40,40 90,44 150,74"/>
+        <path d="M-150,-56 C-60,-30 40,10 150,44"/>
+        <path d="M-150,20 C-50,40 60,-20 150,-50"/>
+        <path d="M-150,-4 C-40,30 50,48 150,24"/>
+        <path d="M-128,-50 C-100,-10 -100,20 -120,56"/>
+        <path d="M126,-52 C104,-14 102,22 122,54"/>
+      </g>
+      <g stroke="#ec5a6f" stroke-width="2.5">
+        <path d="M-150,-52 C-90,-70 40,-60 150,-42"/>
+        <path d="M-150,-29 C-85,-54 45,-45 150,-19"/>
+        <path d="M-150,18 C-65,-17 65,-12 150,25"/>
+        <path d="M-150,41 C-60,6 75,10 150,46"/>
+        <path d="M-150,-46 C-60,-20 40,20 150,54"/>
+        <path d="M-150,30 C-50,50 60,-10 150,-40"/>
+      </g>
+    </g>
+    <use xlink:href="#skein-shape" href="#skein-shape" fill="none" stroke="#7a0a1c" stroke-width="5"/>
+
+    <!-- paper band, with a small trace graph -->
+    <rect x="-26" y="-56" width="52" height="112" rx="5" fill="#f7f1e3" stroke="#3a2f2a" stroke-opacity="0.45" stroke-width="3"/>
+    <path d="M-9,-30 L10,-3 L-8,28" fill="none" stroke="#3a2f2a" stroke-width="4" stroke-linecap="round"/>
+    <g fill="#c8102e" stroke="#3a2f2a" stroke-width="3.5">
+      <circle cx="-9" cy="-30" r="7"/>
+      <circle cx="10" cy="-3" r="7"/>
+      <circle cx="-8" cy="28" r="7"/>
+    </g>
+  </g>
+
+  <!-- pins -->
+  <use xlink:href="#pin" href="#pin" x="118.2" y="66.2"/>
+  <use xlink:href="#pin" href="#pin" x="387.6" y="68.7"/>
+  <use xlink:href="#pin" href="#pin" x="407.8" y="348.1"/>
+  <use xlink:href="#pin" href="#pin" x="104.9" y="364.6"/>
+</svg>

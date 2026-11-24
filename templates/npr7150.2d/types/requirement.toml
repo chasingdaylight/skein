@@ -1,0 +1,9 @@
+description = "A software requirement (SWE-050), specific, testable and traceable, with how it is verified (5.09 SRS, qualification provisions)"
+id = "numbered"
+prefix = "SRS"
+categories = ["functional", "performance", "interface", "safety", "security", "quality", "constraint"]
+statuses = ["draft", "tbd", "tbr", "approved", "deprecated", "removed"]
+verification = ["test", "analysis", "inspection", "demonstration"]
+
+[attributes.rationale]
+normative = false

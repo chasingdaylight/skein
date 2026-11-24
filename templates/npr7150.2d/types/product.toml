@@ -1,0 +1,43 @@
+description = "A software product and its expected maturity at each milestone review (NASA Software Engineering Handbook, topic 7.08); read-only, from skein's template"
+id = "numbered"
+prefix = "PRD"
+digits = 2
+categories = ["engineering", "assurance", "ongoing"]
+
+# its handbook topic or requirement
+[attributes.topic]
+normative = false
+
+# D draft, P preliminary, B baseline, U update, F final, X complete, PPS per schedule
+[attributes.mcr]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]
+
+[attributes.srr]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]
+
+[attributes.sw_rr]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]
+
+[attributes.mdr]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]
+
+[attributes.sdr]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]
+
+[attributes.pdr]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]
+
+[attributes.cdr]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]
+
+[attributes.sir]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]
+
+[attributes.trr]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]
+
+[attributes.sar]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]
+
+[attributes.orr]
+values = ["D", "P", "B", "U", "F", "X", "PPS"]

@@ -1,11 +1,12 @@
 {
   "name": "skein",
-  "displayName": "skein",
-  "description": "Highlights skein's item markers and references in Markdown.",
+  "displayName": "Skein",
+  "description": "Requirements and traceability in Markdown: Skein's language server, the items in a tree, trace and coverage views, and the skein program.",
   "version": "0.1.1",
   "publisher": "chasingdaylight",
   "license": "MIT",
   "preview": true,
+  "icon": "icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/chasingdaylight/skein.git",
@@ -18,6 +19,11 @@
   "engines": {
     "vscode": "^1.147.0"
   },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:.skein/config.toml"
+  ],
   "categories": [
     "Programming Languages",
     "Other"
@@ -29,6 +35,16 @@
     "markdown",
     "skein"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "In an untrusted workspace, skein.path is taken only from the user's settings, and the language server is not started.",
+      "restrictedConfigurations": [
+        "skein.path"
+      ]
+    },
+    "virtualWorkspaces": false
+  },
   "contributes": {
     "grammars": [
       {
@@ -38,6 +54,294 @@
           "text.html.markdown"
         ]
       }
-    ]
+    ],
+    "markdown.markdownItPlugins": true,
+    "markdown.previewStyles": [
+      "./media/preview.css"
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "skein.mcp",
+        "label": "Skein"
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "skein_item",
+        "displayName": "Skein Item",
+        "toolReferenceName": "skeinItem",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(symbol-key)",
+        "userDescription": "The Skein item under the cursor, or the one named, with its links, references, citations, results and all above and below it.",
+        "modelDescription": "Gives the trace of a Skein item (a requirement, rule, test or other item kept in the repository's Markdown with a %type[ID ...] marker): its type, status, text, attributes, links to and from other items, references, citations in code and tests, approvals, test results, and every item above and below it. Without an ID, the item under the cursor in the active editor. Use it before changing an item or what traces to it.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The ID of the item; leave out for the item under the cursor."
+            }
+          }
+        }
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "skein.items",
+          "name": "Skein Items",
+          "when": "skein.project"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "skein.showVersion",
+        "title": "Show Version",
+        "category": "Skein"
+      },
+      {
+        "command": "skein.restartServer",
+        "title": "Restart the Language Server",
+        "category": "Skein"
+      },
+      {
+        "command": "skein.refreshItems",
+        "title": "Refresh Items",
+        "category": "Skein",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "skein.openItem",
+        "title": "Go to Item...",
+        "category": "Skein"
+      },
+      {
+        "command": "skein.trace",
+        "title": "Trace",
+        "category": "Skein",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "skein.showCoverage",
+        "title": "Show Coverage",
+        "category": "Skein",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "skein.showPlan",
+        "title": "Show Plan",
+        "category": "Skein",
+        "icon": "$(calendar)"
+      },
+      {
+        "command": "skein.newItem",
+        "title": "New Item...",
+        "category": "Skein",
+        "icon": "$(add)"
+      },
+      {
+        "command": "skein.editItem",
+        "title": "Edit Item...",
+        "category": "Skein",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "skein.showGraph",
+        "title": "Show Graph",
+        "category": "Skein",
+        "icon": "$(type-hierarchy-sub)"
+      },
+      {
+        "command": "skein.writeAgentInstructions",
+        "title": "Write Agent Instructions",
+        "category": "Skein"
+      },
+      {
+        "command": "skein.copyId",
+        "title": "Copy ID",
+        "category": "Skein"
+      },
+      {
+        "command": "skein.pickLinked",
+        "title": "Go to a Linked Item...",
+        "category": "Skein"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "skein.trace",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.showCoverage",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.showPlan",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.writeAgentInstructions",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.showGraph",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.newItem",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.editItem",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.openItem",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.refreshItems",
+          "when": "skein.project"
+        },
+        {
+          "command": "skein.copyId",
+          "when": "false"
+        },
+        {
+          "command": "skein.pickLinked",
+          "when": "false"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "skein.trace",
+          "when": "skein.project && resourceScheme == file",
+          "group": "navigation@90"
+        },
+        {
+          "command": "skein.editItem",
+          "when": "skein.project && resourceScheme == file",
+          "group": "navigation@91"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "skein.newItem",
+          "when": "view == skein.items",
+          "group": "navigation@0"
+        },
+        {
+          "command": "skein.refreshItems",
+          "when": "view == skein.items",
+          "group": "navigation@1"
+        },
+        {
+          "command": "skein.showCoverage",
+          "when": "view == skein.items",
+          "group": "navigation@2"
+        },
+        {
+          "command": "skein.showPlan",
+          "when": "view == skein.items",
+          "group": "navigation@3"
+        },
+        {
+          "command": "skein.showGraph",
+          "when": "view == skein.items",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "skein.trace",
+          "when": "view == skein.items && viewItem == item",
+          "group": "inline"
+        },
+        {
+          "command": "skein.trace",
+          "when": "view == skein.items && viewItem == item",
+          "group": "1_skein@1"
+        },
+        {
+          "command": "skein.copyId",
+          "when": "view == skein.items && viewItem == item",
+          "group": "1_skein@2"
+        },
+        {
+          "command": "skein.editItem",
+          "when": "view == skein.items && viewItem == item",
+          "group": "1_skein@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Skein",
+      "properties": {
+        "skein.path": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "markdownDescription": "The `skein` program to use in place of the one this extension carries: the full path of the file. It is the language server, and its directory is put first on the `PATH` of new terminals."
+        },
+        "skein.codeLens.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show a code lens above each item: its links, which open a choice of the items they lead to, and **Trace**."
+        },
+        "skein.statusBar.coverage": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show in the status bar how much of what is expected is covered (`skein coverage`); clicking it opens the coverage view."
+        },
+        "skein.mcp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Offer `skein mcp`, Skein's tools over the Model Context Protocol, to VS Code's AI agents in a trusted workspace: finding and tracing items, `check`, `coverage`, `impact`, and the editing commands."
+        },
+        "skein.agents.file": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "markdownDescription": "The file **Skein: Write Agent Instructions** writes the section on Skein into, from the project's root. Empty: `AGENTS.md`, or `CLAUDE.md` where there is one and no `AGENTS.md`."
+        },
+        "skein.agents.skill": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "markdownDescription": "Have **Skein: Write Agent Instructions** write a skill file (`.claude/skills/skein/SKILL.md`, or `skein.agents.file`) instead of a section of the agent instructions."
+        },
+        "skein.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "markdownDescription": "Log the messages between VS Code and the language server in the output channel **Skein Language Server**: none, each message, or each with its content."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node24 --minify --sourcemap && esbuild src/webview/plan.ts src/webview/graph.ts src/webview/form.ts --bundle --outdir=dist --format=iife --platform=browser --target=es2022 --minify",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p test",
+    "unit": "esbuild test/unit/*.test.ts --bundle --outdir=out/unit --platform=node --target=node24 --format=cjs && node --test out/unit/*.test.js"
+  },
+  "overrides": {
+    "minimatch": "11.0.9"
+  },
+  "dependencies": {
+    "vscode-languageclient": "11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/vscode": "1.146.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
   }
 }

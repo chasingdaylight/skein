@@ -17,11 +17,13 @@ file: []const u8,
 path: []const u8 = "",
 table: *const toml.Table,
 
-/// Reports a problem with `key` of this table
+/// Reports a problem with `key` of this table, at the line the key is on
+/// (or the table's header, for a key that is missing)
 pub fn complain(self: Reader, key: []const u8, comptime fmt: []const u8, args: anytype) Error!void {
     const message = try self.arena.print(fmt, args);
     const sep = if (self.path.len > 0 and key.len > 0) "." else "";
-    try self.report.add(self.file, 0, 0, "{s}{s}{s}: {s}", .{ self.path, sep, key, message });
+    const place = if (key.len > 0) self.table.placeOf(key) else self.table.place;
+    try self.report.add(self.file, place.line, place.column, "{s}{s}{s}: {s}", .{ self.path, sep, key, message });
 }
 
 pub fn string(self: Reader, key: []const u8) Error!?[]const u8 {

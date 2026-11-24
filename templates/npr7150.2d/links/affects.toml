@@ -1,0 +1,5 @@
+description = "A non-conformance is against a software requirement (SWE-052, SWE-201)"
+from = ["nonconformance"]
+to = ["requirement"]
+# every non-conformance is traced to the requirements it is against, for classes A to D and F
+required = {{trace_nonconformance}}

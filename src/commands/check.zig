@@ -5,8 +5,20 @@ const Io = std.Io;
 
 const cli = @import("../cli.zig");
 const Graph = @import("../graph/Graph.zig");
+const Results = @import("../results/Results.zig");
 const Reviews = @import("../graph/Reviews.zig");
 const Workspace = @import("Workspace.zig");
+const forge_checks = @import("../forge/checks.zig");
+const maturity = @import("../graph/maturity.zig");
+const network_checks = @import("../network/checks.zig");
+const planning_checks = @import("../planning/checks.zig");
+const load = @import("../planning/load.zig");
+const Calendar = @import("../planning/Calendar.zig");
+const schedule_checks = @import("../planning/schedule_checks.zig");
+const Overlay = @import("../forge/Overlay.zig");
+const Time = @import("../planning/Time.zig");
+const planning_forge = @import("../planning/forge.zig");
+const Resources = @import("../planning/Resources.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options)) {
@@ -15,19 +27,74 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Common) !Workspace.Out
     };
     defer ws.close();
 
-    if (ws.report.ok()) {
-        try Graph.checks.run(&ws.graph, &ws.project.schema, &ws.report);
-        try ws.citations.check(&ws.project, &ws.graph, &ws.report);
-        const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
-        const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
-        try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
-        try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
-    }
+    try all(io, arena, &ws);
     if (!ws.report.ok()) return ws.problems();
     const schema = ws.project.schema;
     return .{
-        .text = try arena.print("skein: {s}: no problems ({d} items of {d} types, {d} link types, {d} profiles, {d} citations)\n", .{
-            ws.name(), ws.graph.items.len, schema.types.len, schema.links.len, schema.profiles.len, ws.citations.all.len,
+        .text = try arena.print("{s}skein: {s}: no problems{s} ({d} items of {d} types, {d} link types, {d} profiles, {d} citations)\n", .{
+            try ws.report.render(arena), ws.name(),            try ws.warningCount(), ws.graph.items.len, schema.types.len, schema.links.len,
+            schema.profiles.len,         ws.citations.all.len,
         }),
     };
+}
+
+/// `check` in the format `options` asks for: as text, or for a CI system
+/// to show on the lines of a change
+pub fn runFormatted(io: Io, arena: std.mem.Allocator, options: cli.Check) !Workspace.Outcome {
+    if (options.format == .text) return run(io, arena, options.common);
+    var ws = switch (try Workspace.open(io, arena, options.common)) {
+        .ok => |ws| ws,
+        .failed => |outcome| return outcome,
+    };
+    defer ws.close();
+    try all(io, arena, &ws);
+    return .{
+        .text = switch (options.format) {
+            .text => unreachable,
+            .github => try ws.report.renderGithub(arena),
+            .gitlab => try ws.report.renderGitlab(arena),
+        },
+        .status = if (ws.report.ok()) .ok else .problems,
+        .to_stdout = true,
+    };
+}
+
+/// Adds to the report of `ws` everything that is wrong with the project.
+/// When the configuration or the schema has problems, the items were not
+/// read and only those problems are in it.
+pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
+    if (!ws.report.ok()) return;
+    try Graph.checks.run(&ws.graph, &ws.project.schema, &ws.report);
+    try ws.citations.check(&ws.project, &ws.graph, &ws.report);
+    try network_checks.run(arena, &ws.project, &ws.graph, &ws.citations, &ws.network, &ws.report);
+    try forge_checks.run(io, arena, ws.root, &ws.project, &ws.graph, ws.common.offline, &ws.report);
+    const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
+    const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
+    try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
+    try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
+    try reviews.checkCitations(arena, &ws.project, &ws.graph, &ws.citations, &ws.report);
+    try maturity.check(io, arena, ws.root, &ws.project, &ws.graph, &ws.report);
+    const resources = try Resources.of(io, arena, ws, &ws.report);
+    const calendar: *const Calendar = if (resources) |*r| &r.calendar else &Calendar.every_day;
+    try planning_checks.run(arena, &ws.project.schema, &ws.graph, calendar, &ws.report);
+    if (resources) |*r| try load.check(io, arena, ws.root, &ws.project, &ws.graph, r, ws.common.offline, &ws.report);
+    // the overlay's file must read; what it says is checked with the schedule
+    _ = try Overlay.load(io, arena, ws.root, &ws.report);
+    const time = try Time.load(io, arena, ws.root, &ws.report);
+    try time.check((try planning_forge.collect(io, arena, ws.root, &ws.project, &ws.graph, true)).works, &ws.report);
+    try schedule_checks.run(io, arena, ws.root, &ws.project, &ws.graph, calendar, ws.common.offline, &ws.report);
+    // the results the project keeps: a result that belongs to no item is to be looked at
+    const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, &.{}, &ws.report);
+    const idx = try results.index(arena, &ws.graph, &ws.citations);
+    for (idx.unmatched) |i| {
+        const r = results.all[i];
+        try ws.report.warn(r.source, 0, 0, "result {d} ({s}) belongs to no item: no item cites its file, and it names none that exists", .{ r.index, r.label() });
+    }
+    for (results.all) |r| {
+        for (r.evidence) |file| {
+            ws.root.access(io, file, .{}) catch try ws.report.warn(r.source, 0, 0, "result {d} ({s}): its evidence '{s}' is not in the project", .{ r.index, r.label(), file });
+        }
+        const changed = r.stale orelse continue;
+        try ws.report.warn(r.source, 0, 0, "result {d} ({s}) is stale: '{s}' has changed since it was recorded; record it again ('skein result')", .{ r.index, r.label(), changed });
+    }
 }

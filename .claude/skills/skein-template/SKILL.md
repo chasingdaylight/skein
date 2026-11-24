@@ -1,0 +1,19 @@
+---
+name: skein-template
+description: Add or change one of skein's built-in templates (templates/NAME) - its manifest and options, types, links, profiles, configuration, project files, document skeletons, the file list, the test, the requirement and the docs. Use when building a template for a standard or way of working.
+---
+
+# Templates
+
+A template is a directory of `templates/`, laid out as a project's `.skein/` is. Read `docs/templates.md` (the user's view) and `docs/requirements/templates.md` first; `templates/npr7150.2d` is the fullest example.
+
+- `template.toml`: `description`, and `[options.NAME]` with `description`, `values`, `default` (none: the project must give it). `[options.NAME.sets.VALUE]` gives the values a choice sets besides (`trace_design = "true"`), which `{{trace_design}}` writes into the template's files, as `{{NAME}}` writes the option.
+- `types/`, `links/`, `profiles/`: as `.skein/` has them (`docs/project-files.md`). Attributes take no `description` key: say what they are in a comment.
+- `config.toml`: what `skein init` adds to the project's configuration, such as citation sets (commented out when the places are the project's) and the read-only source of a standard.
+- `project/`: files `skein init` writes where they stand, such as `project/standards/NAME/`, a standard's text as read-only items. Its own text is NASA's or the standard's verbatim; it is left out of cspell (`templates/*/project/standards/**`).
+- `documents/`: skeletons `skein init` writes under `docs/`, with document control front matter (`+++ document = "ID" revision = "Draft" +++`), references to the requirements they answer (`%[SWE-013]`), and generated pages (`list`, `matrix ... columns=`, `coverage`). An example item in a skeleton says it is one ("An example: replace it.").
+- **The file list:** `bash tools/agent/register-templates.sh` rewrites `templates/__root__.zig`; a test holds it to the directory.
+- **A test** in `src/template/_test/start.zig`: `init` with the template (several with `.templates = &.{ "a", "b" }`), the options given, `check` with no problems, the coverage it expects; cite its requirement.
+- **A requirement** `templates.NAME` in `docs/requirements/templates.md`, and a row (and a section if it has options) in `docs/templates.md`.
+
+A standard under copyright (ISO, IEEE) is given in Skein's own words with clause numbers, never quoted. NASA's and other US government text may be included. Always the latest revision of a standard (the trailing letter).

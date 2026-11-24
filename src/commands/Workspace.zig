@@ -6,6 +6,7 @@ const Io = std.Io;
 
 const cli = @import("../cli.zig");
 const Graph = @import("../graph/Graph.zig");
+const Network = @import("../network/Network.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 
@@ -17,6 +18,9 @@ const Workspace = @This();
 pub const Outcome = struct {
     text: []const u8,
     status: Status = .ok,
+    /// whether the text goes to standard output whatever the status: what
+    /// a CI system reads there (annotations, a report)
+    to_stdout: bool = false,
 
     pub const Status = enum(u8) {
         ok = 0,
@@ -34,6 +38,10 @@ root_path: []const u8,
 project: Project,
 graph: Graph,
 citations: Graph.Citations = .{},
+/// the options the command was given
+common: cli.Common = .{},
+/// the other repositories, in the state the command asks for
+network: Network = .{},
 /// whether the configuration and schema were sound, so the items were read
 items_read: bool = false,
 report: Report,
@@ -64,6 +72,7 @@ pub fn open(io: Io, arena: std.mem.Allocator, common: cli.Common) !Opened {
         .project = undefined,
         .graph = .{},
         .report = .{ .arena = arena },
+        .common = common,
     };
     self.project = try Project.load(io, arena, self.root, &self.report);
     // items are read against the schema: a broken one would only add noise
@@ -71,6 +80,11 @@ pub fn open(io: Io, arena: std.mem.Allocator, common: cli.Common) !Opened {
         self.items_read = true;
         self.graph = try Graph.load(io, arena, self.root, &self.project, &self.report);
         self.citations = try Graph.Citations.load(io, arena, self.root, &self.project, &self.report);
+        self.network = try Network.load(io, arena, self.root, root_path, &self.project, .{ .state = common.state, .offline = common.offline }, &self.report);
+        // the workspace is returned by value: the graph points at a copy that stays put
+        const others = try arena.create(Network);
+        others.* = self.network;
+        self.graph.others = others;
     }
     return .{ .ok = self };
 }
@@ -89,7 +103,14 @@ pub fn problems(self: *Workspace) !Outcome {
     const text = try self.report.render(self.arena);
     const n = self.report.problems.items.len;
     return .{
-        .text = try self.arena.print("{s}skein: {d} problem{s}\n", .{ text, n, if (n == 1) "" else "s" }),
+        .text = try self.arena.print("{s}skein: {d} problem{s}{s}\n", .{ text, n, if (n == 1) "" else "s", try self.warningCount() }),
         .status = .problems,
     };
+}
+
+/// ", 2 warnings", or nothing when there are none
+pub fn warningCount(self: *const Workspace) ![]const u8 {
+    const w = self.report.warnings.items.len;
+    if (w == 0) return "";
+    return self.arena.print(", {d} warning{s}", .{ w, if (w == 1) "" else "s" });
 }

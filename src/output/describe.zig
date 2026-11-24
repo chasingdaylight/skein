@@ -5,6 +5,7 @@ const std = @import("std");
 const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Json = @import("Json.zig");
+const Network = @import("../network/Network.zig");
 const Project = @import("../Project.zig");
 const fingerprint = @import("../graph/fingerprint.zig");
 const walk = @import("../graph/walk.zig");
@@ -22,7 +23,7 @@ pub const Context = struct {
 };
 
 /// What a reviewed link is, in words; null for a link that is not reviewed
-fn stateName(ctx: Context, item: *const Item, link: Item.Link) Error!?[]const u8 {
+pub fn stateName(ctx: Context, item: *const Item, link: Item.Link) Error!?[]const u8 {
     const state = try ctx.reviews.stateOf(ctx.arena, &ctx.project.schema, ctx.graph, item, link) orelse return null;
     return switch (state) {
         .reviewed => "reviewed",
@@ -63,7 +64,7 @@ pub fn json(ctx: Context, j: *Json, item: *const Item, with_text: bool) Error!vo
     try j.beginObject();
     for (item.attributes) |a| {
         try j.key(a.name);
-        try j.string(a.value);
+        if (a.values.len > 0) try j.strings(a.values) else try j.string(a.value);
     }
     try j.endObject();
 
@@ -147,7 +148,7 @@ pub fn json(ctx: Context, j: *Json, item: *const Item, with_text: bool) Error!vo
 }
 
 /// The IDs the item's text refers to, each once, in order
-fn referenceTargets(arena: std.mem.Allocator, item: *const Item) Error![]const []const u8 {
+pub fn referenceTargets(arena: std.mem.Allocator, item: *const Item) Error![]const []const u8 {
     var seen: std.array_hash_map.String(void) = .empty;
     for (item.references) |r| try seen.put(arena, r.target, {});
     return seen.keys();
@@ -169,6 +170,7 @@ pub fn text(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
 
     if (item.parent) |whole| try out.print(a, "\nPart of: {s}\n", .{whole});
     try list(a, out, "\nParts: ", item.parts);
+    try list(a, out, "\nFormer IDs: ", item.aliases);
 
     if (item.links.len > 0) try out.appendSlice(a, "\nLinks to:\n");
     for (item.links) |link| {
@@ -197,10 +199,15 @@ pub fn text(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
     if (approvals.len > 0) try out.appendSlice(a, "\nApproved by:\n");
     for (approvals) |approval| {
         try out.print(a, "  {s} on {d:0>4}-{d:0>2}-{d:0>2}", .{ approval.by, approval.on.year, approval.on.month, approval.on.day });
+        if (approval.as) |role| try out.print(a, " as {s}", .{role});
         const current = try Graph.Approvals.isCurrent(a, ctx.graph, &ctx.project.schema, approval, item);
         if (!current) try out.appendSlice(a, "  [of an earlier version]");
         try out.append(a, '\n');
     }
+    if (ctx.project.schema.itemType(item.type_name)) |t| if (t.approval_roles.len > 0) {
+        const missing = try ctx.approvals.missingRoles(a, ctx.graph, &ctx.project.schema, t, item);
+        if (missing.len > 0) try out.print(a, "{s}  still to approve as: {s}\n", .{ if (approvals.len == 0) "\nApproved by:\n" else "", try std.mem.join(a, ", ", missing) });
+    };
 
     const cited = try ctx.citations.of(a, item.id);
     if (cited.len > 0) try out.appendSlice(a, "\nCited by:\n");
@@ -214,7 +221,16 @@ pub fn text(ctx: Context, out: *std.ArrayList(u8), item: *const Item) Error!void
 fn typeNote(ctx: Context, out: *std.ArrayList(u8), id: []const u8) Error!void {
     if (ctx.graph.find(id)) |target| {
         try out.print(ctx.arena, " ({s})", .{target.type_name});
-    } else if (std.mem.findScalar(u8, id, ':') == null) try out.appendSlice(ctx.arena, " (no such item)");
+        return;
+    }
+    if (Network.split(id) == null) return out.appendSlice(ctx.arena, " (no such item)");
+    const n = ctx.graph.others orelse return;
+    switch (n.resolve(id)) {
+        .item => |f| try out.print(ctx.arena, " ({s}, in {s} at {s})", .{ f.item.type_name, f.member.repository.name, f.member.at() }),
+        .missing => |m| try out.print(ctx.arena, " (no such item in {s} at {s})", .{ m.repository.name, m.at() }),
+        .unavailable => |m| try out.print(ctx.arena, " (not checked: {s})", .{m.unavailable.?}),
+        .undeclared => |name| try out.print(ctx.arena, " (no repository '{s}' is declared)", .{name}),
+    }
 }
 
 /// `label` and the IDs, on one line; nothing when there are none

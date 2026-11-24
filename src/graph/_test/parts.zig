@@ -173,6 +173,21 @@ test "an entry that holds a part further in stays the whole's own text" {
     try testing.expect(std.mem.find(u8, keywords.text, "those of conversion:") != null);
 }
 
+test "a part of a numbered item extends its number" {
+    var f: Fixture = undefined;
+    f.init();
+    defer f.deinit();
+    try f.document("spec/srs.md",
+        \\%srs[SRS-001 priority=low] The software shall:
+        \\
+        \\- %srs[.a priority=low] start;
+        \\- %srs[.b priority=low] stop.
+    );
+    try f.expectProblems("");
+    try testing.expectEqualStrings("SRS-001.a", f.items.items[0].parts[0]);
+    try testing.expectEqualStrings("SRS-001.b", f.items.items[2].id);
+}
+
 test "mistakes in the names of parts and in markers" {
     var f: Fixture = undefined;
     f.init();
@@ -200,8 +215,8 @@ test "mistakes in the names of parts and in markers" {
     try f.expectProblems(
         \\spec/bad.md:1:1: error: .alone: an ID that starts with a dot extends the ID of a containing item, and this item is not part of another item
         \\spec/bad.md:3:3: error: .entry: an ID that starts with a dot extends the ID of a containing item, and this item is not part of another item
-        \\spec/bad.md:7:3: error: .part: an ID that starts with a dot needs hierarchical IDs for this item and for 'SRS-001'
-        \\spec/bad.md:11:3: error: .1: an ID that starts with a dot needs hierarchical IDs for this item and for 'a.b'
+        \\spec/bad.md:7:3: error: .part: an ID that starts with a dot needs IDs of one kind, hierarchical or numbered, for this item and for 'SRS-001'
+        \\spec/bad.md:11:3: error: .1: an ID that starts with a dot needs IDs of one kind, hierarchical or numbered, for this item and for 'a.b'
         \\spec/bad.md:13:1: error: a.c: there is no item type 'nothing'
         \\spec/bad.md:15:1: error: %rule[...]: the marker is not closed by ']'
         \\spec/bad.md:18:1: error: a.e: the marker has no text after it

@@ -1,6 +1,13 @@
 # Only what the extension needs at run time goes into the VSIX
 **
 !package.json
+!dist/extension.js
+!dist/plan.js
+!dist/graph.js
+!dist/form.js
+!media/preview.css
+!icon.png
+!bin/**
 !syntaxes/skein.injection.tmLanguage.json
 !readme.md
 !CHANGELOG.md

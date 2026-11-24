@@ -1,0 +1,2 @@
+description = "A rule of the language"
+categories = ["syntax", "legality", "static", "dynamic"]

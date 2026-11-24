@@ -5,14 +5,13 @@
 # root (`*` also matches `/`). Lines starting with # and blank lines are
 # ignored.
 
-# documentation, linted by CI
-*.md
-.markdownlint-cli2.jsonc
-.markdownlint.jsonc
 # line endings at checkout, which the tests can see
 .gitattributes
 # CI's workflows, lists and scripts, and the release notes' sections
 .github/*
-# the documentation site: its layout, and the script that puts it together
-site/*
-tools/site.sh
+# the generator of the npr7150.2d template's requirements: tested, not shipped (what it writes is, in templates/)
+tools/npr7150/*
+# the PDF reader that took the text of standards into the templates: tested, not shipped
+tools/pdf/*
+# the script that takes mermaid.js into vendor/ (which is shipped)
+tools/mermaid/*

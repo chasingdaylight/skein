@@ -1,0 +1,4 @@
+description = "A deviation or waiver relieves the project of a requirement of the NPR; once approved, as good as its row in the matrix"
+from = ["tailoring"]
+to = ["swe"]
+counts_as = "complies"

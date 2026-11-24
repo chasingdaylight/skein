@@ -1,0 +1,61 @@
+# A template of skein's: see docs/templates.md.
+description = "Software work under NASA's NPR 7150.2D, NASA Software Engineering Requirements, as the NASA Software Engineering Handbook reads it"
+
+[options.class]
+description = "The software class of the project (NPR 7150.2D, Appendix D; SWE-020)"
+values = ["A", "B", "C", "D", "E", "F"]
+
+# the traces of SWE-052 (Table 1 of the NPR) each class requires
+[options.class.sets.A]
+trace_higher = "true"
+trace_hazards = "true"
+trace_design = "true"
+trace_verification = "true"
+trace_nonconformance = "true"
+
+[options.class.sets.B]
+trace_higher = "true"
+trace_hazards = "true"
+trace_design = "true"
+trace_verification = "true"
+trace_nonconformance = "true"
+
+[options.class.sets.C]
+trace_higher = "true"
+trace_hazards = "true"
+trace_design = "true"
+trace_verification = "true"
+trace_nonconformance = "true"
+
+[options.class.sets.D]
+trace_higher = "false"
+trace_hazards = "true"
+trace_design = "false"
+trace_verification = "true"
+trace_nonconformance = "true"
+
+[options.class.sets.E]
+trace_higher = "false"
+trace_hazards = "false"
+trace_design = "false"
+trace_verification = "false"
+trace_nonconformance = "false"
+
+[options.class.sets.F]
+trace_higher = "true"
+trace_hazards = "false"
+trace_design = "false"
+trace_verification = "true"
+trace_nonconformance = "true"
+
+[options.safety-critical]
+description = "Whether the project has safety-critical software (SWE-205, per NASA-STD-8739.8)"
+values = ["true", "false"]
+default = "false"
+
+# which requirements bind the project: those of every project of its class, and those of safety-critical software
+[options.safety-critical.sets.true]
+applies = '["always", "safety-critical"]'
+
+[options.safety-critical.sets.false]
+applies = '["always"]'

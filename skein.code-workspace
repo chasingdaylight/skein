@@ -19,6 +19,9 @@
     },
     "files.associations": {
       ".local-gitignore": "gitignore",
+      // Jekyll templates: Liquid, which HTML checkers cannot parse
+      "**/site/_layouts/*.html": "liquid",
+      "**/site/_includes/*.html": "liquid",
     },
     "terminal.integrated.automationProfile.windows": {
       "path": "C:\\windows\\system32\\cmd.exe",
@@ -75,6 +78,7 @@
       "streetsidesoftware.code-spell-checker",
       "streetsidesoftware.code-spell-checker-win32",
       "ltex-plus.vscode-ltex-plus",
+      "sissel.shopify-liquid",
     ]
   }
 }

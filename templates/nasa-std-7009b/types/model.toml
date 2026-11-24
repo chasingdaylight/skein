@@ -1,0 +1,54 @@
+description = "A model or simulation whose results inform decisions (NASA-STD-7009B): its intended use, its criticality (Appendix D) and its assessed credibility (Appendix E)"
+id = "numbered"
+prefix = "MDL"
+statuses = ["planned", "in-development", "released", "in-use", "retired"]
+
+# what it is for, and the decisions it informs ([M&S 40])
+[attributes.intended_use]
+normative = false
+
+# Appendix D: the consequence of the decision (I negligible to V catastrophic), the
+# influence of the model on it (1 negligible to 5 controlling), and the box of the matrix
+[attributes.consequence]
+values = ["I", "II", "III", "IV", "V"]
+
+[attributes.influence]
+values = ["1", "2", "3", "4", "5"]
+
+[attributes.criticality]
+values = ["red", "yellow", "green"]
+
+# Appendix E: the capability factors, assessed in development, each at level 0 to 4
+[attributes.data_pedigree]
+values = ["0", "1", "2", "3", "4"]
+
+[attributes.ms_verification]
+values = ["0", "1", "2", "3", "4"]
+
+[attributes.ms_validation]
+values = ["0", "1", "2", "3", "4"]
+
+[attributes.dev_review]
+values = ["0", "1", "2", "3", "4"]
+
+[attributes.dev_management]
+values = ["0", "1", "2", "3", "4"]
+
+# Appendix E: the results factors, assessed in use, each at level 0 to 4
+[attributes.use_assessment]
+values = ["0", "1", "2", "3", "4"]
+
+[attributes.input_pedigree]
+values = ["0", "1", "2", "3", "4"]
+
+[attributes.uncertainty]
+values = ["0", "1", "2", "3", "4"]
+
+[attributes.robustness]
+values = ["0", "1", "2", "3", "4"]
+
+[attributes.use_review]
+values = ["0", "1", "2", "3", "4"]
+
+[attributes.use_management]
+values = ["0", "1", "2", "3", "4"]

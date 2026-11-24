@@ -1,13 +1,17 @@
 //! `skein render`: the project's documents and item files as Markdown
-//! for a site generator, written to a directory under their own paths.
+//! for a site generator, written to a directory under their own paths,
+//! or, with `--format html`, the static site itself (render/site.zig).
 
 const std = @import("std");
 const Io = std.Io;
 
 const cli = @import("../cli.zig");
 const Workspace = @import("Workspace.zig");
+const context = @import("../render/context.zig");
 const files = @import("../files.zig");
 const markdown = @import("../render/markdown.zig");
+const order = @import("../render/order.zig");
+const site = @import("../render/site.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options.common)) {
@@ -18,16 +22,14 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
     // what is wrong with the items is for `check`; the schema must be sound
     if (!ws.items_read) return ws.problems();
 
-    var item_sources: std.ArrayList([]const u8) = .empty;
-    for (ws.project.sources) |source| {
-        if (source.kind == .items) try item_sources.append(arena, source.path);
-    }
-    const ctx: markdown.Context = .{
-        .arena = arena,
-        .graph = &ws.graph,
-        .schema = &ws.project.schema,
-        .item_sources = item_sources.items,
-    };
+    const profile = if (options.profile) |name| ws.project.schema.profile(name) orelse return .{
+        .text = try arena.print("skein: there is no profile '{s}'\n", .{name}),
+        .status = .misuse,
+    } else null;
+    // results that cannot be read are the command's to report
+    const before = ws.report.problems.items.len;
+    const ctx = try context.build(io, arena, &ws, .{ .profile = profile, .results = options.results, .offline = options.common.offline });
+    if (ws.report.problems.items.len > before) return ws.problems();
 
     var out = Io.Dir.cwd().createDirPathOpen(io, options.out, .{}) catch |e| return .{
         .text = try arena.print("skein: cannot make the directory '{s}' ({s})\n", .{ options.out, @errorName(e) }),
@@ -35,11 +37,22 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
     };
     defer out.close(io);
 
+    if (options.format == .document) {
+        const written = try site.documents(io, arena, &ws, ctx, out);
+        return .{ .text = try arena.print("skein: {d} document{s} rendered to {s}\n", .{ written, if (written == 1) "" else "s", options.out }) };
+    }
+    if (options.format == .html) {
+        const pages = try site.build(io, arena, &ws, ctx, out);
+        return .{ .text = try arena.print("skein: {d} page{s} rendered to {s}\n", .{ pages, if (pages == 1) "" else "s", options.out }) };
+    }
+
     var count: usize = 0;
     for (ws.project.sources) |source| {
         // a source that cannot be read was reported when the items were
-        const paths = files.list(io, arena, ws.root, source.path, &.{".md"}) catch continue;
+        const listed = files.list(io, arena, ws.root, source.path, &.{".md"}) catch continue;
+        const paths = if (source.order_by) |attribute| try order.sortFiles(arena, &ws.graph, listed, attribute) else listed;
         for (paths) |file| {
+            if (source.kind == .items and !markdown.fileIncluded(ctx, file)) continue;
             const text = ws.root.readFileAlloc(io, file, arena, .limited(1 << 26)) catch continue;
             const rendered = switch (source.kind) {
                 .documents => try markdown.document(ctx, file, text),

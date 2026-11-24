@@ -1,0 +1,3 @@
+description = "A higher-level requirement the software requirements come from: a system or subsystem requirement, often in another repository of the network"
+id = "numbered"
+prefix = "SYS"

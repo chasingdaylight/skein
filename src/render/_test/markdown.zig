@@ -71,7 +71,7 @@ test "markers become anchors and IDs, references become links" {
         \\- <a id="lex.keywords.as"></a>**[lex.keywords.as](#lex.keywords.as)** *(syntax)* `as`
         \\  1. <a id="lex.keywords.as.cast"></a>**[lex.keywords.as.cast](#lex.keywords.as.cast)** See [lex.keywords.fn](#lex.keywords.fn).
         \\- <a id="lex.keywords.fn"></a>**[lex.keywords.fn](#lex.keywords.fn)** *(syntax)* `fn`
-        \\- no others, and not no.such
+        \\- no others, and not <span class="skein-unresolved" title="unresolved: no.such">no.such</span>
         \\
         \\```text
         \\%rule[in.code] %[lex.token]
@@ -81,9 +81,9 @@ test "markers become anchors and IDs, references become links" {
         \\
     , try render.document(ctx, "spec/lex.md", lex));
 
-    // line ends are kept, and a reference into another repository is its ID
+    // line ends are kept, and a reference into a repository not read is marked unresolved
     try testing.expectEqualStrings(
-        "<a id=\"lex.token\"></a>**[lex.token](#lex.token)** A token: see [comments](../lex.md#lex.comment) and other:some.id.\r\n",
+        "<a id=\"lex.token\"></a>**[lex.token](#lex.token)** A token: see [comments](../lex.md#lex.comment) and <span class=\"skein-unresolved\" title=\"unresolved: other:some.id\">other:some.id</span>.\r\n",
         try render.document(ctx, "spec/terms/terms.md", terms),
     );
 }

@@ -10,6 +10,7 @@ const std = @import("std");
 const Io = std.Io;
 
 const cli = @import("../cli.zig");
+const Graph = @import("../graph/Graph.zig");
 const Reviews = @import("../graph/Reviews.zig");
 const Schema = @import("../schema/Schema.zig");
 const Workspace = @import("Workspace.zig");
@@ -32,7 +33,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Review, direction: Dir
     if (!ws.items_read) return ws.problems();
 
     for (options.ids) |id| {
-        if (ws.graph.find(id) == null) return .{
+        // `review` also takes the files that cite items
+        if (ws.graph.find(id) == null and !(direction == .from and citesIn(&ws.citations, id))) return .{
             .text = try arena.print("skein: there is no item '{s}'\n", .{id}),
             .status = .misuse,
         };
@@ -55,8 +57,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Review, direction: Dir
             if (!named) continue;
             const state = try reviews.stateOf(arena, schema, &ws.graph, item, link) orelse continue;
             if (state == .reviewed) continue;
-            const target = ws.graph.find(link.target).?;
-            const fp = try fingerprint.of(arena, &ws.graph, schema, target);
+            const fp = (try Reviews.targetFingerprint(arena, schema, &ws.graph, link.target)).?;
             try reviews.put(arena, item.id, link.type_name, link.target, &fp);
             const file = try Reviews.fileOf(arena, item);
             if (!Schema.names.contains(files.items, file)) try files.append(arena, file);
@@ -64,7 +65,35 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Review, direction: Dir
         }
     }
     try reviews.write(io, arena, ws.root, schema, &ws.graph, files.items);
+
+    // the citations of the sets that are reviewed: those in the files named, or of the items named
+    var cite_files: std.ArrayList([]const u8) = .empty;
+    var cited: usize = 0;
+    for (ws.citations.all) |c| {
+        const named = options.all or Schema.names.contains(options.ids, switch (direction) {
+            .from => c.file,
+            .to => c.target,
+        });
+        if (!named) continue;
+        const state = try reviews.citationState(arena, &ws.project, &ws.graph, c) orelse continue;
+        if (state == .reviewed) continue;
+        const fp = (try Reviews.targetFingerprint(arena, schema, &ws.graph, c.target)).?;
+        try reviews.putCitation(arena, c, &fp);
+        const file = try Reviews.citationFileOf(arena, c.file);
+        if (!Schema.names.contains(cite_files.items, file)) try cite_files.append(arena, file);
+        cited += 1;
+    }
+    try reviews.writeCitations(io, arena, ws.root, &ws.project, &ws.citations, cite_files.items);
     return .{
-        .text = try arena.print("skein: {d} link{s} recorded as reviewed\n", .{ count, if (count == 1) "" else "s" }),
+        .text = if (cited == 0)
+            try arena.print("skein: {d} link{s} recorded as reviewed\n", .{ count, if (count == 1) "" else "s" })
+        else
+            try arena.print("skein: {d} link{s} and {d} citation{s} recorded as reviewed\n", .{ count, if (count == 1) "" else "s", cited, if (cited == 1) "" else "s" }),
     };
+}
+
+/// Whether some citation is in the file `path`
+fn citesIn(citations: *const Graph.Citations, path: []const u8) bool {
+    for (citations.all) |c| if (std.mem.eql(u8, c.file, path)) return true;
+    return false;
 }

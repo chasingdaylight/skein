@@ -1,0 +1,3 @@
+description = "A rule refers to another rule, or to a term"
+from = ["rule"]
+to = ["rule", "term"]

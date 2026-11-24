@@ -1,0 +1,5 @@
+
+# NASA-STD-7009B's requirements: read-only, written by skein init from the template
+[[sources]]
+path = "standards/nasa-std-7009b"
+read_only = true

@@ -1,0 +1,3 @@
+description = "A system hazard, or a hazard cause, control or mitigation, that software is part of (5.24 Hazard Report)"
+id = "numbered"
+prefix = "HAZ"

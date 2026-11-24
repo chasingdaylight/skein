@@ -1,0 +1,4 @@
+description = "A requirement of NASA-STD-8739.8B numbered by the standard (SASS-01); read-only, from skein's template"
+id = "numbered"
+prefix = "SASS"
+digits = 2

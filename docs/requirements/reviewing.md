@@ -33,7 +33,7 @@ When a record file is written, the records of links that no longer exist shall b
 ## Approvals
 
 %req[approval.record]
-`skein approve` shall record, for each named item, who approved it, on which day, and the fingerprint of the item at that moment. The name is the one given, or the user name configured in git. The day is the one given, or today.
+`skein approve` shall record, for each named item, who approved it, on which day, and the fingerprint of the item at that moment. The name is the one given, or the username configured in git. The day is the one given, or today.
 
 %req[approval.records]
 The approvals shall be kept under `.skein/approvals/`, in files named in the same way as the review records, with one line per item and approver. A new approval by the same approver replaces the earlier record.
@@ -43,3 +43,12 @@ An approval shall count as an approval of the current item only while the finger
 
 %req[approval.status]
 An item type may name statuses that require an approval. An item with such a status and no approval of its current content shall be reported.
+
+%req[citations.review]
+A citation set can ask for reviews, `review = true` in its `[[citations]]` table, so that the citations of a rule by tests and code are held to the same care as a link of a reviewed type: `skein check` shall report a citation of an item whose citation was never reviewed, and one whose item has changed since (its fingerprint differs from the record). `skein review FILE...` (or `--all`) records the citations in those files as reviewed, and `skein clear ID...` those that name those items. The records are under `.skein/reviews/citations/`, one file for each citing file, one sorted line for each citation, written by Skein and committed with the change that was reviewed; a record of a citation that no longer exists is dropped when its file is next written. A citation set that does not ask for reviews is never reported. (#212.)
+
+%req[approval.approvers]
+An item type that has approvals shall be able to say who may approve, `approvers = ["name", ...]` in its `[approval]` table, or for each role, `[approval.approvers]` with a list per role (a role that is not one of the type's is a problem of the schema). An approval counts only when given by one of them, as `--by` or a reviewer's login names them: `skein check` reports an item that needs an approval and has one only by someone else, `skein approve` refuses to record one that would not count, and `skein approve --from-pull-request` records a reviewer's approval of an item of such a type in the role they may act in, or not at all, and says whose it left out. A type that names no approvers lets anyone approve, as before. Skein has no sign-in of its own, so the names are those the records carry; who may change the list is the project's review of `.skein/types/`. (#213.)
+
+%req[approval.roles]
+An item type may also name the roles that must each approve its items (`[approval] statuses = [...]`, `roles = [...]`). Its approvals are then given in a role, `skein approve ID --as ROLE`, which is recorded with them; an approval without a role, or in a role the type does not name, is refused. An item with a status that needs approval is approved only when every role has a current approval of it, and `check` names the roles still missing; `trace` shows each approval's role and the roles still to approve. Who may act in a role is not checked: the records are in git, with their commits.

@@ -1,0 +1,5 @@
+description = "A software requirement addresses a system hazard: a cause, a control or a mitigation (SWE-052, SWE-192)"
+from = ["requirement"]
+to = ["hazard"]
+# every hazard that software is part of is traced to software requirements, for classes A to D
+expected = {{trace_hazards}}

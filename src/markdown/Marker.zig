@@ -10,6 +10,12 @@
 //!
 //! An ID that starts with a dot is a part's name within its whole:
 //! `%rule[.as]` inside `lex.keywords` is `lex.keywords.as`.
+//!
+//! A writer may wrap the marker in bold, `**%rule[lex.comment]** Text.`, to
+//! make it stand out where skein does not render it (emanspeaks,
+//! 2026-11-22, #163); the `**` on both sides are then part of the marker.
+//! Bold that starts before the marker and goes on into the text,
+//! `**%rule[lex.comment] Text.**`, belongs to the text.
 
 const std = @import("std");
 
@@ -24,31 +30,80 @@ fields: []const Field = &.{},
 len: usize,
 /// what is wrong with the marker, if anything
 problem: ?[]const u8 = null,
+/// the `**` before the marker opens bold that goes on into the text
+/// (`**%rule[a] Text.**`), so the text starts with it
+in_bold: bool = false,
 
 pub const Field = struct {
     key: []const u8,
     values: []const []const u8,
 };
 
-/// Whether `line` starts as a marker does: `%`, a name, `[`
+const bold = "**";
+
+/// Whether `line` starts as a marker does: `%`, a name, `[`, after `**`
+/// when the marker is wrapped in bold
 pub fn startsOne(line: []const u8) bool {
+    if (std.mem.startsWith(u8, line, bold ++ "%")) return startsOne(line[bold.len..]);
     if (line.len < 3 or line[0] != '%' or !std.ascii.isLower(line[1])) return false;
     var i: usize = 1;
     while (i < line.len and (std.ascii.isLower(line[i]) or std.ascii.isDigit(line[i]) or line[i] == '-' or line[i] == '_')) i += 1;
     return i < line.len and line[i] == '[';
 }
 
+/// Where the marker of `line` starts: after its indentation and the
+/// bullets or numbers of the list entries it opens; null when the line
+/// starts with no marker
+pub fn startIn(line: []const u8) ?usize {
+    for (line, 0..) |c, i| {
+        if (c == '%') return if (startsOne(line[i..])) i else null;
+        if (std.mem.findScalar(u8, " \t-*+.)0123456789", c) == null) return null;
+    }
+    return null;
+}
+
 /// How much of `line`, which starts a marker, the marker takes: up to its
-/// closing bracket, or all of it when it has none
+/// closing bracket, or all of it when it has none. A line that starts
+/// with `**` takes the `**` after the bracket too.
 pub fn extent(line: []const u8) usize {
+    if (std.mem.startsWith(u8, line, bold ++ "%")) return bold.len + extent(line[bold.len..]) + closingBold(line[bold.len..]);
     const open = std.mem.findScalar(u8, line, '[') orelse return line.len;
     return if (closingBracket(line, open)) |close| close + 1 else line.len;
+}
+
+/// How the marker that starts at `start` of `line` (its `%`) stands in bold
+pub const Bold = enum {
+    /// not in bold
+    none,
+    /// `**` before it and right after its closing bracket
+    wrapped,
+    /// `**` before it, which the text goes on in
+    open,
+};
+
+pub fn boldOf(line: []const u8, start: usize) Bold {
+    if (start < bold.len or !std.mem.eql(u8, line[start - bold.len .. start], bold)) return .none;
+    return if (closingBold(line[start..]) > 0) .wrapped else .open;
+}
+
+/// The length of the `**` that closes the bold around the marker `line`
+/// starts with; 0 when there is none
+fn closingBold(line: []const u8) usize {
+    const end = extent(line);
+    return if (end > 0 and line[end - 1] == ']' and std.mem.startsWith(u8, line[end..], bold)) bold.len else 0;
 }
 
 /// The marker that `line` starts with; null when it starts with none.
 /// A marker with a mistake in it is still a marker, with its `problem`.
 pub fn parse(arena: std.mem.Allocator, line: []const u8) std.mem.Allocator.Error!?Marker {
     if (!startsOne(line)) return null;
+    if (std.mem.startsWith(u8, line, bold)) {
+        var inner = (try parse(arena, line[bold.len..])).?;
+        const closing = closingBold(line[bold.len..]);
+        inner.in_bold = closing == 0;
+        inner.len += bold.len + closing;
+        return inner;
+    }
     const open = std.mem.findScalar(u8, line, '[').?;
     var out: Marker = .{ .type_name = line[1..open], .id = "", .len = line.len };
     const close = closingBracket(line, open) orelse {
@@ -178,6 +233,34 @@ test "a part's name starts with a dot" {
     const m = (try parse(arena.allocator(), "%rule[.as final] `as`")).?;
     try testing.expectEqualStrings(".as", m.id);
     try testing.expectEqual(null, m.problem);
+}
+
+// req: items.marker.bold
+test "a marker wrapped in bold" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const line = "**%rule[lex.comment legality]** A comment.";
+    try testing.expect(startsOne(line));
+    const m = (try parse(arena.allocator(), line)).?;
+    try testing.expectEqualStrings("lex.comment", m.id);
+    try testing.expectEqualStrings("legality", m.words[0]);
+    try testing.expectEqual(null, m.problem);
+    try testing.expectEqualStrings(" A comment.", line[m.len..]);
+    try testing.expectEqual(m.len, extent(line));
+    // from its `%`, as the commands that edit a marker see it
+    try testing.expectEqual(2, startIn(line).?);
+    try testing.expectEqualStrings("%rule[lex.comment legality]", line[2 .. 2 + extent(line[2..])]);
+    try testing.expectEqual(.wrapped, boldOf(line, 2));
+    try testing.expectEqual(.none, boldOf("%rule[a] b", 0));
+    try testing.expectEqual(.open, boldOf("- **%rule[a] b**", 4));
+    try testing.expect(!m.in_bold);
+
+    // bold that goes on into the text is the text's
+    const open_line = "**%rule[lex.comment] A comment.**";
+    const open = (try parse(arena.allocator(), open_line)).?;
+    try testing.expectEqual(null, open.problem);
+    try testing.expect(open.in_bold);
+    try testing.expectEqualStrings(" A comment.**", open_line[open.len..]);
 }
 
 test "lines that do not start a marker" {

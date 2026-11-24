@@ -1,0 +1,5 @@
+description = "A row of the AI RMF profile says how a system addresses a subcategory"
+from = ["ai-rmf-record"]
+to = ["ai-rmf"]
+# every subcategory has its rows, one for each system in scope
+expected = true

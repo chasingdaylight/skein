@@ -29,7 +29,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Import) !Workspace.Out
     var root = try Io.Dir.cwd().openDir(io, root_path, .{});
     defer root.close(io);
 
-    var importer: Importer = .{ .io = io, .arena = arena, .root = root };
+    var importer: Importer = .{ .io = io, .arena = arena, .root = root, .options = options };
     for (options.paths) |path| {
         if (try importer.document(std.mem.trimEnd(u8, path, "/"))) |problem| return .{ .text = problem, .status = .misuse };
     }
@@ -61,13 +61,15 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Import) !Workspace.Out
     }
     try reviews.write(io, arena, root, &ws.project.schema, &ws.graph, files.items);
 
+    const headings = if (importer.headings == 0) "" else try arena.print(", and {d} heading{s} as text", .{ importer.headings, plural(importer.headings) });
     return .{ .text = try arena.print(
-        "skein: imported {d} item{s} of {d} Doorstop document{s}; {d} link{s} recorded as reviewed\n" ++
+        "skein: imported {d} item{s} of {d} Doorstop document{s}{s}; {d} link{s} recorded as reviewed\n" ++
             "       Look over the changes ('git diff'), then run 'skein check'.\n",
         .{
             importer.items,    plural(importer.items),
             options.paths.len, plural(options.paths.len),
-            recorded,          plural(recorded),
+            headings,          recorded,
+            plural(recorded),
         },
     ) };
 }
@@ -84,7 +86,10 @@ const Importer = struct {
     io: Io,
     arena: std.mem.Allocator,
     root: Io.Dir,
+    options: cli.Import,
     items: usize = 0,
+    /// the non-normative items written as plain text (--headings-as-text)
+    headings: usize = 0,
     /// "from\ntarget" of the links Doorstop had a review of
     stamped: std.array_hash_map.String(void) = .empty,
 
@@ -137,11 +142,40 @@ const Importer = struct {
             }
         }
 
+        // with --headings-as-text, a non-normative item that nothing in the
+        // document links to becomes plain Markdown, narrative and no item
+        var linked: std.array_hash_map.String(void) = .empty;
+        for (read.items) |item| {
+            for (item.links) |link| try linked.put(a, link.target, {});
+        }
+        const as_text = try a.alloc(bool, read.items.len);
+        for (read.items, as_text) |item, *text| text.* = self.options.headings_as_text and item.active and !item.normative and !linked.contains(item.id);
+
+        // statuses and verification methods from the attributes named for them
+        var statuses: std.ArrayList([]const u8) = .empty;
+        var verifications: std.ArrayList([]const u8) = .empty;
+        for (read.items, as_text) |*item, text| {
+            if (text) continue;
+            if (self.options.status_from) |key| if (item.front.string(key)) |value| {
+                if (value.len > 0) {
+                    item.status = try convert.nameOf(a, value);
+                    if (item.active and !Schema.names.contains(statuses.items, item.status.?)) try statuses.append(a, item.status.?);
+                }
+            };
+            if (self.options.verification_from) |key| if (item.front.string(key)) |value| {
+                if (value.len > 0) {
+                    item.verification = try convert.nameOf(a, value);
+                    if (!Schema.names.contains(verifications.items, item.verification.?)) try verifications.append(a, item.verification.?);
+                }
+            };
+        }
+        const options: convert.Options = .{ .status_from = self.options.status_from, .verification_from = self.options.verification_from };
+
         // Doorstop's categories are skein's when every active item has one
         var categories: std.ArrayList([]const u8) = .empty;
         var use_category = read.items.len > 0;
-        for (read.items) |item| {
-            if (!item.active) continue;
+        for (read.items, as_text) |item, text| {
+            if (!item.active or text) continue;
             if (item.category.len == 0) use_category = false;
             if (item.category.len > 0 and !Schema.names.contains(categories.items, item.category)) try categories.append(a, item.category);
         }
@@ -153,8 +187,9 @@ const Importer = struct {
         }.lt);
 
         var attributes: std.ArrayList([]const u8) = .empty;
-        for (read.items) |item| {
-            for (try convert.attributesOf(a, item, use_category)) |attribute| {
+        for (read.items, as_text) |item, text| {
+            if (text) continue;
+            for (try convert.attributesOf(a, item, use_category, options)) |attribute| {
                 if (!Schema.names.contains(attributes.items, attribute[0])) try attributes.append(a, attribute[0]);
             }
             for (item.links) |link| {
@@ -163,16 +198,19 @@ const Importer = struct {
         }
 
         // everything is read: now write
-        for (read.items, names.items) |item, name| {
+        var imported: usize = 0;
+        for (read.items, names.items, as_text) |item, name, text| {
             const out_name = try a.print("{s}.md", .{item.id});
-            try dir.writeFile(io, .{ .sub_path = out_name, .data = try convert.render(a, item, use_category) });
+            const data = if (text) try a.print("{s}\n", .{item.body}) else try convert.render(a, item, use_category, options);
+            try dir.writeFile(io, .{ .sub_path = out_name, .data = data });
             if (!std.mem.eql(u8, name, out_name)) dir.deleteFile(io, name) catch {};
+            if (text) self.headings += 1 else imported += 1;
         }
         dir.deleteFile(io, ".doorstop.yml") catch {};
         try self.root.createDirPath(io, Project.dir_name ++ "/types");
-        try self.root.writeFile(io, .{ .sub_path = type_file, .data = try convert.renderType(a, doc, attributes.items, categories.items) });
+        try self.root.writeFile(io, .{ .sub_path = type_file, .data = try convert.renderType(a, doc, attributes.items, categories.items, statuses.items, verifications.items) });
         try self.addSource(path, type_name);
-        self.items += read.items.len;
+        self.items += imported;
         return null;
     }
 

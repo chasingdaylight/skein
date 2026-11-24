@@ -1,0 +1,3 @@
+description = "An AI system is exposed to a generative AI risk"
+from = ["ai-system"]
+to = ["gen-ai-risk"]

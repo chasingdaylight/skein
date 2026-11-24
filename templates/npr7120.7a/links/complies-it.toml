@@ -1,0 +1,5 @@
+description = "A row of the project's compliance matrix says how it meets a row of the NPR's matrix (Appendix C), or a requirement of the NPR"
+from = ["it-compliance"]
+to = ["it-action", "it"]
+# every row of the NPR's matrix for the kind of effort has its row
+expected = { profile = "matrix" }

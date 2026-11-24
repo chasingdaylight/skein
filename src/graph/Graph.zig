@@ -3,6 +3,7 @@
 const std = @import("std");
 const Io = std.Io;
 
+const Network = @import("../network/Network.zig");
 const Project = @import("../Project.zig");
 const Report = @import("../Report.zig");
 const Schema = @import("../schema/Schema.zig");
@@ -21,6 +22,8 @@ const Graph = @This();
 /// in the order of the sources, the files (by path) and the lines
 items: []const Item = &.{},
 by_id: std.array_hash_map.String(usize) = .empty,
+/// by former ID (an alias), the item that had it
+by_alias: std.array_hash_map.String(usize) = .empty,
 /// by target: the links that point to it, in the order of the items
 incoming: std.array_hash_map.String(std.ArrayList(Incoming)) = .empty,
 /// by target: the IDs of the items whose text refers to it, each once
@@ -28,6 +31,30 @@ referrers: std.array_hash_map.String(std.ArrayList([]const u8)) = .empty,
 
 /// the references to items in narrative text, in the order read
 mentions: []const Mention = &.{},
+/// the other repositories, for targets `name:id`; null when not read
+others: ?*const Network = null,
+
+/// An item of this graph or, for `name:id`, of another repository, with
+/// the graph and schema it is read by
+pub const Target = struct {
+    item: *const Item,
+    graph: *const Graph,
+    schema: *const Schema,
+};
+
+/// The item `id` names: one of this graph, read by `schema`, or for
+/// `name:id` one of another repository; null when there is none
+pub fn target(self: *const Graph, schema: *const Schema, id: []const u8) ?Target {
+    if (Network.split(id) != null) {
+        const n = self.others orelse return null;
+        return switch (n.resolve(id)) {
+            .item => |f| .{ .item = f.item, .graph = &f.member.graph, .schema = &f.member.project.schema },
+            else => null,
+        };
+    }
+    const item = self.find(id) orelse self.formerly(id) orelse return null;
+    return .{ .item = item, .graph = self, .schema = schema };
+}
 
 /// A link, with the item it is a link of
 pub const Incoming = struct {
@@ -38,6 +65,19 @@ pub const Incoming = struct {
 pub fn find(self: *const Graph, id: []const u8) ?*const Item {
     const i = self.by_id.get(id) orelse return null;
     return &self.items[i];
+}
+
+/// The item whose former ID `id` is; null when it is no one's
+pub fn formerly(self: *const Graph, id: []const u8) ?*const Item {
+    const i = self.by_alias.get(id) orelse return null;
+    return &self.items[i];
+}
+
+/// The ID now of the item `id` names: `id`, unless it is a former ID
+fn current(self: *const Graph, id: []const u8) []const u8 {
+    if (self.by_id.contains(id)) return id;
+    const i = self.by_alias.get(id) orelse return id;
+    return self.items[i].id;
 }
 
 /// The graph of `items`. An ID used twice is reported, and found as its
@@ -51,14 +91,30 @@ pub fn init(arena: std.mem.Allocator, items: []const Item, report: *Report) std.
             try report.add(item.file, item.line, 1, "{s}: the ID is already used at {s}:{d}", .{ item.id, first.file, first.line });
         } else entry.value_ptr.* = i;
     }
+    // a former ID stays taken, as a removed item's does
+    for (items, 0..) |item, i| {
+        for (item.aliases) |alias| {
+            if (out.by_id.get(alias)) |other| {
+                const o = items[other];
+                try report.add(item.file, item.line, 1, "{s}: '{s}' is a former ID of it, and the ID of the item at {s}:{d}", .{ item.id, alias, o.file, o.line });
+                continue;
+            }
+            const entry = try out.by_alias.getOrPut(arena, alias);
+            if (entry.found_existing) {
+                const first = items[entry.value_ptr.*];
+                try report.add(item.file, item.line, 1, "{s}: '{s}' is already a former ID of '{s}'", .{ item.id, alias, first.id });
+            } else entry.value_ptr.* = i;
+        }
+    }
+    // a link or reference by a former ID is one to the item that had it
     for (items) |*item| {
         for (item.links) |link| {
-            const entry = try out.incoming.getOrPut(arena, link.target);
+            const entry = try out.incoming.getOrPut(arena, out.current(link.target));
             if (!entry.found_existing) entry.value_ptr.* = .empty;
             try entry.value_ptr.append(arena, .{ .from = item, .link = link });
         }
         for (item.references) |r| {
-            const entry = try out.referrers.getOrPut(arena, r.target);
+            const entry = try out.referrers.getOrPut(arena, out.current(r.target));
             if (!entry.found_existing) entry.value_ptr.* = .empty;
             const ids = entry.value_ptr.items;
             if (ids.len == 0 or !std.mem.eql(u8, ids[ids.len - 1], item.id)) try entry.value_ptr.append(arena, item.id);

@@ -1,0 +1,5 @@
+description = "A row of the assurance mapping matrix says how the IV&V Provider meets a requirement of section 4.4.2"
+from = ["assurance"]
+to = ["ivv"]
+# expected only when IV&V is performed on the project
+expected = {{ivv}}

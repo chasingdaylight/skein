@@ -1,0 +1,5 @@
+description = "A design component satisfies a software requirement (SWE-052)"
+from = ["design"]
+to = ["requirement"]
+# every software requirement is traced to design, for classes A, B and C
+expected = {{trace_design}}

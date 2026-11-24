@@ -1,0 +1,17 @@
+description = "A row of the project's Requirements Mapping Matrix (SWE-125): how the project, or one of its software components, meets a requirement of the NPR"
+# fully compliant, tailored, partially compliant, not compliant, not applicable (PAT-028, the handbook's compliance matrix)
+categories = ["FC", "T", "PC", "NC", "NA"]
+
+# the software component the row is for, when the matrix is kept per component
+[attributes.component]
+
+# the document and section, or the items, that show it
+[attributes.evidence]
+normative = false
+
+# why, for a row that is PC, NC or NA, and its risk
+[attributes.rationale]
+normative = false
+
+[attributes.risk]
+normative = false
