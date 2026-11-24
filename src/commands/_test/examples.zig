@@ -8,6 +8,7 @@ const testing = std.testing;
 const check_command = @import("../check.zig");
 const coverage_command = @import("../coverage.zig");
 const examples_command = @import("../examples.zig");
+const render_command = @import("../render.zig");
 
 fn write(dir: std.Io.Dir, path: []const u8, data: []const u8) !void {
     if (std.Io.Dir.path.dirname(path)) |parent| try dir.createDirPath(testing.io, parent);
@@ -102,6 +103,21 @@ test "examples are items: parts of the item they are in, or on their own" {
     const index = try read(f.tmp.dir, a, "out/examples.json");
     try expectContains(index, "\"id\": \"lex.comment.open\",\n    \"file\": \"lex.comment.open.csm\",\n    \"language\": \"cesium\",\n    \"expect\": \"reject\",\n    \"shows\": [\n      \"lex.comment\"\n    ],\n    \"source\": \"spec/lex.md\",\n    \"line\": 9");
     try expectContains(index, "\"shows\": [\n      \"lex.comment\",\n      \"lex.token\"\n    ]");
+}
+
+// req: render.markdown.markers
+test "an example renders as its label, then its fence with the language alone" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    const a = f.arena.allocator();
+    const out_dir = try std.Io.Dir.path.join(a, &.{ f.root, "site" });
+    _ = try render_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .out = out_dir });
+    const page = try f.tmp.dir.readFileAlloc(testing.io, "site/spec/lex.md", a, .limited(1 << 16));
+    try expectContains(page, "<a id=\"lex.comment.example-1\"></a>**[lex.comment.example-1](#lex.comment.example-1)**\n```cesium\n// fine\n```");
+    try expectContains(page, "<a id=\"lex.comment.open\"></a>**[lex.comment.open](#lex.comment.open)** *(rejects)*\n```cesium\n/* open\n```");
+    try expectContains(page, "**[ex.both](#ex.both)**\n```cesium\nx // y");
+    try expectContains(page, "```zig\nconst plain");
 }
 
 test "what cannot be an example is reported" {
