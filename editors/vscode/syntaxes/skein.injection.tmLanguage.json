@@ -4,16 +4,32 @@
   "scopeName": "skein.injection",
   "injectionSelector": "L:text.html.markdown - markup.raw - markup.fenced_code - markup.inline.raw - meta.embedded - comment",
   "patterns": [
+    { "include": "#example-fence" },
     { "include": "#marker" },
     { "include": "#reference" }
   ],
   "repository": {
-    "marker": {
-      "comment": "%type[id words key=value]: declares an item",
-      "name": "meta.item.marker.skein",
-      "begin": "(?<![A-Za-z0-9%\\\\])(%)([a-z][a-z0-9-]*)(\\[)",
+    "example-fence": {
+      "comment": "a fenced code block with a marker after its language: a tested example. Its code is shown as code, without the language's own highlighting",
+      "name": "markup.fenced_code.block.markdown",
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*([^\\s`%]*)\\s+(%[a-z][a-z0-9-]*(?:\\[[^\\]]*\\]?)?)(.*)$",
       "beginCaptures": {
-        "1": { "name": "punctuation.definition.item.skein" },
+        "3": { "name": "punctuation.definition.markdown" },
+        "4": { "name": "fenced_code.block.language.markdown" },
+        "5": { "patterns": [{ "include": "#marker-body" }, { "include": "#bare-marker" }] },
+        "6": { "name": "fenced_code.block.language.attributes.markdown" }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": { "name": "punctuation.definition.markdown" }
+      }
+    },
+    "marker": {
+      "comment": "%type[id words key=value]: declares an item, only at the start of a line (after a list's bullet, a quote's > or **)",
+      "name": "meta.item.marker.skein",
+      "begin": "(?:^|\\G)[ \\t]*(%)([a-z][a-z0-9-]*)(\\[)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.item.skein keyword.other.item-type.skein" },
         "2": { "name": "keyword.other.item-type.skein" },
         "3": { "name": "punctuation.definition.item.begin.skein" }
       },
@@ -21,12 +37,39 @@
       "endCaptures": {
         "0": { "name": "punctuation.definition.item.end.skein" }
       },
+      "patterns": [{ "include": "#marker-words" }]
+    },
+    "marker-body": {
+      "comment": "a marker where it is already known to be one: on the line of an example's fence",
+      "name": "meta.item.marker.skein",
+      "begin": "(%)([a-z][a-z0-9-]*)(\\[)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.item.skein keyword.other.item-type.skein" },
+        "2": { "name": "keyword.other.item-type.skein" },
+        "3": { "name": "punctuation.definition.item.begin.skein" }
+      },
+      "end": "\\]|$",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.item.end.skein" }
+      },
+      "patterns": [{ "include": "#marker-words" }]
+    },
+    "bare-marker": {
+      "comment": "%example alone on a fence's line: an example without an ID",
+      "match": "(%)([a-z][a-z0-9-]*)",
+      "captures": {
+        "0": { "name": "meta.item.marker.skein" },
+        "1": { "name": "punctuation.definition.item.skein keyword.other.item-type.skein" },
+        "2": { "name": "keyword.other.item-type.skein" }
+      }
+    },
+    "marker-words": {
       "patterns": [
         {
           "comment": "the first word is the ID",
           "match": "\\G\\s*(\\.?[A-Za-z0-9_][A-Za-z0-9_.-]*)",
           "captures": {
-            "1": { "name": "entity.name.tag.item-id.skein" }
+            "1": { "name": "entity.name.function.item-id.skein" }
           }
         },
         {
@@ -62,7 +105,7 @@
         {
           "match": "\\G\\s*([A-Za-z0-9_][A-Za-z0-9_.:-]*)",
           "captures": {
-            "1": { "name": "entity.name.tag.item-id.skein markup.underline.link.skein" }
+            "1": { "name": "entity.name.function.item-id.skein markup.underline.link.skein" }
           }
         },
         {
