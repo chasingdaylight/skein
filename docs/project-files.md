@@ -196,7 +196,7 @@ expected = true
 | `open` | An issue or pull request a link of this type points to must be open: see [the forge](forge.md). |
 | `counts_as` | A link of this type counts as one of that type, for coverage: a tailoring as good as compliance. |
 | `excuses` | A link of this type excuses its target from the coverage of that type: shown as waived, counted neither way. |
-| `planning.role` | What a link of this type is to the schedule: `"precedes"` (finish to start: the target starts once the item has finished), `"parent"` (the item is part of its target), or `"blocks"` (recorded, not scheduled). |
+| `planning.role` | What a link of this type is to the schedule: `"precedes"` (finish to start: the target starts once the item has finished), `"follows"` (the same written on the later work: the item starts once the target has finished), `"parent"` (the item is part of its target), or `"blocks"` (recorded, not scheduled). |
 
 A standard's requirements, imported into a read-only source, are covered by the project's links to them; waivers and deviations are item types of the project's, linked to the requirement they relax:
 

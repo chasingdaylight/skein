@@ -116,5 +116,5 @@ test "the schema: roles name attributes of the right kind, link roles are known"
     try expectContains(out, "there is no attribute 'days' (declare it under [attributes])");
     try expectContains(out, "the attribute 'mode' may only have the values \"fixed\" and \"float\"");
     try expectContains(out, "when");
-    try expectContains(out, "expected \"precedes\", \"parent\" or \"blocks\"");
+    try expectContains(out, "expected \"precedes\", \"follows\", \"parent\" or \"blocks\"");
 }

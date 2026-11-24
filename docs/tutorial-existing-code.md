@@ -22,7 +22,7 @@ In the root of the repository:
 
 ```text
 $ skein init
-skein: a project in ., with 0 documents to start from; 'skein check' checks it; AGENTS.md tells coding agents about skein
+skein: a project in ., with 0 documents to start from; 'skein check' checks it; AGENTS.md tells coding agents about Skein
 ```
 
 `skein init` writes two files. `.skein/config.toml` is the project's configuration, and the directory `.skein/` is what makes the repository a Skein project:

@@ -123,16 +123,16 @@ estimate = "effort"
 assignees = "owner"
 ```
 
-Two link types tie the work together. `precedes` orders it: the work it names starts once this work has finished. `delivers` ties work to the requirements it meets, and is expected of every requirement, so that a requirement with no work planned for it shows in `skein coverage`:
+Two link types tie the work together. `after` orders it: this work starts once the work it names has finished. Its role, `follows`, is what makes it part of the schedule; a project that would rather write the order on the earlier work gives a link type the role `precedes` instead. `delivers` ties work to the requirements it meets, and is expected of every requirement, so that a requirement with no work planned for it shows in `skein coverage`:
 
 ```toml
-# .skein/links/precedes.toml
-description = "The work it names starts once this work has finished"
+# .skein/links/after.toml
+description = "This work starts once the work it names has finished"
 from = ["task"]
 to = ["task"]
 
 [planning]
-role = "precedes"
+role = "follows"
 ```
 
 ```toml
@@ -169,11 +169,11 @@ The plan is a document like the others. Its work items are list entries with mar
 
 ## Work
 
-- %task[t.sensors start=2027-03-01 days=5 owner=ann precedes=t.firmware delivers=REQ-001,REQ-002] Choose the sensors and wire a prototype.
-- %task[t.radio start=2027-03-01 days=8 owner=bob precedes=t.firmware delivers=REQ-003] Get a radio link to the farm's gateway.
-- %task[t.firmware days=10 owner=ann precedes=t.power,t.field delivers=REQ-001,REQ-002,REQ-003] Write the firmware that measures and sends every hour.
-- %task[t.power days=6 owner=bob precedes=t.field delivers=REQ-004] Measure the power use and size the battery and panel.
-- %task[t.field days=0] The station goes to the field.
+- %task[t.sensors start=2027-03-01 days=5 owner=ann delivers=REQ-001,REQ-002] Choose the sensors and wire a prototype.
+- %task[t.radio start=2027-03-01 days=8 owner=bob delivers=REQ-003] Get a radio link to the farm's gateway.
+- %task[t.firmware days=10 owner=ann after=t.sensors,t.radio delivers=REQ-001,REQ-002,REQ-003] Write the firmware that measures and sends every hour.
+- %task[t.power days=6 owner=bob after=t.firmware delivers=REQ-004] Measure the power use and size the battery and panel.
+- %task[t.field days=0 after=t.firmware,t.power] The station goes to the field.
 
 ## Schedule
 
@@ -213,9 +213,9 @@ critical = false
 
 ```text
 $ skein check
-.skein/resources.toml: warning: bob has 24.0 hours of work in the week of 2027-03-08 (2027-W10), and 20.0 hours to work
-.skein/resources.toml: warning: bob has 32.0 hours of work in the week of 2027-03-29 (2027-W13), and 20.0 hours to work
-.skein/resources.toml: warning: bob has 40.0 hours of work in the week of 2027-03-01 (2027-W09), and 20.0 hours to work
+.skein/resources.toml: warning: bob: in the week of 2027-03-01 (2027-W09), 40.0 hours of work and 20.0 hours to work
+.skein/resources.toml: warning: bob: in the week of 2027-03-08 (2027-W10), 24.0 hours of work and 20.0 hours to work
+.skein/resources.toml: warning: bob: in the week of 2027-03-29 (2027-W13), 32.0 hours of work and 20.0 hours to work
 skein: station: no problems, 3 warnings (11 items of 3 types, 3 link types, 0 profiles, 0 citations)
 
 $ skein load

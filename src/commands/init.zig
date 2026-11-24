@@ -49,7 +49,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
         if (options.templates.len == 1) "" else "s",
         try std.mem.join(arena, " and ", options.templates),
     });
-    const told = if (agents_file.len == 0) "" else try arena.print("; {s} tells coding agents about skein", .{agents_file});
+    const told = if (agents_file.len == 0) "" else try arena.print("; {s} tells coding agents about Skein", .{agents_file});
     return .{ .text = try arena.print("skein: a project in {s}{s}, with {d} document{s} to start from; 'skein check' checks it{s}\n", .{
         options.root,
         from,

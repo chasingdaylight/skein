@@ -73,6 +73,9 @@ pub const Mode = enum { fixed, float };
 pub const LinkRole = enum {
     /// finish to start: the target starts once the item has finished
     precedes,
+    /// start to finish, written on the later work: the item starts once the
+    /// target has finished
+    follows,
     /// the item is part of its target
     parent,
     /// the item blocks its target, without scheduling it
@@ -112,11 +115,11 @@ pub fn read(r: Reader, attributes: []const Attribute) Reader.Error!Planning {
 pub fn readLink(r: Reader) Reader.Error!?LinkRole {
     try r.known(&.{"role"});
     const role = try r.string("role") orelse {
-        try r.complain("role", "a link type's [planning] needs a role: \"precedes\", \"parent\" or \"blocks\"", .{});
+        try r.complain("role", "a link type's [planning] needs a role: \"precedes\", \"follows\", \"parent\" or \"blocks\"", .{});
         return null;
     };
     return std.meta.stringToEnum(LinkRole, role) orelse {
-        try r.complain("role", "expected \"precedes\", \"parent\" or \"blocks\"", .{});
+        try r.complain("role", "expected \"precedes\", \"follows\", \"parent\" or \"blocks\"", .{});
         return null;
     };
 }

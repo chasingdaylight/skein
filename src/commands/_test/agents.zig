@@ -64,6 +64,6 @@ test "skein init writes AGENTS.md" {
     defer tmp.cleanup();
     const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
     const said = (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"langspec"} })).text;
-    try expectContains(said, "; AGENTS.md tells coding agents about skein\n");
+    try expectContains(said, "; AGENTS.md tells coding agents about Skein\n");
     try expectContains(try tmp.dir.readFileAlloc(testing.io, "AGENTS.md", a, .limited(1 << 16)), instructions.begin);
 }

@@ -134,24 +134,28 @@ fn gather(arena: std.mem.Allocator, out: *std.ArrayList(Work), after: *Edges, sc
         w.done = Schema.names.contains(p.doneStatuses(t.statuses, t.tombstone), item.effectiveStatus(t));
         try out.append(arena, w);
     }
-    // links: `a precedes b` makes a a predecessor of b; `a parent b` makes b a parent of a
+    // links: `a precedes b` and `b follows a` make a a predecessor of b; `a parent b` makes b a parent of a
     for (out.items[first..]) |*w| {
         var parents: std.ArrayList([]const u8) = .empty;
         for (w.item.links) |link| {
             const role = (schema.linkType(link.type_name) orelse continue).planning orelse continue;
             const target = (try targetOf(arena, graph, repo, network, link.target)) orelse continue;
             switch (role) {
-                .precedes => {
-                    const e = try after.getOrPut(arena, target);
-                    if (!e.found_existing) e.value_ptr.* = .empty;
-                    try e.value_ptr.append(arena, w.id);
-                },
+                .precedes => try addAfter(arena, after, target, w.id),
+                .follows => try addAfter(arena, after, w.id, target),
                 .parent => try parents.append(arena, target),
                 .blocks => {},
             }
         }
         w.parents = parents.items;
     }
+}
+
+/// Records `before` as a predecessor of `later`
+fn addAfter(arena: std.mem.Allocator, after: *Edges, later: []const u8, before: []const u8) std.mem.Allocator.Error!void {
+    const e = try after.getOrPut(arena, later);
+    if (!e.found_existing) e.value_ptr.* = .empty;
+    try e.value_ptr.append(arena, before);
 }
 
 /// What a link's target names among the work items: its `id` here, or, for

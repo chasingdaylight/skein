@@ -113,8 +113,20 @@ test "load: effort spread over the working days, shared among assignees, beside 
     try expectContains(try r.load(true), "\"week\": \"2027-W09\"");
 
     const out = try r.check();
-    try expectContains(out, "ann has 64.0 hours of work in the week of 2027-03-01 (2027-W09), and 32.0 hours to work");
+    try expectContains(out, "ann: in the week of 2027-03-01 (2027-W09), 64.0 hours of work and 32.0 hours to work");
     try expectContains(out, "no problems");
+}
+
+// req: planning.overallocation, principle.deterministic
+test "the weeks a person has too much work are warned of in their order" {
+    var r: Run = undefined;
+    // the later week has more hours, which as text sort before the earlier's
+    try r.init("%task[t.a start=2027-03-01 days=5 effort=10 owner=ann] Heavy.\n\n%task[t.c start=2027-03-08 days=1 effort=13 owner=ann] Heavier.\n", resources);
+    defer r.deinit();
+    const out = try r.check();
+    const first = std.mem.find(u8, out, "(2027-W09)") orelse return error.TestUnexpectedResult;
+    const second = std.mem.find(u8, out, "(2027-W10)") orelse return error.TestUnexpectedResult;
+    try testing.expect(first < second);
 }
 
 test "an assignee who is not listed, and a resources file with mistakes" {
