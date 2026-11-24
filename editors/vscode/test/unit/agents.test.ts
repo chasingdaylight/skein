@@ -14,7 +14,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "ut
 const agents = fs.readFileSync(path.join(root, "src", "agents.ts"), "utf8");
 
 test("skein mcp is offered to VS Code's MCP support, and can be turned off", () => {
-  assert.deepEqual(manifest.contributes.mcpServerDefinitionProviders, [{ id: "skein.mcp", label: "skein" }]);
+  assert.deepEqual(manifest.contributes.mcpServerDefinitionProviders, [{ id: "skein.mcp", label: "Skein" }]);
   assert.ok(agents.includes('registerMcpServerDefinitionProvider("skein.mcp"'));
   assert.ok(agents.includes('["mcp"]'));
   assert.equal(manifest.contributes.configuration.properties["skein.mcp.enabled"].default, true);

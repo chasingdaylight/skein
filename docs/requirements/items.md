@@ -5,7 +5,7 @@ The user documentation is in `docs/writing-items.md`.
 ## Reading Markdown
 
 %req[markdown.blocks]
-skein shall read the block structure of a Markdown file: headings, paragraphs, lists (including lists with blank lines between entries), fenced and indented code, block quotes, tables, HTML blocks and thematic breaks, each with its first and last line. The content of a code block is never read as anything else.
+Skein shall read the block structure of a Markdown file: headings, paragraphs, lists (including lists with blank lines between entries), fenced and indented code, block quotes, tables, HTML blocks and thematic breaks, each with its first and last line. The content of a code block is never read as anything else.
 
 %req[markdown.line-ends]
 A file with CRLF line ends shall give the same blocks, the same items and the same fingerprints as the same file with LF line ends.
@@ -25,7 +25,7 @@ The text of an item shall follow the marker on the same line, or start on the ne
 An entry of a list, at any depth, shall be an item when it starts with a marker.
 
 %req[items.marker.bold]
-A marker may be wrapped in bold, `**%rule[lex.comment syntax]** Text.`, so that it stands out where skein does not render the document; that is never required (emanspeaks, 2026-11-22, #163). `**` before the marker and right after its closing bracket shall be part of the marker, not of the item's text; `**` before the marker that is closed further on, in bold that goes on into the text (`**%rule[a] Text.**`), shall be the text's. The rendered marker is bold once: in place of the writer's `**` around it, and without bold of its own inside the writer's bold.
+A marker may be wrapped in bold, `**%rule[lex.comment syntax]** Text.`, so that it stands out where Skein does not render the document; that is never required (emanspeaks, 2026-11-22, #163). `**` before the marker and right after its closing bracket shall be part of the marker, not of the item's text; `**` before the marker that is closed further on, in bold that goes on into the text (`**%rule[a] Text.**`), shall be the text's. The rendered marker is bold once: in place of the writer's `**` around it, and without bold of its own inside the writer's bold.
 
 %req[items.marker.types-only]
 A marker shall be recognized only at the start of a paragraph or of a list entry, as a percent sign, a lowercase name and an opening bracket. The same characters elsewhere in a line, and anything in a code block, are text. A marker that names an item type the project does not have is reported.
@@ -85,7 +85,7 @@ The items of a project shall be read from every source, in the order of the sour
 ## References and citations
 
 %req[items.reference]
-In the text of an item, a marker without an item type, `%[id]` or `%[id words]`, shall be a reference to the item `id`. skein records its line and column, and the words to show in place of the ID. Nothing inside a code span or a code block is a reference, and neither is a percent sign directly after a letter or a digit. Double brackets (`[[page]]`) have no meaning in skein and are left to other tools.
+In the text of an item, a marker without an item type, `%[id]` or `%[id words]`, shall be a reference to the item `id`. Skein records its line and column, and the words to show in place of the ID. Nothing inside a code span or a code block is a reference, and neither is a percent sign directly after a letter or a digit. Double brackets (`[[page]]`) have no meaning in Skein and are left to other tools.
 
 %req[items.reference.narrative]
 A reference in narrative text, which is the text of a document that does not belong to any item, shall be read too, with its file, line and column. It is checked by the same rules as a reference inside an item, and `skein trace` shows it with the item it names. It is not part of any fingerprint and does not make any link suspect.

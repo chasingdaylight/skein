@@ -26,7 +26,7 @@ export class Views {
       return;
     }
     const dist = vscode.Uri.joinPath(this.extensionUri, "dist");
-    const panel = vscode.window.createWebviewPanel("skein.plan", "skein Plan", vscode.ViewColumn.Active, {
+    const panel = vscode.window.createWebviewPanel("skein.plan", "Skein Plan", vscode.ViewColumn.Active, {
       enableScripts: true,
       localResourceRoots: [dist],
       retainContextWhenHidden: true,
@@ -62,7 +62,7 @@ export class Views {
   async showCoverage(): Promise<void> {
     const result = await this.server.request<{ html: string }>("skein/coverage");
     if (!result) return;
-    this.coverage = this.show(this.coverage, "skein.coverage", "skein Coverage", result.html, () => (this.coverage = undefined));
+    this.coverage = this.show(this.coverage, "skein.coverage", "Skein Coverage", result.html, () => (this.coverage = undefined));
   }
 
   /** Shows the coverage and the plan again, where their views are open */

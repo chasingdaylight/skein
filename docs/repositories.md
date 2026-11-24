@@ -32,7 +32,7 @@ url = "https://github.com/example/compiler.git"
 ref = "main"
 ```
 
-skein fetches it with git, so any address and sign-in git has works, SSH included, into a cache under `.git/skein/repositories/` that is never committed. `ref` is the branch or tag that `--current` follows; without it, the default branch. With `--offline`, skein fetches nothing and reads what the cache holds.
+Skein fetches it with git, so any address and sign-in git has works, SSH included, into a cache under `.git/skein/repositories/` that is never committed. `ref` is the branch or tag that `--current` follows; without it, the default branch. With `--offline`, Skein fetches nothing and reads what the cache holds.
 
 ## Pinning: the state of the network
 
@@ -59,7 +59,7 @@ Someone looks at those, and the record is committed with whatever the change nee
 
 ## Networks that nest
 
-A repository can be the root of its own network and a member of others: a compiler's network, a website's that includes the compiler, a workspace's that includes both. Whichever project skein is run for decides what is read; the records of its members are not followed, only compared.
+A repository can be the root of its own network and a member of others: a compiler's network, a website's that includes the compiler, a workspace's that includes both. Whichever project Skein is run for decides what is read; the records of its members are not followed, only compared.
 
 Each repository says who it is, so that it is recognized whatever another project calls it:
 

@@ -1,6 +1,6 @@
 # tools/npr7150
 
-Writes NASA's NPR 7150.2D, NASA Software Engineering Requirements, as skein documents for the `npr7150.2d` template: each requirement (`SWE-nnn`) an item of the type `swe`, its lettered sub-parts its parts, its notes under it, with the classes and tailoring authority of Appendix C and a link to its page in the NASA Software Engineering Handbook (NASA-HDBK-2203), which interprets it. It took the template's text once, on 2026-11-22; that text is kept by hand from then on, when NASA revises the NPR (emanspeaks, 2026-11-22). The program is kept for reuse (reading NODIS pages, and the handbook's reading of each requirement from `guidance.csv`), not to be run again over the template.
+Writes NASA's NPR 7150.2D, NASA Software Engineering Requirements, as Skein documents for the `npr7150.2d` template: each requirement (`SWE-nnn`) an item of the type `swe`, its lettered sub-parts its parts, its notes under it, with the classes and tailoring authority of Appendix C and a link to its page in the NASA Software Engineering Handbook (NASA-HDBK-2203), which interprets it. It took the template's text once, on 2026-11-22; that text is kept by hand from then on, when NASA revises the NPR (emanspeaks, 2026-11-22). The program is kept for reuse (reading NODIS pages, and the handbook's reading of each requirement from `guidance.csv`), not to be run again over the template.
 
 ```sh
 bash tools/npr7150/fetch.sh /tmp/npr                  # chapters 2 to 5 and appendix C, from NODIS

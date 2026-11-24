@@ -30,7 +30,7 @@ export interface Api {
 
 export async function activate(context: vscode.ExtensionContext): Promise<Api> {
   updateTerminals(context);
-  const output = vscode.window.createOutputChannel("skein Language Server", { log: true });
+  const output = vscode.window.createOutputChannel("Skein Language Server", { log: true });
   const server = new Server(context, output);
   const tree = new ItemTree(server);
   const views = new Views(server, (id) => commands.openItem(tree, id), context.extensionUri);

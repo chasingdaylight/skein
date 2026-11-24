@@ -20,7 +20,7 @@ export class FormView {
     const first = await this.server.request<object | null>("skein/form", id ? { id } : type ? { type } : {});
     if (!first) return;
     const dist = vscode.Uri.joinPath(this.context.extensionUri, "dist");
-    const panel = vscode.window.createWebviewPanel("skein.form", id ? `Edit ${id}` : "New skein item", vscode.ViewColumn.Beside, {
+    const panel = vscode.window.createWebviewPanel("skein.form", id ? `Edit ${id}` : "New Skein item", vscode.ViewColumn.Beside, {
       enableScripts: true,
       localResourceRoots: [dist],
     });

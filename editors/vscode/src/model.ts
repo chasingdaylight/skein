@@ -83,7 +83,7 @@ export function describe(item: ItemInfo): string {
 
 /** The share of what is expected that is covered, for the status bar */
 export function coverageText(covered: number, total: number): { text: string; tooltip: string } {
-  if (total === 0) return { text: "$(checklist) skein", tooltip: "skein: nothing is expected" };
+  if (total === 0) return { text: "$(checklist) Skein", tooltip: "skein: nothing is expected" };
   const percent = Math.floor((covered * 100) / total);
   return { text: `$(checklist) ${percent}%`, tooltip: `skein: ${covered} of ${total} expected links and citations are there` };
 }

@@ -1,4 +1,4 @@
-// The tree of items in the side bar (the Explorer's "skein Items"), from
+// The tree of items in the side bar (the Explorer's "Skein Items"), from
 // the server's `skein/items`.
 
 import * as vscode from "vscode";

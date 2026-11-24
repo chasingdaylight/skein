@@ -7,7 +7,7 @@ maturity = "D"
 
 # Software configuration management plan
 
-How the software is kept under configuration management (%[SWE-079]), after handbook topic 5.06. With skein, the items and documents are in git: baselines are its tags (`skein baseline`), and changes are its commits and pull requests.
+How the software is kept under configuration management (%[SWE-079]), after handbook topic 5.06. With Skein, the items and documents are in git: baselines are its tags (`skein baseline`), and changes are its commits and pull requests.
 
 ## Organization and responsibilities
 

@@ -1,8 +1,8 @@
-# skein
+# Skein
 
-skein keeps requirements, specifications and their traceability as plain text in git. An item is a paragraph of a Markdown document, or a file of its own, with a stable ID, a type and typed links to other items. Code and tests cite the items they implement and check. skein reads all of it and answers the questions a project keeps asking: is everything consistent, what does this rest on, what is not tested yet, what changed, and what does the change reach.
+Skein keeps requirements, specifications and their traceability as plain text in git. An item is a paragraph of a Markdown document, or a file of its own, with a stable ID, a type and typed links to other items. Code and tests cite the items they implement and check. Skein reads all of it and answers the questions a project keeps asking: is everything consistent, what does this rest on, what is not tested yet, what changed, and what does the change reach.
 
-There is no database and no server. Everything skein knows is in files you can read, review and merge like code.
+There is no database and no server. Everything Skein knows is in files you can read, review and merge like code.
 
 ```markdown
 %rule[lex.comment syntax final] A line comment starts with `//` and ends with the line.
@@ -29,13 +29,13 @@ Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as
 | [Other repositories](repositories.md) | Items of other repositories, `pin`, and the state of the network. |
 | [Test results](results.md) | Reading test results, and what they say of each item. |
 | [The forge](forge.md) | Issues and pull requests, checked against GitHub. |
-| [Templates](templates.md) | Common ways of working, built into skein: a project names one in one line. |
+| [Templates](templates.md) | Common ways of working, built into Skein: a project names one in one line. |
 | [Importing](importing.md) | Bringing in Doorstop documents and CSV files. |
-| [Design](design.md) | What skein is for, how it is built, and what is planned. |
-| [Requirements](requirements/readme.md) | What skein is required to do, written in skein and checked by skein. |
+| [Design](design.md) | What Skein is for, how it is built, and what is planned. |
+| [Requirements](requirements/readme.md) | What Skein is required to do, written in Skein and checked by Skein. |
 
 The requirements pages are produced by `skein render` from the same files that `skein check` checks, so they show what a rendered project looks like.
 
 ## Status
 
-skein is early and its version is 0.x: the file formats can still change. The core, the command line, rendering, links across repositories, tested examples, test results and the language server work and are tested on every platform. Planning and the forge adapters are next; the [design](design.md) describes all of it.
+Skein is early and its version is 0.x: the file formats can still change. The core, the command line, rendering, links across repositories, tested examples, test results and the language server work and are tested on every platform. Planning and the forge adapters are next; the [design](design.md) describes all of it.

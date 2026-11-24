@@ -5,7 +5,7 @@ revision = "Draft"
 
 # Peer reviews and inspections
 
-The peer reviews of requirements, plans, design, code and test procedures (%[SWE-087], %[SWE-088], %[SWE-089]), after handbook topic 5.03. skein records reviews of links (`skein review`) and approvals (`skein approve`); this record holds each review's data.
+The peer reviews of requirements, plans, design, code and test procedures (%[SWE-087], %[SWE-088], %[SWE-089]), after handbook topic 5.03. Skein records reviews of links (`skein review`) and approvals (`skein approve`); this record holds each review's data.
 
 ## Each review
 

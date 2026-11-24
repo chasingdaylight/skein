@@ -97,7 +97,7 @@ export class Server {
       },
       outputChannel: this.output,
     };
-    const c = new LanguageClient("skein", "skein Language Server", serverOptions, clientOptions);
+    const c = new LanguageClient("skein", "Skein Language Server", serverOptions, clientOptions);
     try {
       await c.start();
       this.client = c;

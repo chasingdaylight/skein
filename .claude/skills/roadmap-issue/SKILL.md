@@ -5,7 +5,7 @@ description: File skein issues at their place in the skein Roadmap project, keep
 
 # Issues and the Roadmap
 
-The order of all work is the GitHub Project "skein Roadmap" (chasingdaylight, project 1): the first row that is not done is next.
+The order of all work is the GitHub Project "Skein Roadmap" (chasingdaylight, project 1): the first row that is not done is next.
 
 - **The board:** `bash tools/agent/board.sh` lists the rows not done, in order, with their status and next action.
 - **Filing:** write the body to a file, ending with `_Filed by Claude at the request of emanspeaks._`, then `bash tools/agent/file-issue.sh "Title" BODY_FILE "MILESTONE" AFTER_NUMBER [BLOCKER...]`. It files the issue as the app with the labels `feature` and `agent`, puts it after the row of `AFTER_NUMBER`, sets "Next action: agent", and records blocked-by links. Use the milestone of the issue it follows. For other labels (`housekeeping`, `backlog`), `gh issue edit N --add-label`.

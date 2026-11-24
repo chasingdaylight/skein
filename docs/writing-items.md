@@ -31,11 +31,11 @@ The marker is a percent sign, the item type, and in brackets the ID and then opt
 | a bare word | The category or the status, whichever of the type's it is; at most one of each. |
 | `key=value` | An attribute, the verification method, or links of the type `key`. Several values are separated by commas; a value with spaces is put in double quotes. |
 
-A marker may be wrapped in bold, so that it stands out on a forge or in an editor's preview, where skein does not render it: `**%rule[lex.space syntax]** White space separates tokens.` It is never needed. The bold may also go on into the text, `**%rule[lex.space syntax] White space separates tokens.**`, and then it is the text's. Either way `skein render` writes the marker bold once, not bold inside bold.
+A marker may be wrapped in bold, so that it stands out on a forge or in an editor's preview, where Skein does not render it: `**%rule[lex.space syntax]** White space separates tokens.` It is never needed. The bold may also go on into the text, `**%rule[lex.space syntax] White space separates tokens.**`, and then it is the text's. Either way `skein render` writes the marker bold once, not bold inside bold.
 
 A marker is recognized only at the start of a paragraph or of a list entry, as a percent sign, a lowercase name and an opening bracket. Anywhere else in a line, and inside a code block, the same characters are text. A marker that names an item type the project does not have is reported, so a misspelled type is not silently treated as prose.
 
-The marker reads as plain text wherever Markdown is shown without skein, and `grep '%rule\['` finds every rule.
+The marker reads as plain text wherever Markdown is shown without Skein, and `grep '%rule\['` finds every rule.
 
 **The text of an item** is the rest of the paragraph or list entry that the marker is in. When the marker is alone on its line, it is the block after the marker: a paragraph, a list, a code block, a table or a quote. In both cases the lists, code blocks, tables and quotes that follow directly are included. So a paragraph that ends in a colon keeps its list, and the next paragraph is narrative again unless it has its own marker.
 
@@ -112,11 +112,11 @@ A line comment is not a %[lex.token]; see %[lex.space white space].
 
 References work in narrative text as well as in items, so the introduction of a chapter, a heading or another document can point at a rule. `skein check` applies the same rules to them, and `skein trace` lists them under "Mentioned in". A reference inside an item is part of the content of that item. A reference in narrative text does not belong to any item, so it is not part of any fingerprint and does not make any link suspect.
 
-Nothing inside a code span or a code block is a reference, nor is a percent sign that follows a letter or a digit (`50%[1]`). The double brackets of wikis and site generators (`[[a page]]`) mean nothing to skein, so a document can use both. `skein check` reports a reference to an item that does not exist or is removed. A reference with a colon, `%[other:some.id]`, names an item of another repository, which the project declares: see [other repositories](repositories.md).
+Nothing inside a code span or a code block is a reference, nor is a percent sign that follows a letter or a digit (`50%[1]`). The double brackets of wikis and site generators (`[[a page]]`) mean nothing to Skein, so a document can use both. `skein check` reports a reference to an item that does not exist or is removed. A reference with a colon, `%[other:some.id]`, names an item of another repository, which the project declares: see [other repositories](repositories.md).
 
 An item renamed with `skein move` can keep its former IDs, as `aliases=lex.token` in its marker or `aliases = ["SRS-001"]` in its front matter. A reference, link or citation that uses a former ID still finds the item, and `skein check` warns that its ID has changed. A former ID stays taken, as a removed item's does.
 
-Inside code spans and code blocks nothing is a marker or a reference, so the examples on this page need nothing. To write one as plain text in running text, put a backslash before the percent sign: `\%rule[x]` and `\%[x]` are neither. Markdown itself reads `\%` as an escaped percent sign, so GitHub, site generators and skein's own rendering all show `%rule[x]` and `%[x]`.
+Inside code spans and code blocks nothing is a marker or a reference, so the examples on this page need nothing. To write one as plain text in running text, put a backslash before the percent sign: `\%rule[x]` and `\%[x]` are neither. Markdown itself reads `\%` as an escaped percent sign, so GitHub, site generators and Skein's own rendering all show `%rule[x]` and `%[x]`.
 
 ## Tested examples
 
@@ -186,6 +186,6 @@ lex.comment.block
 - A marker with nothing after it, one that is not closed or names no item type, a part named with a leading dot where that cannot work, and an item file without front matter.
 - A citation of an item that does not exist, is removed, or is of a type its citations may not name.
 
-## How skein reads Markdown
+## How Skein reads Markdown
 
-skein reads only the block structure of a file, to place items: headings, paragraphs, lists, fenced and indented code, block quotes, tables, HTML blocks and thematic breaks. What a block contains is left alone until a document is rendered.
+Skein reads only the block structure of a file, to place items: headings, paragraphs, lists, fenced and indented code, block quotes, tables, HTML blocks and thematic breaks. What a block contains is left alone until a document is rendered.

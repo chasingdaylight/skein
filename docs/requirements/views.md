@@ -5,7 +5,7 @@ The user documentation is in `docs/commands.md`.
 ## The command line
 
 %req[cli.commands]
-skein shall be one program that takes a command as its first argument. Without a command, and for `help`, it prints the commands and options. An unknown command is reported by name.
+Skein shall be one program that takes a command as its first argument. Without a command, and for `help`, it prints the commands and options. An unknown command is reported by name.
 
 %req[cli.options]
 An unknown option, an option that does not belong to the command, and an option that is missing its value shall each be reported by name, and the command shall do nothing.
@@ -57,10 +57,10 @@ For the items removed or changed in content, `skein impact` shall list every ite
 
 ## Markdown as HTML
 
-skein turns Markdown into HTML with code of its own, which nothing is fetched for. It covers what documents of requirements and specifications use, as GitHub shows it; it is not a complete CommonMark renderer.
+Skein turns Markdown into HTML with code of its own, which nothing is fetched for. It covers what documents of requirements and specifications use, as GitHub shows it; it is not a complete CommonMark renderer.
 
 %req[html.blocks]
-skein shall render the blocks it reads as HTML: paragraphs, block quotes (their content read as Markdown again), thematic breaks, and HTML blocks passed through as they are. Front matter is left out. A file with CRLF line ends gives the same HTML as with LF.
+Skein shall render the blocks it reads as HTML: paragraphs, block quotes (their content read as Markdown again), thematic breaks, and HTML blocks passed through as they are. Front matter is left out. A file with CRLF line ends gives the same HTML as with LF.
 
 %req[html.headings]
 A heading shall get an anchor as GitHub makes it: in lowercase, punctuation left out, spaces as hyphens; a second heading of the same name gets `-1`, a third `-2`. The first heading of level 1 gives the document its title.
@@ -80,7 +80,7 @@ Inline Markdown shall be rendered: emphasis and strong with `*` and `_` (not `_`
 ## Baselines
 
 %req[baseline.tag]
-`skein baseline NAME [--message TEXT]` shall make an annotated git tag `NAME` of the commit checked out, whose message starts with `skein baseline NAME`, then gives the message, and then what the project held: its number of items and what `skein coverage` counts. The tag is made in the local repository only; skein says how to share it. `skein diff` and `skein impact` take a baseline's name as they take any commit.
+`skein baseline NAME [--message TEXT]` shall make an annotated git tag `NAME` of the commit checked out, whose message starts with `skein baseline NAME`, then gives the message, and then what the project held: its number of items and what `skein coverage` counts. The tag is made in the local repository only; Skein says how to share it. `skein diff` and `skein impact` take a baseline's name as they take any commit.
 
 %req[baseline.refusals]
 `skein baseline` shall refuse, and make no tag, when the project is not in a git repository, when the name cannot be a tag, when a tag of that name exists, when the project has changes that are not committed, and when `skein check` reports problems: a baseline is of a committed state without problems.
@@ -91,7 +91,7 @@ Inline Markdown shall be rendered: emphasis and strong with `*` and `_` (not `_`
 ## Examples
 
 %req[examples.command]
-`skein examples --out DIR` shall write the code of each example that is not removed to a file of its own in `DIR`, named after its ID with the extension the example type gives for its language (else the language itself), and `examples.json`: for each, its ID, file, language, whether it must be accepted or rejected, the items it shows (its links of the type's link type, or all its links when the type gives none), and its source file and line. skein runs none of them.
+`skein examples --out DIR` shall write the code of each example that is not removed to a file of its own in `DIR`, named after its ID with the extension the example type gives for its language (else the language itself), and `examples.json`: for each, its ID, file, language, whether it must be accepted or rejected, the items it shows (its links of the type's link type, or all its links when the type gives none), and its source file and line. Skein runs none of them.
 
 ## Export
 
@@ -131,7 +131,7 @@ The site shall have a front page that lists its pages with their titles and file
 Every link and every reference to a file in the site shall be relative, and nothing shall be loaded from another address: the styles are in each page. So the site can be served under any address, or opened from disk.
 
 %req[render.generated]
-A fenced code block of the language `skein` in a document shall be a request for a page that skein generates from the graph: `skein render` puts the page in its place, as Markdown and as HTML alike, and its links lead to the items from the page they are on. A request skein cannot read is replaced by a note that says what is wrong. Removed items are never listed.
+A fenced code block of the language `skein` in a document shall be a request for a page that Skein generates from the graph: `skein render` puts the page in its place, as Markdown and as HTML alike, and its links lead to the items from the page they are on. A request Skein cannot read is replaced by a note that says what is wrong. Removed items are never listed.
 
 %req[render.generated.list]
 `list [TYPE...] [category=C] [status=S] [profile=P] [ATTRIBUTE=V]` shall give a table of the items that pass every condition given, in the order of the items: each with a link to it, its category, its status and the first paragraph of its text. A glossary is the list of the type of terms. With `columns=C,...`, the columns are those given instead, as a matrix's are: a table of models with their assessed factors, say.
@@ -164,7 +164,7 @@ A controlled document's front matter may name the item it is (`item`) and the ma
 A document that gives `document` (its identifier) and `revision` in TOML front matter shall be rendered with, under its first heading of level 1, a table of its identifier, its revision and its last change (the date, the author and the commit, linked on the forge when the project names one), and at its end a change record: each baseline in which its items changed, oldest first, with its date, the message given to `skein baseline`, and how many of its items were added, changed and removed since the baseline before. A rendered item file gives the date, author and commit of its last change in its front matter. A generated `documents` page lists the controlled documents with their identifier, title, revision and last change. All of it is read from git; outside a git repository there is none.
 
 %req[render.mermaid]
-A fenced code block of the language `mermaid` shall be drawn as a diagram in the pages of `--format html` and `--format document`, by mermaid.js built into skein (`vendor/mermaid`): a site has one copy of it, at its root, which only the pages with a diagram load; a standalone document with a diagram has it inside. Pages without a diagram are as they were. Markdown output leaves the block as it is, for a site generator to draw.
+A fenced code block of the language `mermaid` shall be drawn as a diagram in the pages of `--format html` and `--format document`, by mermaid.js built into Skein (`vendor/mermaid`): a site has one copy of it, at its root, which only the pages with a diagram load; a standalone document with a diagram has it inside. Pages without a diagram are as they were. Markdown output leaves the block as it is, for a site generator to draw.
 
 %req[render.documents]
 `skein render --format document --out DIR` shall write each document and item file as one HTML file of its own, under its own path: the same page as in the site, without the navigation, with its images put in it as `data:` addresses, and with a style sheet for printing. Nothing else is written.

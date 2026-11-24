@@ -71,7 +71,7 @@ On the ID of an item, wherever it is written (a reference, a link, a citation in
 Hovering over the ID of an item shall show its ID, type, category and status, its text, and its parts. The position is taken in the text the editor shows, saved or not.
 
 %req[lsp.completion]
-The server shall complete what is being written where skein reads it: the item type after a `%` at the start of a paragraph or list entry; the ID in a reference; after the ID of a marker, the categories, statuses and attributes of its type and the link types it may have; the value of a key of a marker (the items a link may point to, the statuses, the verification methods, the values of an attribute); and the ID after a citation marker in code and tests. A completion replaces the word being written. Removed items are not offered, and the new ID of a marker is not completed.
+The server shall complete what is being written where Skein reads it: the item type after a `%` at the start of a paragraph or list entry; the ID in a reference; after the ID of a marker, the categories, statuses and attributes of its type and the link types it may have; the value of a key of a marker (the items a link may point to, the statuses, the verification methods, the values of an attribute); and the ID after a citation marker in code and tests. A completion replaces the word being written. Removed items are not offered, and the new ID of a marker is not completed.
 
 %req[lsp.rename]
 Renaming an item from the editor shall do what `skein move` does, and be refused with its reason when `skein move` would refuse. It is refused while an open document of the project has changes that are not saved, since the rename is made in the files.
@@ -103,7 +103,7 @@ The request `skein/form` (`{ "id": ID }` or `{ "type": TYPE }`) shall give what 
 ## The VS Code extension
 
 %req[edit.vscode]
-A VS Code extension on the language server shall be skein's graphical interface, with the item tree, trace and coverage views, forms for items, and interactive planning views. (Design, section 9.)
+A VS Code extension on the language server shall be Skein's graphical interface, with the item tree, trace and coverage views, forms for items, and interactive planning views. (Design, section 9.)
 
 %req[vscode.server]
 The VS Code extension shall start `skein lsp` itself, the program it carries or the one `skein.path` names, and restart it when that setting changes or on the command; diagnostics, go to definition, references, hover, completion and rename then work with nothing to configure.

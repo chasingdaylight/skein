@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rank.sh: sets the Rank field of the skein Roadmap to each row's position,
+# rank.sh: sets the Rank field of the Skein Roadmap to each row's position,
 # changing only the rows whose Rank differs, 15 to a GraphQL request (larger
 # batches have been refused with 502).
 set -euo pipefail

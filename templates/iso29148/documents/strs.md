@@ -5,7 +5,7 @@ revision = "Draft"
 
 # Stakeholder requirements specification
 
-What the users and other stakeholders need of the system (ISO/IEC/IEEE 29148:2018, clause 9.4, in skein's words). Its requirements are items of the type `stakeholder`, `STK-001` and on, each linked by `refines` to the business requirements it serves.
+What the users and other stakeholders need of the system (ISO/IEC/IEEE 29148:2018, clause 9.4, in Skein's words). Its requirements are items of the type `stakeholder`, `STK-001` and on, each linked by `refines` to the business requirements it serves.
 
 ## Purpose, scope and overview
 

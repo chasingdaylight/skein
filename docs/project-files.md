@@ -1,6 +1,6 @@
 # The files of a project
 
-A project is a repository with a `.skein/` directory at its root. This page describes the files in it that skein reads so far. All of them are TOML; one file declares one thing, and a file's name is the name of what it declares. A name is lowercase letters, digits, `-` and `_`, starting with a letter. A key that skein does not know is reported, so a misspelled key is never ignored in silence.
+A project is a repository with a `.skein/` directory at its root. This page describes the files in it that Skein reads so far. All of them are TOML; one file declares one thing, and a file's name is the name of what it declares. A name is lowercase letters, digits, `-` and `_`, starting with a letter. A key that Skein does not know is reported, so a misspelled key is never ignored in silence.
 
 `skein check` reads all of this and reports every mistake with its file.
 
@@ -145,7 +145,7 @@ Days are working days of the project's calendar (below); without one, every day 
 
 ### The schedule: `.skein/schedule.toml`
 
-`skein schedule` computes the schedule and writes it to `.skein/schedule.toml`, which the project commits: tools that read the repository offline, and other scheduling tools, find every work item's dates there. skein writes it; it is not to be edited.
+`skein schedule` computes the schedule and writes it to `.skein/schedule.toml`, which the project commits: tools that read the repository offline, and other scheduling tools, find every work item's dates there. Skein writes it; it is not to be edited.
 
 ```toml
 [items."t.build"]

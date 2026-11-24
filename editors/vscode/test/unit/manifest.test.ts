@@ -19,7 +19,7 @@ test("every command has a title and is registered", () => {
   assert.ok(commands.length >= 8);
   for (const c of commands) {
     assert.ok(c.title, `${c.command} has a title`);
-    assert.equal(c.category, "skein");
+    assert.equal(c.category, "Skein");
     assert.ok(source.includes(`command("${c.command}"`) || source.includes(`registerCommand("${c.command}"`), `${c.command} is registered`);
   }
   // and every command named in a menu exists

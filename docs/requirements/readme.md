@@ -1,6 +1,6 @@
-# The requirements of skein
+# The requirements of Skein
 
-What skein is required to do, written in skein's own format: each paragraph with a `%req[...]` marker is a requirement, and the rest is narrative. skein's tests cite the requirements they check (`// req:` and the IDs, in the test files under `src/` and those of the VS Code extension), so that
+What Skein is required to do, written in Skein's own format: each paragraph with a `%req[...]` marker is a requirement, and the rest is narrative. Skein's tests cite the requirements they check (`// req:` and the IDs, in the test files under `src/` and those of the VS Code extension), so that
 
 ```text
 skein check
@@ -10,11 +10,11 @@ skein trace check.links
 
 run in this repository say whether the requirements are well formed, which of them have a test, and where a given one is tested.
 
-A requirement that names no status is implemented. One marked `planned` describes something `docs/design.md` commits skein to that the code does not do yet. It is here so that the plan is traced too, and it has no test.
+A requirement that names no status is implemented. One marked `planned` describes something `docs/design.md` commits Skein to that the code does not do yet. It is here so that the plan is traced too, and it has no test.
 
 | Document | Requirements of |
 | --- | --- |
-| [principles](principles.md) | What holds for all of skein. |
+| [principles](principles.md) | What holds for all of Skein. |
 | [project](project.md) | The `.skein/` directory: configuration and schema. |
 | [items](items.md) | How items, references and citations are written and read. |
 | [checking](checking.md) | What `skein check` reports. |
@@ -26,7 +26,7 @@ A requirement that names no status is implemented. One marked `planned` describe
 | [repositories](repositories.md) | Other repositories, `pin`, and the state of the network. |
 | [results](results.md) | Test results, and what they say of the items. |
 | [forge](forge.md) | Issues and pull requests on the forge. |
-| [templates](templates.md) | Templates built into skein. |
+| [templates](templates.md) | Templates built into Skein. |
 | [importing](importing.md) | `import doorstop`, `import csv`. |
 | [planned](planned.md) | What is to come. |
 

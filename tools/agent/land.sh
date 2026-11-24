@@ -3,7 +3,8 @@
 # Lands a change of an agent's on dev: the checks, a commit of the PATHs
 # named (never everything: emanspeaks works in this tree too) on the current
 # branch (not dev or main), a pull request into dev with the label, its
-# merge, and the issue closed (close) or commented on (keep). The model is
+# merge, and the issue closed (close) or commented on (keep); ISSUE - for a
+# change emanspeaks asked for without one. The model is
 # the one the agent runs on, for the commit's Co-Authored-By. Run from a
 # branch made for the change; the app's wrappers are outside the repository
 # (see CLAUDE.md).
@@ -54,7 +55,9 @@ git switch -q dev
 bash /c/scratch/github-apps/app-git.sh chasingdaylight pull -q --ff-only
 git branch -D "$branch" | tail -1
 git fetch -q --prune
-if [ "$close" = close ]; then
+if [ "$issue" = - ]; then
+  : # a change with no issue
+elif [ "$close" = close ]; then
   gh issue close "$issue" --comment "Landed on dev with #${url##*/}. _Posted by Claude at the request of emanspeaks._" < /dev/null | tail -1
 else
   gh issue comment "$issue" --body "Part of this landed on dev with #${url##*/}. _Posted by Claude at the request of emanspeaks._" < /dev/null | tail -1

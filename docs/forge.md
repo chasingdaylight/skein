@@ -28,7 +28,7 @@ Then `#97` is issue or pull request 97 of `example/spec`, and `other/repo#12` on
 open = true
 ```
 
-skein asks through `gh` when it is installed, so its sign-in is used, GitHub Enterprise included. Without `gh`, it calls GitHub's API itself, with the token in `GH_TOKEN` or `GITHUB_TOKEN` when one is set; public repositories need none. Nothing has to be installed for it.
+Skein asks through `gh` when it is installed, so its sign-in is used, GitHub Enterprise included. Without `gh`, it calls GitHub's API itself, with the token in `GH_TOKEN` or `GITHUB_TOKEN` when one is set; public repositories need none. Nothing has to be installed for it.
 
 ## GitLab
 
@@ -39,7 +39,7 @@ repository = "group/sub/project"
 # url = "https://gitlab.example.com"   # for a self-managed server
 ```
 
-Everything above works the same: `#97` is issue 97 of the project, a merge request's approvals are read for `skein approve --from-pull-request`, and the planning fields (assignees, milestone and its due date, closed) are read and written back by `skein apply`. skein asks through `glab` when it is installed, so its sign-in is used; without it, it calls GitLab's API with the token in `GITLAB_TOKEN` when one is set (public projects need none). Forgejo's adapter is still to come.
+Everything above works the same: `#97` is issue 97 of the project, a merge request's approvals are read for `skein approve --from-pull-request`, and the planning fields (assignees, milestone and its due date, closed) are read and written back by `skein apply`. Skein asks through `glab` when it is installed, so its sign-in is used; without it, it calls GitLab's API with the token in `GITLAB_TOKEN` when one is set (public projects need none). Forgejo's adapter is still to come.
 
 ## Rendered
 
@@ -56,7 +56,7 @@ skein: pull request 97, merged 2026-11-21: 3 items approved by ann, carol
 
 ## Offline
 
-What the forge said is kept in a cache under `.git/skein/forge/`, never committed. With `--offline`, skein asks nothing and uses the cache; when the forge cannot be reached, it uses the cache too. What neither knows is not checked, and `check` says so with a warning:
+What the forge said is kept in a cache under `.git/skein/forge/`, never committed. With `--offline`, Skein asks nothing and uses the cache; when the forge cannot be reached, it uses the cache too. What neither knows is not checked, and `check` says so with a warning:
 
 ```text
 .skein/config.toml: warning: forge: 6 references to issues and pull requests are not checked: no network
@@ -86,7 +86,7 @@ skein publish --to gitlab:group/project
 
 `skein publish` creates the labels, milestones and issues with their comments, and closes the ones that were closed. Each issue says where it came from and who opened it. Pull and merge requests are not re-created, since a forge cannot make one without its branches, and nobody is assigned, as the new forge may not know the people. `.skein/forge-map.toml`, which the project commits, records where each issue went (`"github:example/spec#24" = "gitlab:group/project#7"`). ### References after a move
 
-Older items and commits say `#24`, which is now the new forge's issue 24, or, written for the old forge, what became issue 7 there. Name the old forge once, and skein reads the map:
+Older items and commits say `#24`, which is now the new forge's issue 24, or, written for the old forge, what became issue 7 there. Name the old forge once, and Skein reads the map:
 
 ```toml
 [forge]

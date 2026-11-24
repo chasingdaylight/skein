@@ -5,7 +5,7 @@ revision = "Draft"
 
 # System requirements specification
 
-What the system shall do and be (ISO/IEC/IEEE 29148:2018, clause 9.5, in skein's words). Its requirements are items of the type `system`, `SYS-001` and on, each linked by `derives` to the stakeholder requirements it meets, with its category and verification method.
+What the system shall do and be (ISO/IEC/IEEE 29148:2018, clause 9.5, in Skein's words). Its requirements are items of the type `system`, `SYS-001` and on, each linked by `derives` to the stakeholder requirements it meets, with its category and verification method.
 
 ## Introduction
 
