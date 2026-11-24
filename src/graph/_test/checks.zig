@@ -88,10 +88,10 @@ test "categories, statuses and verification methods" {
     );
     _ = try f.check();
     try f.expectProblems(
-        \\spec/a.md:1:1: error: a.none: a 'rule' needs a category
+        \\spec/a.md:1:1: error: a.none: an item of type 'rule' needs a category
         \\spec/a.md:4:1: error: a.wrong: 'frozen' is neither a category nor a status of a 'rule'
         \\spec/a.md:4:1: error: a.wrong: 'semantics' is neither a category nor a status of a 'rule'
-        \\spec/a.md:4:1: error: a.wrong: a 'rule' needs a category
+        \\spec/a.md:4:1: error: a.wrong: an item of type 'rule' needs a category
         \\spec/a.md:7:1: error: a.term: 'syntax' is neither a category nor a status of a 'term'
         \\spec/a.md:7:1: error: a.term: 'test' is not a verification method of a 'term'
         \\
@@ -149,7 +149,7 @@ test "links: to nothing, to the wrong type, from the wrong type, missing, to a r
         \\spec/a.md:6:1: error: a.rule: verifies: 'a.term' is a 'term', which this link cannot point to
         \\spec/a.md:9:1: error: t.one: verifies: 'a.term' is a 'term', which this link cannot point to
         \\spec/a.md:9:1: error: t.one: verifies: there is no item 'no.such'
-        \\spec/a.md:12:1: error: t.two: a 'test' needs a 'verifies' link
+        \\spec/a.md:12:1: error: t.two: an item of type 'test' needs a link of type 'verifies'
         \\
     );
 }

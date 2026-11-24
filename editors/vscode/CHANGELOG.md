@@ -12,6 +12,7 @@
 - **New Item** and **Edit Item**: a form of an item's category, status, attributes and links, written into its file.
 - **Graph**: the network of items and links, with search, filters, an item's trace beside it and the actions on items.
 - VS Code's Markdown preview shows a saved document as `skein render` writes it.
+- Highlighting, tuned on a real specification in the built-in themes: the marker of a tested example on its fence's line is highlighted; a marker only at the start of a line, a list entry or a quote, where Skein reads one; an item's ID in a color of its own (`entity.name.function.item-id.skein`, which was `entity.name.tag.item-id.skein`), apart from the item type's.
 - Commands **Trace**, **Show Coverage**, **Show Plan**, **Go to Item...**, **Refresh Items** and **Restart the Language Server**; settings `skein.codeLens.enabled`, `skein.statusBar.coverage` and `skein.trace.server`.
 
 ## 0.1.0

@@ -23,9 +23,9 @@ This extension brings the `skein` program and its language server into VS Code: 
 - **Coverage:** the coverage page, in a view, and the share of what is expected that is covered in the status bar, which opens the view.
 - **The `skein` program:** the extension carries it for Windows, Linux, Alpine and macOS (x86_64 and arm64) and puts it on the `PATH` of new terminals in VS Code, so `skein check` works there with nothing else installed. Open a new terminal after installing.
 - **Markdown preview:** VS Code's preview of a saved document shows it as `skein render` writes it: markers as the item's ID with its category and status, references as links to the items, unresolved references marked, and generated pages (lists, matrices, coverage, Gantt charts) in place. While a document has unsaved changes, the preview shows it as written.
-- **Highlighting:** in Markdown, markers (`%type[id words key=value]`) and references (`%[id]`, `%[id words]`) stand out from the prose; nothing inside a code span or a code block is highlighted, as Skein reads nothing there.
+- **Highlighting:** in Markdown, markers (`%type[id words key=value]`) and references (`%[id]`, `%[id words]`) stand out from the prose; nothing inside a code span or a code block is highlighted, as Skein reads nothing there, except the marker of a tested example on the line of its fence (`` ```cesium %example[.ok accepts] ``). A marker is highlighted only at the start of a line, of a list entry or of a quote, where Skein reads one; an example's code is shown as code, without its language's own highlighting.
 
-The colors and fonts of the views come from your color theme. To change those of the highlighting, use `editor.tokenColorCustomizations` with the scopes `keyword.other.item-type.skein`, `entity.name.tag.item-id.skein`, `constant.language.item-word.skein`, `entity.other.attribute-name.skein` and `string.other.link.title.skein`.
+The colors and fonts of the views come from your color theme. To change those of the highlighting, use `editor.tokenColorCustomizations` with the scopes `keyword.other.item-type.skein`, `entity.name.function.item-id.skein`, `constant.language.item-word.skein`, `entity.other.attribute-name.skein` and `string.other.link.title.skein`.
 
 ## Commands
 

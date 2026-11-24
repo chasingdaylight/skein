@@ -105,7 +105,7 @@ fn checkOwn(ctx: Context, item: *const Item, item_type: *const Schema.ItemType) 
         }
     } else if (item_type.categories.len > 0 and !item.isTombstone(item_type) and item_type.example == null) {
         // an example without one is one that must be accepted
-        try ctx.problem(item, 0, "a '{s}' needs a category", .{item_type.name});
+        try ctx.problem(item, 0, "an item of type '{s}' needs a category", .{item_type.name});
     }
     if (item.status) |s| {
         if (!Schema.names.contains(item_type.statuses, s)) {
@@ -180,7 +180,7 @@ fn checkLinks(ctx: Context, item: *const Item, item_type: *const Schema.ItemType
         const has = for (item.links) |link| {
             if (std.mem.eql(u8, link.type_name, link_type.name)) break true;
         } else false;
-        if (!has) try ctx.problem(item, 0, "a '{s}' needs a '{s}' link", .{ item.type_name, link_type.name });
+        if (!has) try ctx.problem(item, 0, "an item of type '{s}' needs a link of type '{s}'", .{ item.type_name, link_type.name });
     }
 }
 
