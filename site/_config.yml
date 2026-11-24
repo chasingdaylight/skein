@@ -38,6 +38,10 @@ defaults:
 nav:
   - title: Overview
     url: /
+  - title: "Tutorial: existing code"
+    url: /tutorial-existing-code.html
+  - title: "Tutorial: planning"
+    url: /tutorial-planning.html
   - title: Writing items
     url: /writing-items.html
   - title: Project files
@@ -46,6 +50,14 @@ nav:
     url: /commands.html
   - title: Reviewing
     url: /reviewing.html
+  - title: Other repositories
+    url: /repositories.html
+  - title: Test results
+    url: /results.html
+  - title: The forge
+    url: /forge.html
+  - title: Templates
+    url: /templates.html
   - title: Importing
     url: /importing.html
   - title: Design
