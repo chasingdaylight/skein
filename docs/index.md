@@ -18,6 +18,13 @@ skein: example: no problems (24 items of 2 types, 1 link types, 1 profiles, 31 c
 
 Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as one program for Linux, macOS and Windows, with nothing else to install. For VS Code there is the extension `chasingdaylight.skein`, which highlights markers and references in Markdown and brings the `skein` program with it, on the `PATH` of its terminals.
 
+## Where to start
+
+Two tutorials, each a small project from nothing to a working setup, every command run as shown:
+
+- [Skein in a project that has code](tutorial-existing-code.md): requirements written down for a program that exists, cited by its code and tests; what is tested, what a change reaches, a site of it.
+- [Planning a project before the code](tutorial-planning.md): needs, requirements and the work that meets them, with people, a calendar, a schedule, a Gantt chart and a board.
+
 ## The documentation
 
 | Page | What it covers |
@@ -38,4 +45,4 @@ The requirements pages are produced by `skein render` from the same files that `
 
 ## Status
 
-Skein is early and its version is 0.x: the file formats can still change. The core, the command line, rendering, links across repositories, tested examples, test results and the language server work and are tested on every platform. Planning and the forge adapters are next; the [design](design.md) describes all of it.
+Skein is early and its version is 0.x: the file formats can still change. The core, the command line, rendering, links across repositories, tested examples, test results, templates, planning, the forge adapters for GitHub and GitLab, the language server and the VS Code extension work and are tested on every platform. The [design](design.md) describes all of it, and what is still to come.
