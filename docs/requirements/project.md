@@ -26,7 +26,7 @@ Each item type, link type and profile shall be declared by one TOML file, in `.s
 An unknown key, in the configuration or in a schema file, shall be reported with the file and the key.
 
 %req[project.toml]
-The files of `.skein/` and the front matter of items shall be TOML, read by the TOML reader that is part of skein: tables, arrays of tables, inline tables, strings of all four kinds, integers, floats, booleans, and dates and times.
+The files of `.skein/` and the front matter of items shall be TOML, read by the TOML reader that is part of Skein: tables, arrays of tables, inline tables, strings of all four kinds, integers, floats, booleans, and dates and times.
 
 %req[project.toml.diagnostics]
 TOML that cannot be read shall be reported with its file, line and column, and a description of the error.
@@ -64,7 +64,7 @@ A link type shall declare which item types its links may start at and which they
 A profile shall select items by any of: item types, categories, statuses, and attributes that must have one of the given values. An item is in the profile when it meets every condition.
 
 %req[schema.reserved-names]
-No attribute or link type shall have the name of a key that skein itself reads (`id`, `type`, `status`, `category`, `verification`), and no attribute shall have the name of a link type.
+No attribute or link type shall have the name of a key that Skein itself reads (`id`, `type`, `status`, `category`, `verification`), and no attribute shall have the name of a link type.
 
 %req[schema.cross-check]
 References between parts of the schema shall be checked. A link type, a profile, a source or a citation set that names an item type the schema does not have is reported. So is a profile that names a category, status or attribute that none of its item types has.

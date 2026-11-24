@@ -5,7 +5,7 @@ revision = "Draft"
 
 # Software requirements specification
 
-What the software shall do and be (ISO/IEC/IEEE 29148:2018, clause 9.6, in skein's words). Its requirements are items of the type `software`, `SRS-001` and on, each linked by `allocates` to the system requirement it comes from, with its category and verification method.
+What the software shall do and be (ISO/IEC/IEEE 29148:2018, clause 9.6, in Skein's words). Its requirements are items of the type `software`, `SRS-001` and on, each linked by `allocates` to the system requirement it comes from, with its category and verification method.
 
 ## Introduction
 

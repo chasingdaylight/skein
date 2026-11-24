@@ -12,7 +12,7 @@ A project shall declare each other repository in `.skein/config.toml` under `[[r
 ## The record
 
 %req[network.record]
-The recorded state shall be in `.skein/network.toml`, a file skein writes and the project commits: for each repository, by its short name, the commit and the fingerprint of its items at that commit, which is a hash over the ID and fingerprint of each item, in order of ID. A record that skein cannot read is reported, and a repository whose items at the recorded commit do not have the recorded fingerprint is reported as not what was pinned.
+The recorded state shall be in `.skein/network.toml`, a file Skein writes and the project commits: for each repository, by its short name, the commit and the fingerprint of its items at that commit, which is a hash over the ID and fingerprint of each item, in order of ID. A record that Skein cannot read is reported, and a repository whose items at the recorded commit do not have the recorded fingerprint is reported as not what was pinned.
 
 %req[pin.command]
 `skein pin [NAME [REV]]` shall record the commit `REV` of the repository `NAME`, or the commit its checkout has checked out, or do so for each repository when no name is given, and write the record. For a repository pinned before at another commit, it says how many items were added, removed and changed between the two, and which of the removed and changed items the project's items link or refer to.
@@ -22,7 +22,7 @@ The recorded state shall be in `.skein/network.toml`, a file skein writes and th
 
 ## Networks that nest
 
-A repository can be the root of its own network and a member of others: a compiler's, a website's that includes the compiler, a workspace's that includes both. The project skein is run for decides which commits are read.
+A repository can be the root of its own network and a member of others: a compiler's, a website's that includes the compiler, a workspace's that includes both. The project Skein is run for decides which commits are read.
 
 %req[network.identity]
 A repository shall be known by the `id` its own configuration declares, not by the short names others give it. Two declared repositories with the same identity, and a declared repository that is the project itself, are reported. When a member's own record has a repository at another commit than this network has it, that is a warning, and this network's commit is the one read.

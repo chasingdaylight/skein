@@ -8,7 +8,7 @@ Work as items: their planning attributes, the links that order them, and their s
 Work shall be items with planning attributes (dates or durations, effort, assignees), linked to each other and to the product items they serve, scheduled from their dependencies, with the critical path computed. (Design, section 10.1.)
 
 %req[planning.roles]
-An item type shall be work when it has a `[planning]` table, which names the attribute that holds each planning role: `start` and `finish` (dates), `duration`, `estimate`, `remaining` and `lag` (whole days, integers), `assignees`, `priority`, `milestone`, and `mode`. skein names no attribute itself. A role that names no attribute of the type, or one of another kind than the role takes, and a key that is no role, are problems of the schema. (emanspeaks, 2026-11-21, on #85.)
+An item type shall be work when it has a `[planning]` table, which names the attribute that holds each planning role: `start` and `finish` (dates), `duration`, `estimate`, `remaining` and `lag` (whole days, integers), `assignees`, `priority`, `milestone`, and `mode`. Skein names no attribute itself. A role that names no attribute of the type, or one of another kind than the role takes, and a key that is no role, are problems of the schema. (emanspeaks, 2026-11-21, on #85.)
 
 %req[planning.link-roles]
 A link type shall take part in the schedule by its `[planning] role`: `precedes` (finish to start: the target starts once the item has finished, plus the target's lag), `parent` (the item is part of its target), or `blocks` (recorded, not scheduled). Any other role is a problem of the schema.
@@ -28,7 +28,7 @@ A work item shall be scheduled in one of two modes, the value of its `mode` attr
 The schedule shall give each scheduled item its slack, the working days it can finish later before an item after it or the end of the plan moves, and mark as critical the items without slack: the critical path.
 
 %req[planning.stored]
-`skein schedule` shall write the schedule to `.skein/schedule.toml`, a file the project commits and the one source of the schedule offline: every work item with its start, finish, mode, where its dates come from (`written`, `computed`, or `unscheduled`), its slack and whether it is critical. `[schedule] also = ["json", "csv"]` in the configuration writes `.skein/schedule.json` and `.skein/schedule.csv` beside it, from the same schedule, for tools that read those; skein reads only the TOML. (emanspeaks, 2026-11-21, on #85.)
+`skein schedule` shall write the schedule to `.skein/schedule.toml`, a file the project commits and the one source of the schedule offline: every work item with its start, finish, mode, where its dates come from (`written`, `computed`, or `unscheduled`), its slack and whether it is critical. `[schedule] also = ["json", "csv"]` in the configuration writes `.skein/schedule.json` and `.skein/schedule.csv` beside it, from the same schedule, for tools that read those; Skein reads only the TOML. (emanspeaks, 2026-11-21, on #85.)
 
 %req[planning.schedule-checks]
 `skein check` shall report a fixed item that starts before its predecessors let it, an item that runs outside its parent's dates (a parent that spans its children excepted), an item that finishes after its milestone (the work item its milestone names), and a stored schedule, in any of its formats, that is missing or not the one the work items give now.
@@ -65,15 +65,15 @@ A branch of the plan shall be able to deviate from what the forge holds without 
 ## Progress
 
 %req[planning.views]
-skein shall draw Gantt charts, burndown and burnup charts, boards and a roadmap, as static pages: `render.gantt`, `render.burn`, `render.board` and `render.roadmap` in `docs/requirements/views.md`. (Design, section 10.3.)
+Skein shall draw Gantt charts, burndown and burnup charts, boards and a roadmap, as static pages: `render.gantt`, `render.burn`, `render.board` and `render.roadmap` in `docs/requirements/views.md`. (Design, section 10.3.)
 
 %req[planning.burn]
-skein shall count, for a milestone (the work item a work item's `milestone` role names) and each day of a span, the work in it (its scope) and the work done: in items, or in weight (an item's estimate, else its duration). Work is done when its status is one of `[planning] done` of its type, by default the type's last status before its tombstone. Each past day is the project as committed at the end of that day on the first-parent history of the checkout; today is the files as they are; so work added to or taken out of the milestone is a change of scope, and nothing is recorded by hand. (Design, section 10.3; emanspeaks, 2026-11-21.)
+Skein shall count, for a milestone (the work item a work item's `milestone` role names) and each day of a span, the work in it (its scope) and the work done: in items, or in weight (an item's estimate, else its duration). Work is done when its status is one of `[planning] done` of its type, by default the type's last status before its tombstone. Each past day is the project as committed at the end of that day on the first-parent history of the checkout; today is the files as they are; so work added to or taken out of the milestone is a change of scope, and nothing is recorded by hand. (Design, section 10.3; emanspeaks, 2026-11-21.)
 
 ## Resources
 
 %req[planning.resources]
-skein shall hold people's capacities and calendars, compute their load, and report overallocation. (Design, section 10.2.)
+Skein shall hold people's capacities and calendars, compute their load, and report overallocation. (Design, section 10.2.)
 
 %req[planning.people]
 The people who do the work shall be listed in `.skein/resources.toml`, each under a handle the project chooses (`[people.ann]`), with a name, a capacity (a `share` of full-time work, or `hours` a week, not both), the days of the week they work when not the project's, and the days they are `absent` (dates, and `[first, last]` pairs). A work item's assignees are handles; one that is not listed is a problem `check` reports.

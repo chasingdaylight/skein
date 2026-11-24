@@ -53,17 +53,17 @@ ${body}
 
 /** The planning view's page: its script, from the extension's files, draws it */
 export function planPage(scriptUri: string, cspSource: string, scriptNonce: string): string {
-  return scriptPage("skein Plan", planStyle, scriptUri, cspSource, scriptNonce);
+  return scriptPage("Skein Plan", planStyle, scriptUri, cspSource, scriptNonce);
 }
 
 /** The graph view's page, drawn by its script */
 export function graphPage(scriptUri: string, cspSource: string, scriptNonce: string): string {
-  return scriptPage("skein Graph", graphStyle, scriptUri, cspSource, scriptNonce);
+  return scriptPage("Skein Graph", graphStyle, scriptUri, cspSource, scriptNonce);
 }
 
 /** The item form's page, drawn by its script */
 export function formPage(scriptUri: string, cspSource: string, scriptNonce: string): string {
-  return scriptPage("skein Item", formStyle, scriptUri, cspSource, scriptNonce);
+  return scriptPage("Skein Item", formStyle, scriptUri, cspSource, scriptNonce);
 }
 
 // the form's fields in the theme's colors

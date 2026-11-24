@@ -1,7 +1,7 @@
 {
   "name": "skein",
-  "displayName": "skein",
-  "description": "Requirements and traceability in Markdown: skein's language server, the items in a tree, trace and coverage views, and the skein program.",
+  "displayName": "Skein",
+  "description": "Requirements and traceability in Markdown: Skein's language server, the items in a tree, trace and coverage views, and the skein program.",
   "version": "0.1.1",
   "publisher": "chasingdaylight",
   "license": "MIT",
@@ -62,18 +62,18 @@
     "mcpServerDefinitionProviders": [
       {
         "id": "skein.mcp",
-        "label": "skein"
+        "label": "Skein"
       }
     ],
     "languageModelTools": [
       {
         "name": "skein_item",
-        "displayName": "skein Item",
+        "displayName": "Skein Item",
         "toolReferenceName": "skeinItem",
         "canBeReferencedInPrompt": true,
         "icon": "$(symbol-key)",
-        "userDescription": "The skein item under the cursor, or the one named, with its links, references, citations, results and all above and below it.",
-        "modelDescription": "Gives the trace of a skein item (a requirement, rule, test or other item kept in the repository's Markdown with a %type[ID ...] marker): its type, status, text, attributes, links to and from other items, references, citations in code and tests, approvals, test results, and every item above and below it. Without an ID, the item under the cursor in the active editor. Use it before changing an item or what traces to it.",
+        "userDescription": "The Skein item under the cursor, or the one named, with its links, references, citations, results and all above and below it.",
+        "modelDescription": "Gives the trace of a Skein item (a requirement, rule, test or other item kept in the repository's Markdown with a %type[ID ...] marker): its type, status, text, attributes, links to and from other items, references, citations in code and tests, approvals, test results, and every item above and below it. Without an ID, the item under the cursor in the active editor. Use it before changing an item or what traces to it.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -89,7 +89,7 @@
       "explorer": [
         {
           "id": "skein.items",
-          "name": "skein Items",
+          "name": "Skein Items",
           "when": "skein.project"
         }
       ]
@@ -98,74 +98,74 @@
       {
         "command": "skein.showVersion",
         "title": "Show Version",
-        "category": "skein"
+        "category": "Skein"
       },
       {
         "command": "skein.restartServer",
         "title": "Restart the Language Server",
-        "category": "skein"
+        "category": "Skein"
       },
       {
         "command": "skein.refreshItems",
         "title": "Refresh Items",
-        "category": "skein",
+        "category": "Skein",
         "icon": "$(refresh)"
       },
       {
         "command": "skein.openItem",
         "title": "Go to Item...",
-        "category": "skein"
+        "category": "Skein"
       },
       {
         "command": "skein.trace",
         "title": "Trace",
-        "category": "skein",
+        "category": "Skein",
         "icon": "$(type-hierarchy)"
       },
       {
         "command": "skein.showCoverage",
         "title": "Show Coverage",
-        "category": "skein",
+        "category": "Skein",
         "icon": "$(checklist)"
       },
       {
         "command": "skein.showPlan",
         "title": "Show Plan",
-        "category": "skein",
+        "category": "Skein",
         "icon": "$(calendar)"
       },
       {
         "command": "skein.newItem",
         "title": "New Item...",
-        "category": "skein",
+        "category": "Skein",
         "icon": "$(add)"
       },
       {
         "command": "skein.editItem",
         "title": "Edit Item...",
-        "category": "skein",
+        "category": "Skein",
         "icon": "$(edit)"
       },
       {
         "command": "skein.showGraph",
         "title": "Show Graph",
-        "category": "skein",
+        "category": "Skein",
         "icon": "$(type-hierarchy-sub)"
       },
       {
         "command": "skein.writeAgentInstructions",
         "title": "Write Agent Instructions",
-        "category": "skein"
+        "category": "Skein"
       },
       {
         "command": "skein.copyId",
         "title": "Copy ID",
-        "category": "skein"
+        "category": "Skein"
       },
       {
         "command": "skein.pickLinked",
         "title": "Go to a Linked Item...",
-        "category": "skein"
+        "category": "Skein"
       }
     ],
     "menus": {
@@ -278,7 +278,7 @@
       ]
     },
     "configuration": {
-      "title": "skein",
+      "title": "Skein",
       "properties": {
         "skein.path": {
           "type": "string",
@@ -299,19 +299,19 @@
         "skein.mcp.enabled": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Offer `skein mcp`, skein's tools over the Model Context Protocol, to VS Code's AI agents in a trusted workspace: finding and tracing items, `check`, `coverage`, `impact`, and the editing commands."
+          "markdownDescription": "Offer `skein mcp`, Skein's tools over the Model Context Protocol, to VS Code's AI agents in a trusted workspace: finding and tracing items, `check`, `coverage`, `impact`, and the editing commands."
         },
         "skein.agents.file": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "markdownDescription": "The file **skein: Write Agent Instructions** writes the section on skein into, from the project's root. Empty: `AGENTS.md`, or `CLAUDE.md` where there is one and no `AGENTS.md`."
+          "markdownDescription": "The file **Skein: Write Agent Instructions** writes the section on Skein into, from the project's root. Empty: `AGENTS.md`, or `CLAUDE.md` where there is one and no `AGENTS.md`."
         },
         "skein.agents.skill": {
           "type": "boolean",
           "default": false,
           "scope": "resource",
-          "markdownDescription": "Have **skein: Write Agent Instructions** write a skill file (`.claude/skills/skein/SKILL.md`, or `skein.agents.file`) instead of a section of the agent instructions."
+          "markdownDescription": "Have **Skein: Write Agent Instructions** write a skill file (`.claude/skills/skein/SKILL.md`, or `skein.agents.file`) instead of a section of the agent instructions."
         },
         "skein.trace.server": {
           "type": "string",
@@ -321,7 +321,7 @@
             "verbose"
           ],
           "default": "off",
-          "markdownDescription": "Log the messages between VS Code and the language server in the output channel **skein Language Server**: none, each message, or each with its content."
+          "markdownDescription": "Log the messages between VS Code and the language server in the output channel **Skein Language Server**: none, each message, or each with its content."
         }
       }
     }

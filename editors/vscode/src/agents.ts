@@ -22,7 +22,7 @@ export function register(context: vscode.ExtensionContext, server: Server): void
         const folder = vscode.workspace.workspaceFolders?.[0];
         const program = programOf(context);
         if (!settings.get<boolean>("mcp.enabled", true) || !vscode.workspace.isTrusted || !folder || !program) return [];
-        const definition = new vscode.McpStdioServerDefinition("skein", program, ["mcp"], {}, context.extension.packageJSON.version as string);
+        const definition = new vscode.McpStdioServerDefinition("Skein", program, ["mcp"], {}, context.extension.packageJSON.version as string);
         definition.cwd = folder.uri;
         return [definition];
       },
@@ -34,7 +34,7 @@ export function register(context: vscode.ExtensionContext, server: Server): void
       prepareInvocation: (options) => ({ invocationMessage: options.input.id ? `Tracing ${options.input.id}` : "Tracing the item under the cursor" }),
       invoke: async (options) => {
         const id = options.input.id || (await commands.itemAtCursor(server));
-        if (!id) throw new Error("There is no skein item under the cursor; name one with its ID.");
+        if (!id) throw new Error("There is no Skein item under the cursor; name one with its ID.");
         const text = await run(context, ["trace", id]);
         return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(text)]);
       },

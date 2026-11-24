@@ -22,7 +22,7 @@ Then change a requirement and see what follows from it:
 | --- | --- |
 | `.skein/types/` | Numbered IDs, a status that needs an approval, verification methods, attributes. |
 | `.skein/links/` | Link types that are required, reviewed and expected. |
-| `.skein/reviews/`, `.skein/approvals/` | The records skein keeps: written by `skein review` and `skein approve`, never by hand. |
+| `.skein/reviews/`, `.skein/approvals/` | The records Skein keeps: written by `skein review` and `skein approve`, never by hand. |
 | `docs/` | Item files: TOML front matter, then the text. |
 | `src/record.c` | Citations in code. |
 

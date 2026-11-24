@@ -1,6 +1,6 @@
 # Fingerprints, reviews, suspect links and approvals
 
-When a requirement changes, the items derived from it and the tests that verify it may no longer be correct. skein finds those places: a link can record the content of its target at the time the link was last reviewed, and `skein check` reports the link as suspect once the content of the target has changed.
+When a requirement changes, the items derived from it and the tests that verify it may no longer be correct. Skein finds those places: a link can record the content of its target at the time the link was last reviewed, and `skein check` reports the link as suspect once the content of the target has changed.
 
 ## Fingerprints
 
@@ -67,7 +67,7 @@ Under `.skein/reviews/`, never in the items or beside the documents, so the sour
 "t.lex.comment".verifies."lex.comment.line" = "9f2c41d0a6b7c8e9f0a1b2c3d4e5f607"
 ```
 
-skein writes these files; no one edits them by hand. They are committed with the change that was reviewed, so a pull request shows which links its author looked at. Two branches conflict in them only where both reviewed links of the same document. A record of a link that no longer exists is dropped when its file is next written.
+Skein writes these files; no one edits them by hand. They are committed with the change that was reviewed, so a pull request shows which links its author looked at. Two branches conflict in them only where both reviewed links of the same document. A record of a link that no longer exists is dropped when its file is next written.
 
 ## Approvals
 
@@ -120,7 +120,7 @@ An item is approved only when every role has approved what it says now; `check` 
 
 ### Who may approve
 
-skein has no sign-in of its own, so by default anyone can record an approval: the records are in git, with their commits. A type can say whose approval counts:
+Skein has no sign-in of its own, so by default anyone can record an approval: the records are in git, with their commits. A type can say whose approval counts:
 
 ```toml
 # .skein/types/proposal.toml

@@ -5,7 +5,7 @@ The user documentation is in `docs/results.md`.
 Test results say whether what the items require holds: a CI run's, given to one command, or a record the project keeps, as a project that files test reports must.
 
 %req[results.import]
-skein shall read test results in a format of its own, record which implementation and version produced each, and attach them to the items they are about. JUnit XML and TAP are for later (#129).
+Skein shall read test results in a format of its own, record which implementation and version produced each, and attach them to the items they are about. JUnit XML and TAP are for later (#129).
 
 %req[results.formats]
 A results file shall be TOML, JSON or YAML, told apart by its extension (`.toml`, `.json`, `.yaml`, `.yml`), each a list of results with the same fields: `test` (its name), `file` (of the test, from the project's root), `item`, `items`, `result` (`pass`, `fail` or `skip`), `implementation`, `version` and `note`. In TOML the list is `[[result]]` tables; in JSON an array, or an object with a `result` array; in YAML a list, or a `result:` list. A file that cannot be read, a result without `result`, and a `result` other than the three are reported.

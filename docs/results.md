@@ -1,6 +1,6 @@
 # Test results
 
-skein reads test results and says, per item, whether its tests passed. It runs no tests: the project's test driver, or a person carrying out a procedure, writes the results.
+Skein reads test results and says, per item, whether its tests passed. It runs no tests: the project's test driver, or a person carrying out a procedure, writes the results.
 
 ## A results file
 
@@ -77,7 +77,7 @@ skein result tp.inspect pass --evidence reports/listing-review.pdf
 
 `check` warns when such a file is not in the project.
 
-## What skein says of them
+## What Skein says of them
 
 Per implementation, an item **passes** when every result that belongs to it passed, **fails** when one failed, and is **untested** when none belongs to it or all were skipped.
 
@@ -92,4 +92,4 @@ results (cesium0 0.3.1): 40 of 47 passed, 2 failed, 5 untested
     ...
 ```
 
-The items counted are those of the types a citation set expects to be cited, and any that have results. A generated coverage page (a ```` ```skein ```` block with `coverage`) shows the same, with links to the items that failed; `skein render --results FILE` gives it a run's results. `skein trace ID` shows an item's verdict and its results per implementation. A result that belongs to no item (its file cites nothing, the items it names do not exist) is listed by `coverage`, and `check` warns about it for kept results.
+The items counted are those of the types a citation set expects to be cited, and any that have results. A generated coverage page (a ```` ```skein ```` block with `coverage`) shows the same, with links to the items that failed; `Skein render --results FILE` gives it a run's results. `Skein trace ID` shows an item's verdict and its results per implementation. A result that belongs to no item (its file cites nothing, the items it names do not exist) is listed by `coverage`, and `check` warns about it for kept results.

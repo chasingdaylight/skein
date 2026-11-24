@@ -1,6 +1,6 @@
 # Writing requirements
 
-A checklist, in skein's words, of what ISO/IEC/IEEE 29148:2018 asks of requirements; the standard itself is the authority, and its clauses are given for reference. Each requirement is an item: business (`BRS-001`), stakeholder (`STK-001`), system (`SYS-001`) or software (`SRS-001`), with `refines`, `derives` and `allocates` links between the levels and `verifies` from its verifications.
+A checklist, in Skein's words, of what ISO/IEC/IEEE 29148:2018 asks of requirements; the standard itself is the authority, and its clauses are given for reference. Each requirement is an item: business (`BRS-001`), stakeholder (`STK-001`), system (`SYS-001`) or software (`SRS-001`), with `refines`, `derives` and `allocates` links between the levels and `verifies` from its verifications.
 
 ## Each requirement (clause 5.2.5)
 
@@ -19,7 +19,7 @@ The set is complete, consistent (no two contradict), feasible as a whole, unders
 
 ## Attributes (clause 5.2.8)
 
-Besides its ID and text, a requirement may carry its priority, owner, source, rationale, risk, difficulty and acceptance criteria, which the template's types declare. Its version is its history in git; its status is its status in skein.
+Besides its ID and text, a requirement may carry its priority, owner, source, rationale, risk, difficulty and acceptance criteria, which the template's types declare. Its version is its history in git; its status is its status in Skein.
 
 ## Wording
 

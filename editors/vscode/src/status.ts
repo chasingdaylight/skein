@@ -9,7 +9,7 @@ export class Status {
   private readonly item = vscode.window.createStatusBarItem("skein.coverage", vscode.StatusBarAlignment.Left, 10);
 
   constructor(private readonly server: Server) {
-    this.item.name = "skein Coverage";
+    this.item.name = "Skein Coverage";
     this.item.command = "skein.showCoverage";
   }
 

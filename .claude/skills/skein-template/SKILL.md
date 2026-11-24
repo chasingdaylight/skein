@@ -16,4 +16,4 @@ A template is a directory of `templates/`, laid out as a project's `.skein/` is.
 - **A test** in `src/template/_test/start.zig`: `init` with the template (several with `.templates = &.{ "a", "b" }`), the options given, `check` with no problems, the coverage it expects; cite its requirement.
 - **A requirement** `templates.NAME` in `docs/requirements/templates.md`, and a row (and a section if it has options) in `docs/templates.md`.
 
-A standard under copyright (ISO, IEEE) is given in skein's own words with clause numbers, never quoted. NASA's and other US government text may be included. Always the latest revision of a standard (the trailing letter).
+A standard under copyright (ISO, IEEE) is given in Skein's own words with clause numbers, never quoted. NASA's and other US government text may be included. Always the latest revision of a standard (the trailing letter).

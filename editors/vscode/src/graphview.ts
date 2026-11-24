@@ -26,7 +26,7 @@ export class GraphView {
       return;
     }
     const dist = vscode.Uri.joinPath(this.context.extensionUri, "dist");
-    const panel = vscode.window.createWebviewPanel("skein.graph", "skein Graph", vscode.ViewColumn.Active, {
+    const panel = vscode.window.createWebviewPanel("skein.graph", "Skein Graph", vscode.ViewColumn.Active, {
       enableScripts: true,
       localResourceRoots: [dist],
       retainContextWhenHidden: true,

@@ -179,7 +179,7 @@ Every link is relative and the styles are inside each page, so `DIR` can be serv
 
 ### Generated pages
 
-A document can ask for a page that skein makes from the project, in a fenced code block of the language `skein`. `skein render` replaces the block with the page, in both formats; elsewhere (on GitHub, in an editor) the request shows as the code it is.
+A document can ask for a page that Skein makes from the project, in a fenced code block of the language `skein`. `skein render` replaces the block with the page, in both formats; elsewhere (on GitHub, in an editor) the request shows as the code it is.
 
 ````markdown
 ```skein
@@ -214,7 +214,7 @@ revision = "B"
 
 Its rendered page gets, under its title, a table with its identifier, its revision, and when it last changed, by whom and in which commit (a link to the commit when the project names its forge), and at its end a change record: each baseline (`skein baseline`) in which its items changed, with the baseline's message and how many items were added, changed and removed since the one before. A rendered item file says in its front matter when it last changed, and by whom. All of it comes from git; without git, there is none.
 
-A request skein cannot read becomes a note in its place, saying what is wrong.
+A request Skein cannot read becomes a note in its place, saying what is wrong.
 
 A document may also say what item it is and how mature it is, to be held to what that item expects at the project's milestone:
 
@@ -238,7 +238,7 @@ milestone = "pdr"                   # the attribute of the items that says what 
 
 ### Diagrams
 
-A fenced block of the language `mermaid` is drawn as a diagram in HTML (`--format html` and `--format document`), by mermaid.js, which skein carries (`vendor/mermaid`): the site has one copy of it, which only the pages with a diagram load, and a standalone document with a diagram has it inside (about 5 MB more). Markdown output leaves the block for the site generator.
+A fenced block of the language `mermaid` is drawn as a diagram in HTML (`--format html` and `--format document`), by mermaid.js, which Skein carries (`vendor/mermaid`): the site has one copy of it, which only the pages with a diagram load, and a standalone document with a diagram has it inside (about 5 MB more). Markdown output leaves the block for the site generator.
 
 ````markdown
 ```mermaid
@@ -296,7 +296,7 @@ Records in `.skein/network.toml` the commit of each other repository that the it
 
 ## `skein import doorstop DIR...`
 
-Turns Doorstop documents into skein items, where they are; see [importing](importing.md).
+Turns Doorstop documents into Skein items, where they are; see [importing](importing.md).
 
 ## `skein import csv FILE --type TYPE --to DIR`
 
@@ -362,7 +362,7 @@ Writes each tested example (see [writing items](writing-items.md#tested-examples
 ]
 ```
 
-skein runs none of them: the project's test driver reads the index, compiles or runs each file, and fails when an example is not accepted or rejected as it must be.
+Skein runs none of them: the project's test driver reads the index, compiles or runs each file, and fails when an example is not accepted or rejected as it must be.
 
 ## `skein schedule`
 
@@ -412,9 +412,9 @@ A language server for editors, on standard input and output. It works in the Mar
 - **Hover:** the item's type, category and status, its text and its parts.
 - **Completion:** item types after `%`, IDs in references and after a citation marker, and after the ID of a marker its categories, statuses, attributes and link types, then their values.
 - **Rename:** renaming an item does what `skein move` does. Save your files first; the rename is made in them, and the editor shows them again.
-- **Quick fixes:** a problem whose mending skein knows is offered as a fix: the ID an item has now in place of a former one, and the closest ID, category, status, attribute, link type or verification method in place of a misspelled one.
+- **Quick fixes:** a problem whose mending Skein knows is offered as a fix: the ID an item has now in place of a former one, and the closest ID, category, status, attribute, link type or verification method in place of a misspelled one.
 - **Code lenses:** above each item, its links, those it has and those that point to it, and "Trace". The commands they run (`skein.pickLinked`, `skein.trace`) are the VS Code extension's; another editor shows them as text.
-- **skein's own requests**, for an editor's views: `skein/items` (every item with its place), `skein/itemAt` (the item under a position), `skein/trace` (`{ "id": ID }`, the item's trace as HTML), `skein/coverage` (the coverage page as HTML, with how much is covered), `skein/render` (`{ "uri": URI }`, the file as `skein render` writes it, for a Markdown preview), `skein/graph` (the network of items and links, with the review state of each link), `skein/form` and `skein/saveItem` (an item form, and writing it), `skein/schedule` (the work items as scheduled, with the calendar) and `skein/plan` (`{ "id": ID }` with a `start`, `finish` or `status` to write into the item). Their links are `skein:item/ID` and `skein:file/PATH#LINE`.
+- **Skein's own requests**, for an editor's views: `skein/items` (every item with its place), `skein/itemAt` (the item under a position), `skein/trace` (`{ "id": ID }`, the item's trace as HTML), `skein/coverage` (the coverage page as HTML, with how much is covered), `skein/render` (`{ "uri": URI }`, the file as `skein render` writes it, for a Markdown preview), `skein/graph` (the network of items and links, with the review state of each link), `skein/form` and `skein/saveItem` (an item form, and writing it), `skein/schedule` (the work items as scheduled, with the calendar) and `skein/plan` (`{ "id": ID }` with a `start`, `finish` or `status` to write into the item). Their links are `skein:item/ID` and `skein:file/PATH#LINE`.
 
 Any editor with a Language Server Protocol client can use it. Tell the editor to start `skein lsp` for Markdown files (and for the source files that hold citations) with the project's directory as the root. For example, in Neovim:
 
@@ -439,7 +439,7 @@ The VS Code extension starts the server itself, and adds the item tree, the trac
 
 ## `skein mcp`
 
-A Model Context Protocol server for AI agents, on standard input and output, on the project it is started in (or `--root DIR`). Its tools are skein's commands, answering in JSON: `items` (find items by type or words), `trace`, `check`, `coverage`, `impact`, and `new`, `link`, `move`, `result` and `approve`. An agent that speaks MCP is pointed at it with its own configuration, for example Claude Code's:
+A Model Context Protocol server for AI agents, on standard input and output, on the project it is started in (or `--root DIR`). Its tools are Skein's commands, answering in JSON: `items` (find items by type or words), `trace`, `check`, `coverage`, `impact`, and `new`, `link`, `move`, `result` and `approve`. An agent that speaks MCP is pointed at it with its own configuration, for example Claude Code's:
 
 ```sh
 claude mcp add skein -- skein mcp
@@ -453,15 +453,15 @@ or a `.mcp.json` in the project:
 
 ## `skein agents`
 
-Writes what a coding agent should know of the project's skein documents into its agent instructions: `AGENTS.md`, or `CLAUDE.md` where there is one and no `AGENTS.md`, or `--file PATH`. It says how markers and references are written, the project's item types, link types and citations, and to run `skein check` after editing. The section sits between two HTML comments, so running it again after a change to `.skein/` replaces it in place. `--skill` writes it as a skill file, `.claude/skills/skein/SKILL.md`, for agents that read skills. `skein init` writes the section too.
+Writes what a coding agent should know of the project's Skein documents into its agent instructions: `AGENTS.md`, or `CLAUDE.md` where there is one and no `AGENTS.md`, or `--file PATH`. It says how markers and references are written, the project's item types, link types and citations, and to run `skein check` after editing. The section sits between two HTML comments, so running it again after a change to `.skein/` replaces it in place. `--skill` writes it as a skill file, `.claude/skills/skein/SKILL.md`, for agents that read skills. `skein init` writes the section too.
 
 ## `skein help`, `skein version`
 
-The usage text, and skein's version.
+The usage text, and Skein's version.
 
 ## In continuous integration
 
-A CI job needs three lines: get skein, check, and report coverage.
+A CI job needs three lines: get Skein, check, and report coverage.
 
 ```yaml
 # GitHub Actions
@@ -487,4 +487,4 @@ skein:
       codequality: gl-code-quality-report.json
 ```
 
-To get skein in the job, download the archive of a [release](https://github.com/chasingdaylight/skein/releases) for the runner's platform and check it against the release's `SHA256SUMS`; pin the version, so that a new skein never changes a job by itself.
+To get Skein in the job, download the archive of a [release](https://github.com/chasingdaylight/skein/releases) for the runner's platform and check it against the release's `SHA256SUMS`; pin the version, so that a new Skein never changes a job by itself.

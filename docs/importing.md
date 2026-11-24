@@ -8,16 +8,16 @@ skein import doorstop docs/sys docs/srs docs/des docs/tst
 
 Each directory named is a Doorstop document (it has a `.doorstop.yml`). The import changes it in place:
 
-- every item (`SRS-001.md`, or `SRS-001.yml`) is rewritten as a skein item file, `SRS-001.md`, with TOML front matter;
+- every item (`SRS-001.md`, or `SRS-001.yml`) is rewritten as a Skein item file, `SRS-001.md`, with TOML front matter;
 - `.doorstop.yml` becomes an item type, `.skein/types/srs.toml`;
-- the directory is added to the sources in `.skein/config.toml`, which is made when the repository is not a skein project yet;
+- the directory is added to the sources in `.skein/config.toml`, which is made when the repository is not a Skein project yet;
 - a link type `parent` is made, with `review = true`.
 
 Because the files stay where they are, git shows each item's history through the import. **Commit before importing**: the import is then one diff to look over, and `git checkout .` undoes it. Nothing but the documents named and `.skein/` is touched; a file in the directory whose name does not start with the document's prefix is left alone.
 
 ### What becomes of what
 
-| Doorstop | skein |
+| Doorstop | Skein |
 | --- | --- |
 | the item's file name (`SRS-001`) | its `id` |
 | `prefix`, `digits`, `sep` | the item type's numbered IDs (`prefix`, `digits`, `separator`) |
@@ -28,7 +28,7 @@ Because the files stay where they are, git shows each item's history through the
 | `normative`, `derived`, `level`, `ref` | attributes of the same names (the booleans only where they differ from Doorstop's defaults) |
 | `references` | the attribute `references`: the paths, separated by commas |
 | `category` | the item's category, when every active item of the document has one; otherwise the attribute `doorstop-category` |
-| `status`, and any attribute named like a key skein reads itself | an attribute with `doorstop-` before its name (`doorstop-status`) |
+| `status`, and any attribute named like a key Skein reads itself | an attribute with `doorstop-` before its name (`doorstop-status`) |
 | every other attribute | an attribute of the same name |
 | the attributes the document lists as `reviewed` | attributes marked `normative = true`, so that a change to them changes the item's fingerprint |
 | `header` and `text` (items kept as YAML) | a heading and the text |
@@ -43,8 +43,8 @@ Doorstop's stamps are hashes that only Doorstop can compute, so they cannot be c
 Run `skein check`. Things to look at by hand:
 
 - `doorstop-status`: Doorstop projects often keep a status of their own. If it is the item's lifecycle, make its values the item type's `statuses` and rename the key to `status` in the items.
-- `verification-method` or the like: skein has `verification`, with the methods the item type allows.
-- Doorstop's `references` point from an item to the code. skein reads the other direction, a citation in the code (`// Implements SRS-012.`), which cannot go stale unnoticed; see [writing items](writing-items.md).
+- `verification-method` or the like: Skein has `verification`, with the methods the item type allows.
+- Doorstop's `references` point from an item to the code. Skein reads the other direction, a citation in the code (`// Implements SRS-012.`), which cannot go stale unnoticed; see [writing items](writing-items.md).
 
 ### Options
 
@@ -52,7 +52,7 @@ Run `skein check`. Things to look at by hand:
 | --- | --- |
 | `--headings-as-text` | Doorstop's non-normative items (headings, introductions) become plain Markdown: narrative text, not items. An item that another links to stays an item. |
 | `--status-from NAME` | The values of the attribute `NAME` (for example `status`) become the items' statuses, and the item type's lifecycle; `removed` stays the status of removed items. |
-| `--verification-from NAME` | The same for skein's verification method (for example `verification-method`). |
+| `--verification-from NAME` | The same for Skein's verification method (for example `verification-method`). |
 
 Values are put in lowercase, with other characters as `-`: `In Review` becomes `in-review`.
 

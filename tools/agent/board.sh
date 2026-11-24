@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# board.sh: the rows of the skein Roadmap that are not done, in order: the
+# board.sh: the rows of the Skein Roadmap that are not done, in order: the
 # first is the next to work
 set -euo pipefail
 export GH_TOKEN="${GH_TOKEN:-$(bash /c/scratch/github-apps/app-token.sh chasingdaylight)}"

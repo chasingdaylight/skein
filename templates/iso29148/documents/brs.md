@@ -5,7 +5,7 @@ revision = "Draft"
 
 # Business requirements specification
 
-What the organization needs and why (ISO/IEC/IEEE 29148:2018, clause 9.3, in skein's words). Its requirements are items of the type `business`, `BRS-001` and on.
+What the organization needs and why (ISO/IEC/IEEE 29148:2018, clause 9.3, in Skein's words). Its requirements are items of the type `business`, `BRS-001` and on.
 
 ## Business purpose and scope
 
