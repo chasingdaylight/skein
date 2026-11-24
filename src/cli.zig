@@ -56,7 +56,7 @@ pub const usage =
     \\  lsp              Serve editors as a language server, on standard input and output
     \\  mcp               Serve AI agents skein's tools (Model Context Protocol), on
     \\                    standard input and output
-    \\  agents [--skill]  Write what coding agents should know of skein into AGENTS.md
+    \\  agents [--skill]  Write what coding agents should know of Skein into AGENTS.md
     \\                    (or CLAUDE.md, or --file PATH), or as a skill file
     \\  help              Show this text
     \\  version           Show skein's version

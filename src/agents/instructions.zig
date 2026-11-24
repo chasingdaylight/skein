@@ -20,8 +20,8 @@ pub const skill_file = ".claude/skills/skein/SKILL.md";
 /// The text about the project, without the markers
 pub fn body(a: Allocator, project: *const Project) Allocator.Error![]const u8 {
     var out: std.ArrayList(u8) = .empty;
-    try out.appendSlice(a, "## skein\n\n");
-    try out.appendSlice(a, "This repository keeps its requirements, specifications and their traceability with skein (<https://github.com/chasingdaylight/skein>). An item is a paragraph or list entry of a Markdown document, or a Markdown file of its own, with a marker:\n\n");
+    try out.appendSlice(a, "## Skein\n\n");
+    try out.appendSlice(a, "This repository keeps its requirements, specifications and their traceability with Skein (<https://github.com/chasingdaylight/skein>). An item is a paragraph or list entry of a Markdown document, or a Markdown file of its own, with a marker:\n\n");
     try out.appendSlice(a, "```markdown\n%TYPE[ID words key=value,value] The text of the item.\n\n- %TYPE[.part] A part of the item above, as a list entry.\n```\n\n");
     try out.appendSlice(a, "- A marker is `%`, the item type, and in brackets the ID, then bare words (the category and the status) and `key=value` (an attribute, or links to the items named, separated by commas). `.part` names a part by its whole's ID.\n");
     try out.appendSlice(a, "- `%[ID]` in text refers to an item; `%[ID some words]` shows the words in its place.\n");
@@ -109,7 +109,7 @@ pub fn merge(a: Allocator, existing: []const u8, section_body: []const u8) Alloc
 /// The skill file's text
 pub fn skill(a: Allocator, section_body: []const u8) Allocator.Error![]const u8 {
     return std.mem.concat(a, u8, &.{
-        "---\nname: skein\ndescription: Reading and writing this repository's skein documents: item markers, references, links, and the skein commands that check and edit them. Use when editing Markdown with %type[...] markers or files under .skein/.\n---\n\n",
+        "---\nname: skein\ndescription: Reading and writing this repository's Skein documents: item markers, references, links, and the skein commands that check and edit them. Use when editing Markdown with %type[...] markers or files under .skein/.\n---\n\n",
         section_body,
     });
 }
