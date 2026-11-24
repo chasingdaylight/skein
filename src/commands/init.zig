@@ -2,7 +2,7 @@
 //! its configuration, and, from each template, what the template's
 //! `config.toml` adds to it, its document skeletons (`documents/`) under
 //! `docs/`, and its `project/` files where they say; and what coding agents
-//! should know of skein, in the project's agent instructions (agents.zig).
+//! should know of Skein, in the project's agent instructions (agents.zig).
 
 const std = @import("std");
 const Io = std.Io;

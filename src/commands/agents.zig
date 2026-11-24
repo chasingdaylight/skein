@@ -17,7 +17,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Agents) !Workspace.Out
     };
     defer ws.close();
     const file = try write(io, arena, &ws, options.skill, options.file);
-    return .{ .text = try arena.print("skein: wrote what agents should know of skein into {s}\n", .{file}) };
+    return .{ .text = try arena.print("skein: wrote what agents should know of Skein into {s}\n", .{file}) };
 }
 
 /// Writes the section, or the skill file; the path written

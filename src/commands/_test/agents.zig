@@ -34,7 +34,7 @@ test "skein agents: a section of CLAUDE.md, written again in place, and a skill 
     const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
 
     const said = (try agents.run(testing.io, a, .{ .common = .{ .root = root } })).text;
-    try testing.expectEqualStrings("skein: wrote what agents should know of skein into CLAUDE.md\n", said);
+    try testing.expectEqualStrings("skein: wrote what agents should know of Skein into CLAUDE.md\n", said);
     const first = try tmp.dir.readFileAlloc(testing.io, "CLAUDE.md", a, .limited(1 << 16));
     // the file's own text and line ends are kept
     try expectContains(first, "# Project\r\n\r\nOur notes.\r\n\r\n" ++ instructions.begin ++ "\r\n");
@@ -53,7 +53,7 @@ test "skein agents: a section of CLAUDE.md, written again in place, and a skill 
     _ = try agents.run(testing.io, a, .{ .common = .{ .root = root }, .skill = true });
     const skill = try tmp.dir.readFileAlloc(testing.io, instructions.skill_file, a, .limited(1 << 16));
     try testing.expect(std.mem.startsWith(u8, skill, "---\nname: skein\ndescription: "));
-    try expectContains(skill, "## skein\n");
+    try expectContains(skill, "## Skein\n");
 }
 
 test "skein init writes AGENTS.md" {
