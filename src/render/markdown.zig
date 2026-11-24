@@ -221,6 +221,16 @@ const Page = struct {
             }
             var at: usize = 0;
             if (self.markers.get(number)) |item| {
+                // a tested example: its label on the line before its fence, and the
+                // fence with its language alone, which site generators read
+                if (markdown.fence.read(line)) |info| if (info.marker) |m| {
+                    const indent = line[0 .. line.len - std.mem.trimStart(u8, line, " \t").len];
+                    try out.appendSlice(a, indent);
+                    try self.label(&out, item, true);
+                    try out.append(a, '\n');
+                    try out.appendSlice(a, std.mem.trimEnd(u8, line[0 .. @intFromPtr(m.ptr) - @intFromPtr(line.ptr)], " \t"));
+                    continue;
+                };
                 if (Marker.startIn(line)) |start| {
                     // bold once: the label's own in place of the writer's `**` around
                     // the marker, and none inside the writer's bold that goes on
