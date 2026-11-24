@@ -115,7 +115,7 @@ pub fn page(arena: std.mem.Allocator, project: []const u8, pages: []const Page, 
     }
     try out.appendSlice(arena, "</ul>\n</nav>\n<main>\n<article>\n");
     try out.appendSlice(arena, body);
-    try out.appendSlice(arena, "</article>\n<footer>Made with skein.</footer>\n</main>\n</div>\n");
+    try out.appendSlice(arena, "</article>\n<footer>Made with Skein.</footer>\n</main>\n</div>\n");
     // the site's copy of mermaid.js, only on the pages with a diagram
     if (hasDiagram(body)) {
         try out.appendSlice(arena, "<script src=\"");

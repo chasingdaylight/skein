@@ -87,7 +87,8 @@ pub fn check(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Pro
     }
     for (try compute(arena, works, resources)) |l| {
         for (l.weeks) |week| if (week.over()) {
-            try report.warn(Resources.file, l.person.line, 1, "{s} has {d:.1} hours of work in the week of {s} ({s}), and {d:.1} hours to work", .{ l.person.handle, week.hours, &day.format(week.monday), &day.isoWeek(week.monday), week.capacity });
+            // the week first, so that the warnings come in its order
+            try report.warn(Resources.file, l.person.line, 1, "{s}: in the week of {s} ({s}), {d:.1} hours of work and {d:.1} hours to work", .{ l.person.handle, &day.format(week.monday), &day.isoWeek(week.monday), week.hours, week.capacity });
         };
     }
 }

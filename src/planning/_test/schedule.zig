@@ -55,6 +55,7 @@ const Run = struct {
         try write(dir, ".skein/config.toml", config);
         try write(dir, ".skein/types/task.toml", task_type);
         try write(dir, ".skein/links/precedes.toml", "[planning]\nrole = \"precedes\"\n");
+        try write(dir, ".skein/links/after.toml", "[planning]\nrole = \"follows\"\n");
         try write(dir, ".skein/links/part_of.toml", "[planning]\nrole = \"parent\"\n");
         // Monday to Friday
         try write(dir, ".skein/resources.toml", "[calendar]\n");
@@ -125,6 +126,28 @@ test "skein schedule: float work after its predecessors, parents spanning their 
     const stale = try r.check();
     try expectContains(stale, ".skein/schedule.toml: error: the stored schedule is not the one the work items give now: run 'skein schedule'");
     try expectContains(stale, ".skein/schedule.csv: error: the stored schedule is not the one");
+}
+
+// req: planning.link-roles
+test "a follows link is written on the later work, and orders it as precedes does" {
+    var r: Run = undefined;
+    try r.init("[[sources]]\npath = \"plan\"\n",
+        \\%task[t.design start=2027-03-01 days=5] Design, fixed.
+        \\
+        \\%task[t.build days=3 after=t.design] Build.
+        \\
+        \\%task[t.test days=2 after=t.build precedes=t.ship] Test.
+        \\
+        \\%task[t.ship days=1] Ship.
+        \\
+    );
+    defer r.deinit();
+    _ = try r.schedule();
+    const toml = try r.read(".skein/schedule.toml");
+    try expectContains(toml, "[items.\"t.build\"]\nstart = 2027-03-08\nfinish = 2027-03-10\n");
+    try expectContains(toml, "[items.\"t.test\"]\nstart = 2027-03-11\nfinish = 2027-03-12\n");
+    try expectContains(toml, "[items.\"t.ship\"]\nstart = 2027-03-15\nfinish = 2027-03-15\n");
+    try expectContains(try r.check(), "no problems");
 }
 
 test "check: before the predecessors, outside the parent, after the milestone, nothing to schedule from" {
