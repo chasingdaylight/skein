@@ -23,6 +23,8 @@ branch=$(git branch --show-current)
 # the label is needed after the push: a wrong one is refused before anything is done
 gh label list --limit 100 --json name -q '.[].name' < /dev/null | grep -qx -- "$label" || { echo "land.sh: the repository has no label '$label'"; exit 1; }
 
+# every place that states the version agrees, as CI checks
+bash .github/workflows/version.sh > /dev/null
 "$Z" fmt --check build build.zig src templates tools
 "$Z" build
 "$Z" build test

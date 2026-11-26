@@ -144,10 +144,9 @@ jobs:
           SIGN_WINDOWS: ${{ vars.SIGN_AZURE_CLIENT_ID }}
           SIGN_MACOS: ${{ vars.APPLE_SIGNING }}
         run: |
-          version=$(sed -nE 's/^\s*\.version = "([^"]+)",/\1/p' build.zig.zon)
-          extension=$(sed -nE 's/^\s*"version": "([^"]+)",/\1/p' editors/vscode/package.json)
-          if [ -z "$version" ] || [ "$version" != "$extension" ]; then
-            echo "::error::build.zig.zon has version '$version' and editors/vscode/package.json has '$extension'; they must be the same"
+          # every place that states the version agrees (version.sh lists them)
+          if ! version=$(bash .github/workflows/version.sh); then
+            echo "::error::the places that state the version disagree; see the log, and set them all with version.sh set"
             exit 1
           fi
           release=false
@@ -833,11 +832,8 @@ jobs:
                 IFS=. read -r ma mi pa <<< "$next"
                 next="$ma.$mi.$((pa + 1))"
               done
-              sed -i -E "s/^(\s*\.version = \")[^\"]+(\",)/\1$next\2/" build.zig.zon
-              sed -i -E "s/^(\s*\"version\": \")[^\"]+(\",)/\1$next\2/" editors/vscode/package.json
-              printf '# Changelog\n\n## %s (unreleased)\n\n' "$next" > changelog.head
-              tail -n +3 editors/vscode/CHANGELOG.md | sed "s/ (unreleased)$//" >> changelog.head
-              mv changelog.head editors/vscode/CHANGELOG.md
+              # every place that states the version, the lock file too
+              bash .github/workflows/version.sh set "$next"
               git commit -qam "Begin v$next development [skip ci]"
             fi
             if git push -q origin dev; then exit 0; fi
