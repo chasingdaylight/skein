@@ -14,6 +14,7 @@ const import_doorstop = @import("commands/import_doorstop.zig");
 const coverage = @import("commands/coverage.zig");
 const load = @import("commands/load.zig");
 const schedule = @import("commands/schedule.zig");
+const level = @import("commands/level.zig");
 const time_spent = @import("commands/time.zig");
 const overlay = @import("commands/overlay.zig");
 const apply = @import("commands/apply.zig");
@@ -78,6 +79,7 @@ pub fn main(init: std.process.Init) !void {
         .coverage => |options| try coverage.run(io, arena, options),
         .load => |options| try load.run(io, arena, options),
         .schedule => |options| try schedule.run(io, arena, options),
+        .level => |options| try level.run(io, arena, options),
         .time => |options| try time_spent.run(io, arena, options),
         .overlay => |options| try overlay.run(io, arena, options),
         .apply => |options| try apply.run(io, arena, options),

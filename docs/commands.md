@@ -427,6 +427,18 @@ ann (Ann Example)
 
 The work of an item is its estimate (else its duration) in days of the calendar's hours, spread evenly over its working days and shared evenly among its assignees. What a person can work is their share of the calendar's hours (or their hours a week) on their working days, less holidays and absences. Work without dates counts once it is scheduled. `--json` gives the same as JSON.
 
+## `skein level [--write]`
+
+Proposes moving work later so that nobody has more work in a week than hours to work, and lists the moves:
+
+```text
+t.a: 2027-03-08 to 2027-03-12, from 2027-03-01 (start = 2027-03-08)
+t.c: 2027-03-15 to 2027-03-16, from 2027-03-08 (lag = 5)
+skein: nothing written; --write writes these moves into the work items
+```
+
+The work is taken in the order of its start, critical work first; each item starts no earlier than its predecessors' new finishes, and on the first working day from which its hours, counted as `skein load` counts them, fit beside what its assignees have already. Finished work stays where it is. With `--write`, the moves go into the work items, to be reviewed as any change on a branch: fixed work gets its new start (and finish, when it gives one), float work that follows other work a longer lag, and float work that follows none a start (and the mode `fixed`, when it names `float`). Then `skein schedule` writes the new plan. Work that finds no room within two years is left where it is and listed.
+
 ## `skein lsp`
 
 A language server for editors, on standard input and output. It works in the Markdown documents of a project and in the code and tests that cite its items.

@@ -187,7 +187,7 @@ A branch of the plan can explore a different schedule: other priorities, assignm
 - `check` reports an overlay whose upstream value has since changed, as a merge would report a conflict.
 - Views and charts on the branch show the plan with the overlay applied, and can show it beside the current plan.
 - When the plan is adopted, `skein apply` writes the overlay's values to the forge through the adapter and removes them from `.skein/`; a plan that is not adopted is a branch that is never merged.
-- The same mechanism releveling uses: Skein proposes reassignments or new dates to remove overallocation as an overlay, for review like any other change.
+- Releveling (`skein level`) proposes new dates to remove overallocation, written into the work items on a branch for review like any other change; reassignments are for a person to make, as an overlay.
 
 #### Full mirror and moving between forges
 

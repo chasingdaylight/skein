@@ -50,6 +50,8 @@ pub const usage =
     \\                    Record a result a person obtained, such as a procedure
     \\                    carried out by hand, in the results the project keeps
     \\  schedule          Schedule the work items, and write .skein/schedule.toml
+    \\  level [--write]   Move work later so that nobody has more work than time; list
+    \\                    the moves, or write them into the work items
     \\  time [ITEM HOURS] Log hours spent on a work item; without them, spent against estimate
     \\  overlay [ISSUE FIELD VALUE]
     \\                    A what-if plan's deviations from the forge: list, record or --remove
@@ -132,6 +134,7 @@ pub const Command = union(enum) {
     coverage: Coverage,
     load: Load,
     schedule: Schedule,
+    level: Level,
     time: TimeSpent,
     overlay: OverlayCommand,
     apply: Apply,
@@ -238,6 +241,12 @@ pub const Coverage = struct {
 pub const Load = struct {
     common: Common = .{},
     json: bool = false,
+};
+
+pub const Level = struct {
+    common: Common = .{},
+    /// write the moves into the work items
+    write: bool = false,
 };
 
 pub const Schedule = struct {
@@ -480,6 +489,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--implementation-version", .takes_value = true },
     .{ .name = "--gitlab-requirements", .takes_value = true },
     .{ .name = "--editions", .takes_value = false },
+    .{ .name = "--write", .takes_value = false },
     .{ .name = "--from-pull-request", .takes_value = true },
     .{ .name = "--evidence", .takes_value = true },
     .{ .name = "--as", .takes_value = true },
@@ -612,6 +622,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (try p.allow(&.{ "--root", "--by", "--on", "--note", "--json", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len != 0 and words.len != 2) return .{ .misuse = "time takes a work item and the hours spent, or nothing for the report" };
         return .{ .time = .{ .common = common, .id = if (words.len == 2) words[0] else null, .hours = if (words.len == 2) words[1] else null, .by = p.value("--by"), .on = p.value("--on"), .note = p.value("--note"), .json = p.flag("--json") } };
+    }
+    if (eql(name, "level")) {
+        if (try p.allow(&.{ "--root", "--write", "--offline" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "level takes no items" };
+        return .{ .level = .{ .common = common, .write = p.flag("--write") } };
     }
     if (eql(name, "schedule")) {
         if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
