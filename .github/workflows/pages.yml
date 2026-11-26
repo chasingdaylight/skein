@@ -3,6 +3,9 @@
 # skein (tools/site.sh), turned into pages by GitHub Pages' Jekyll until skein
 # renders HTML itself.
 #
+# The site has an edition of each earlier release under vX.Y.Z/, built from
+# its tag, and lists them on every page (#260; tools/site.sh).
+#
 # Runs on every push to main, and by hand (Actions > Documentation site > Run
 # workflow). A mirror with its own domain builds the same site from this
 # repository with the same script; see docs/design.md, section 8.
@@ -12,6 +15,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the site (else only build it, to check it)
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -33,7 +41,7 @@ jobs:
   build:
     name: Build the site
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -68,6 +76,7 @@ jobs:
   deploy:
     name: Publish
     needs: build
+    if: ${{ github.event_name == 'push' || inputs.publish }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment:
