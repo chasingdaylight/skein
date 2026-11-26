@@ -16,6 +16,7 @@ const Workspace = @import("Workspace.zig");
 const coverage = @import("../graph/coverage.zig");
 const describe = @import("../output/describe.zig");
 const fingerprint = @import("../graph/fingerprint.zig");
+const gitlab_requirements = @import("../forge/gitlab_requirements.zig");
 
 pub const What = cli.Export.What;
 
@@ -48,6 +49,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Export) !Workspace.Out
         .items => try exporter.items(),
         .links => try exporter.links(),
         .citations => try exporter.citations(),
+        .@"gitlab-requirements" => try exporter.gitlabRequirements(),
     } };
 }
 
@@ -117,6 +119,16 @@ const Exporter = struct {
         try j.endArray();
         try j.endObject();
         return j.finish();
+    }
+
+    /// The items, not removed ones, as GitLab's requirements import takes them
+    fn gitlabRequirements(self: Exporter) ![]const u8 {
+        var list: std.ArrayList(*const Graph.Item) = .empty;
+        for (self.ctx.graph.items) |*item| {
+            const item_type = self.ctx.project.schema.itemType(item.type_name) orelse continue;
+            if (self.included(item) and !item.isTombstone(item_type)) try list.append(self.ctx.arena, item);
+        }
+        return gitlab_requirements.importCsv(self.ctx.arena, list.items);
     }
 
     /// One row per item: what it is, its attributes (one column each,

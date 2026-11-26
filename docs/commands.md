@@ -60,7 +60,7 @@ A link points up, from an item to what it rests on: a test to the rule it verifi
 
 ## `skein coverage`
 
-With test results, kept in the project or given with `--results FILE`, it also says per implementation which items passed, failed or are untested: see [test results](results.md). `skein trace ID` takes `--results` too.
+With test results, kept in the project or given with `--results FILE`, it also says per implementation which items passed, failed or are untested: see [test results](results.md). `skein trace ID` takes `--results` too. `--gitlab-requirements FILE` also writes GitLab's requirements report: see [forges](forge.md#gitlabs-requirements).
 
 Counts, of the items that should be linked to or cited, how many are, and lists the ones that are not. An item with [parts](writing-items.md#parts-items-inside-an-item) also counts when every one of its parts does:
 
@@ -143,6 +143,7 @@ Writes the project's graph to standard output, for other tools.
 | `items` | CSV, one row per item: ID, type, category, status, verification, the item it is a part of, file, line, fingerprint, a column for each attribute, and the text. |
 | `links` | CSV, one row per link: from, its type, the link type, to, its type, and the review state. A traceability matrix in its long form, ready for a pivot table. |
 | `citations` | CSV, one row per citation: the citation set, file, line, the item and its type. |
+| `gitlab-requirements` | CSV for GitLab's requirements import, `title,description`: see [forges](forge.md#gitlabs-requirements). |
 
 `--profile NAME` exports only the items of that profile, with their links and citations.
 
@@ -301,6 +302,10 @@ Turns Doorstop documents into Skein items, where they are; see [importing](impor
 ## `skein import csv FILE --type TYPE --to DIR`
 
 Makes an item file in `DIR` of each row of a CSV file; see [importing](importing.md).
+
+## `skein import gitlab-requirements FILE`
+
+Records the GitLab requirement of each item, from the CSV GitLab exports of a project's requirements, in `.skein/gitlab-requirements.toml`; see [forges](forge.md#gitlabs-requirements).
 
 ## `skein review ID...` and `skein clear ID...`
 

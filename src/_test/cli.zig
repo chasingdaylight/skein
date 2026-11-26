@@ -125,7 +125,7 @@ test "export takes what to export" {
     const e = (try f.run(&.{ "export", "links", "--profile", "s0" })).exporting;
     try testing.expectEqual(.links, e.what);
     try testing.expectEqualStrings("s0", e.profile.?);
-    try testing.expectEqualStrings("export: json, items, links or citations", (try f.run(&.{ "export", "everything" })).misuse);
+    try testing.expectEqualStrings("export: json, items, links, citations or gitlab-requirements", (try f.run(&.{ "export", "everything" })).misuse);
 }
 
 test "lsp takes nothing but the transport" {
