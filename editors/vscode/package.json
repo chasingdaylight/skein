@@ -2,7 +2,7 @@
   "name": "skein",
   "displayName": "Skein",
   "description": "Requirements and traceability in Markdown: Skein's language server, the items in a tree, trace and coverage views, and the skein program.",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "publisher": "chasingdaylight",
   "license": "MIT",
   "preview": true,
