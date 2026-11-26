@@ -80,3 +80,10 @@ parenright
 
 chasingdaylight
 OCIO
+Authenticode
+SmartScreen
+uuidgen
+xcrun
+lipo
+spctl
+xattr

@@ -12,7 +12,9 @@ It is for projects that want the rigor of requirements management without a data
 
 ## Installing
 
-Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as one program for Linux, macOS and Windows (x86_64 and arm64), with a `SHA256SUMS` file. Unpack the archive for your platform and put `bin/skein` on your `PATH`; it needs nothing else.
+Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as one program for Linux, macOS and Windows (x86_64 and arm64), with a `SHA256SUMS` file. Unpack the archive for your platform and put `bin/skein` on your `PATH`; it needs nothing else. On macOS there is also an installer package, `skein-v<version>-macos.pkg`, one for Apple Silicon and Intel: open it, and it installs `skein` into `/usr/local/bin` and the license into `/usr/local/share/doc/skein`. To remove it, delete those and forget the package (`sudo pkgutil --forget com.github.chasingdaylight.skein`).
+
+Releases from 0.1.2 on are signed: `skein.exe` with an Authenticode signature, and `skein` on macOS, in the archives and the installer package, with a Developer ID and notarized by Apple; the programs in the VS Code extension are the same signed ones. A browser still marks what it downloads as coming from the internet. On macOS, double-clicking the unpacked `skein` in Finder then shows a warning, as it does for any command-line program marked that way: run it from a terminal instead, or use the installer package. Unpack the archive with `tar -xzf` in a terminal (Finder's Archive Utility passes the mark on to what it unpacks); if a mark is on `skein` already, remove it with `xattr -d com.apple.quarantine skein`. On Windows, SmartScreen may still ask about a program it has not seen often: unblock the zip before unpacking it (`Unblock-File`, or "Unblock" in its Properties).
 
 For VS Code and editors built on it, the extension [Skein](editors/vscode/readme.md) (`chasingdaylight.skein`, on the Visual Studio Marketplace and Open VSX) highlights markers and references in Markdown and carries the `skein` program for its platform, on the `PATH` of its terminals.
 
