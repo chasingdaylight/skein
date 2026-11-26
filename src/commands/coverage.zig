@@ -10,6 +10,7 @@ const Workspace = @import("Workspace.zig");
 const coverage = @import("../graph/coverage.zig");
 const Results = @import("../results/Results.zig");
 const summary = @import("../results/summary.zig");
+const gitlab_requirements = @import("../forge/gitlab_requirements.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options.common)) {
@@ -31,6 +32,12 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
     const idx = try results.index(arena, &ws.graph, &ws.citations);
     const summaries = try summary.compute(arena, &results, &idx, &ws.project, &ws.graph, profile);
     const methods = try summary.byMethod(arena, &results, &idx, &ws.project, &ws.graph, profile);
+    if (options.gitlab_requirements) |path| {
+        const map = try gitlab_requirements.loadMap(io, arena, ws.root);
+        if (map.len == 0) return .{ .text = try arena.print("skein: {s} maps no item to a GitLab requirement: run skein import gitlab-requirements first\n", .{gitlab_requirements.map_file}), .status = .misuse };
+        Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = try gitlab_requirements.report(arena, map, &results, &idx, &ws.graph) }) catch |e|
+            return .{ .text = try arena.print("skein: cannot write '{s}' ({s})\n", .{ path, @errorName(e) }), .status = .misuse };
+    }
 
     if (options.json) {
         var j: Json = .{ .arena = arena };

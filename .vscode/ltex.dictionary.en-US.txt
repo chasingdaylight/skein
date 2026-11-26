@@ -88,3 +88,5 @@ lipo
 spctl
 xattr
 apos
+IID
+IIDs

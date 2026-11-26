@@ -14,7 +14,8 @@ pub const usage =
     \\  coverage          Count the items that are linked to or cited as expected
     \\  diff [REV [REV]]  Show the items added, removed or changed since a commit
     \\  impact [REV]      Show what the changes since a commit reach
-    \\  export [WHAT]     Write the graph as JSON, or items, links or citations as CSV
+    \\  export [WHAT]     Write the graph as JSON, or items, links or citations as CSV,
+    \\                    or gitlab-requirements: a CSV for GitLab's requirements import
     \\  render --out DIR  Write the documents as Markdown for a site generator
     \\  move OLD NEW      Give an item another ID, everywhere the old one is used
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
@@ -36,6 +37,9 @@ pub const usage =
     \\                    Turn Doorstop documents into skein items, in place
     \\  import csv FILE --type TYPE --to DIR
     \\                    Make an item file in DIR of each row of a CSV file
+    \\  import gitlab-requirements FILE
+    \\                    Record the GitLab requirement of each item, from the CSV
+    \\                    GitLab exports of a project's requirements
     \\  review ID...      Record the links of these items as reviewed
     \\  clear ID...       Record the links to these items as reviewed
     \\  approve ID...     Record an approval of these items as they are now
@@ -93,6 +97,9 @@ pub const usage =
     \\                    produced the results of --results that name nothing
     \\  --implementation-version VERSION
     \\                    trace, coverage, render: its version
+    \\  --gitlab-requirements FILE
+    \\                    coverage: also write GitLab's requirements report, for a CI
+    \\                    job's artifacts
     \\  --type TYPE       import csv: the item type of the rows
     \\  --to DIR          import csv: where the item files go
     \\  --id-column NAME, --text-column NAME
@@ -219,6 +226,8 @@ pub const Coverage = struct {
     markdown: bool = false,
     /// results files besides the project's own, and what produced them
     results: Results.Given = .{},
+    /// where to write GitLab's requirements report
+    gitlab_requirements: ?[]const u8 = null,
 };
 
 pub const Load = struct {
@@ -319,6 +328,8 @@ pub const Export = struct {
         items,
         links,
         citations,
+        /// as CSV for GitLab's requirements import
+        @"gitlab-requirements",
     };
 };
 
@@ -397,7 +408,7 @@ pub const Import = struct {
     /// doorstop: the attribute whose values are the verification methods
     verification_from: ?[]const u8 = null,
 
-    pub const Format = enum { doorstop, csv };
+    pub const Format = enum { doorstop, csv, @"gitlab-requirements" };
 };
 
 pub const Review = struct {
@@ -458,6 +469,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--note", .takes_value = true },
     .{ .name = "--implementation", .takes_value = true },
     .{ .name = "--implementation-version", .takes_value = true },
+    .{ .name = "--gitlab-requirements", .takes_value = true },
     .{ .name = "--from-pull-request", .takes_value = true },
     .{ .name = "--evidence", .takes_value = true },
     .{ .name = "--as", .takes_value = true },
@@ -544,10 +556,10 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .trace = .{ .common = common, .id = words[0], .json = p.flag("--json"), .results = try p.results() } };
     }
     if (eql(name, "coverage")) {
-        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--gitlab-requirements" })) |problem| return .{ .misuse = problem };
         if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
-        return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.results() } };
+        return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.results(), .gitlab_requirements = p.value("--gitlab-requirements") } };
     }
     if (eql(name, "overlay")) {
         if (try p.allow(&.{ "--root", "--offline", "--remove" })) |problem| return .{ .misuse = problem };
@@ -613,7 +625,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (try p.allow(&.{ "--root", "--profile", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 1) return .{ .misuse = "export takes one thing to export" };
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
-            return .{ .misuse = "export: json, items, links or citations" };
+            return .{ .misuse = "export: json, items, links, citations or gitlab-requirements" };
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
     }
     if (eql(name, "baseline")) {
@@ -648,7 +660,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results() } };
     }
     if (eql(name, "import")) {
-        const forms = "import: doorstop DIR..., or csv FILE --type TYPE --to DIR";
+        const forms = "import: doorstop DIR..., csv FILE --type TYPE --to DIR, or gitlab-requirements FILE";
         if (words.len == 0) return .{ .misuse = forms };
         const format = std.meta.stringToEnum(Import.Format, words[0]) orelse return .{ .misuse = forms };
         switch (format) {
@@ -677,6 +689,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
                     .text_column = p.value("--text-column"),
                     .replace = p.flag("--replace"),
                 } };
+            },
+            .@"gitlab-requirements" => {
+                if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+                if (words.len != 2) return .{ .misuse = "import gitlab-requirements: name the CSV file GitLab exported" };
+                return .{ .import = .{ .common = common, .format = format, .paths = words[1..] } };
             },
         }
     }

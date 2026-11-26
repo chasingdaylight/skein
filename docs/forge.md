@@ -41,6 +41,25 @@ repository = "group/sub/project"
 
 Everything above works the same: `#97` is issue 97 of the project, a merge request's approvals are read for `skein approve --from-pull-request`, and the planning fields (assignees, milestone and its due date, closed) are read and written back by `skein apply`. Skein asks through `glab` when it is installed, so its sign-in is used; without it, it calls GitLab's API with the token in `GITLAB_TOKEN` when one is set (public projects need none). Forgejo's adapter is still to come.
 
+### GitLab's requirements
+
+GitLab Ultimate has requirements of its own, which a CI job can mark satisfied or failed. Skein keeps the items as the truth and gives GitLab a view of them, through the files GitLab reads and writes:
+
+1. `skein export gitlab-requirements --profile NAME > requirements.csv` writes the items (removed ones left out) as the CSV GitLab's requirements import takes: the title is the item's ID, a colon and its first sentence (or its `title` attribute), the description its text. Import it in GitLab under Plan > Requirements.
+2. Export the requirements from GitLab (it sends the CSV by email), then `skein import gitlab-requirements that-export.csv` records the requirement IID of each item in `.skein/gitlab-requirements.toml`, matched by the ID that starts the title; commit it. Archived requirements, and ones whose title names no item, are left out and listed.
+3. In CI, `skein coverage --results junit.xml --gitlab-requirements requirements.json` also writes the requirements report: an item's requirement fails when a result of any implementation failed, passes when one passed and none failed, and is left out when untested. Upload it as the job's report:
+
+```yaml
+requirements:
+  script:
+    - skein coverage --results junit.xml --gitlab-requirements requirements.json
+  artifacts:
+    reports:
+      requirements: requirements.json
+```
+
+Run the first two steps again when items are added. Creating and updating GitLab's requirements through its API is still to come (#247).
+
 ## Rendered
 
 `skein render` makes each reference a link to the issue or pull request on the forge. A reference that gives no words of its own is followed by its title and state, as the forge or the cache has them: `#97 (Proposal 0000, closed)`. One the forge says does not exist is marked unresolved, as a missing item is.
