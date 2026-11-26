@@ -43,6 +43,7 @@ const doors =
     \\        <SPEC-ATTRIBUTES>
     \\          <ATTRIBUTE-DEFINITION-STRING IDENTIFIER="ad-fid" LONG-NAME="ReqIF.ForeignID" LAST-CHANGE="2026-01-01T00:00:00Z"/>
     \\          <ATTRIBUTE-DEFINITION-XHTML IDENTIFIER="ad-text" LONG-NAME="ReqIF.Text" LAST-CHANGE="2026-01-01T00:00:00Z"/>
+    \\          <ATTRIBUTE-DEFINITION-STRING IDENTIFIER="ad-name" LONG-NAME="ReqIF.Name" LAST-CHANGE="2026-01-01T00:00:00Z"/>
     \\          <ATTRIBUTE-DEFINITION-ENUMERATION IDENTIFIER="ad-priority" LONG-NAME="Priority" LAST-CHANGE="2026-01-01T00:00:00Z"/>
     \\        </SPEC-ATTRIBUTES>
     \\      </SPEC-OBJECT-TYPE>
@@ -58,6 +59,7 @@ const doors =
     \\      <SPEC-OBJECT IDENTIFIER="_o1" LAST-CHANGE="2026-01-01T00:00:00Z"><TYPE><SPEC-OBJECT-TYPE-REF>ot</SPEC-OBJECT-TYPE-REF></TYPE>
     \\        <VALUES>
     \\          <ATTRIBUTE-VALUE-STRING THE-VALUE="SRS-001"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-fid</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>
+    \\          <ATTRIBUTE-VALUE-STRING THE-VALUE="Logging"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-name</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>
     \\          <ATTRIBUTE-VALUE-XHTML><DEFINITION><ATTRIBUTE-DEFINITION-XHTML-REF>ad-text</ATTRIBUTE-DEFINITION-XHTML-REF></DEFINITION>
     \\            <THE-VALUE><xhtml:div><xhtml:p>The system <xhtml:b>shall</xhtml:b>
     \\              log:</xhtml:p><xhtml:ul><xhtml:li>errors</xhtml:li><xhtml:li>warnings<xhtml:br/>too</xhtml:li></xhtml:ul></xhtml:div></THE-VALUE>
@@ -109,6 +111,7 @@ test "a ReqIF file as DOORS writes one: foreign IDs, XHTML text, an enumeration,
     const one = try tmp.dir.readFileAlloc(testing.io, "srs/SRS-001.md", a, .limited(1 << 16));
     try expectContains(one, "reqif = \"_o1\"\n");
     try expectContains(one, "priority = \"High\"\n");
+    try expectContains(one, "title = \"Logging\"\n");
     try expectContains(one, "+++\n\nThe system **shall** log:");
     try expectContains(try tmp.dir.readFileAlloc(testing.io, "srs/SRS-002.md", a, .limited(1 << 16)), "refines = [\"SRS-001\"]\n");
     try expectContains((try check.run(testing.io, a, .{ .root = root })).text, "no problems (2 items");

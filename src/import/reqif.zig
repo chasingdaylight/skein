@@ -170,6 +170,8 @@ fn valueOf(arena: std.mem.Allocator, v: *const Element, names: *const Map) !?[]c
 fn columnName(name: []const u8) []const u8 {
     if (std.ascii.eqlIgnoreCase(name, "id")) return "id";
     if (std.ascii.eqlIgnoreCase(name, "ReqIF.ForeignID")) return "reqif-foreign-id";
+    // the standard name of an object's title, as Jama Connect writes it
+    if (std.ascii.eqlIgnoreCase(name, "ReqIF.Name")) return "title";
     if (std.ascii.eqlIgnoreCase(name, "type")) return "reqif-type";
     if (std.ascii.eqlIgnoreCase(name, "text")) return "reqif-text";
     if (std.ascii.eqlIgnoreCase(name, "reqif")) return "reqif-reqif";
