@@ -82,6 +82,8 @@ paths = ["verification/results"]
 
 Every results file under those paths (`.toml`, `.json`, `.yaml`, `.yml`, `.xml`, `.tap`) is read by `check`, `trace` and `coverage`. A CI run's results need not be kept: `skein coverage --results run.json` reads them for that command alone, and `--results` may be given more than once.
 
+The citations are read from the tests on every run, and a result finds the items its file cites at once: a project of 20,000 items, with 5,000 test files citing them and 20,000 results, is counted in well under a second (`tools/bench/large-project.sh` makes such a project), so nothing is cached between runs.
+
 ## A result a person obtained
 
 A procedure of a test plan carried out by hand, an inspection, an analysis: someone records how it went.

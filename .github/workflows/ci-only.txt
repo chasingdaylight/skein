@@ -15,3 +15,5 @@ tools/npr7150/*
 tools/pdf/*
 # the script that takes mermaid.js into vendor/ (which is shipped)
 tools/mermaid/*
+# the generator of a large project for timing skein: run by hand, not shipped
+tools/bench/*
