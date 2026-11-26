@@ -16,7 +16,9 @@ const Workspace = @import("Workspace.zig");
 const coverage = @import("../graph/coverage.zig");
 const describe = @import("../output/describe.zig");
 const fingerprint = @import("../graph/fingerprint.zig");
+const git = @import("../git.zig");
 const gitlab_requirements = @import("../forge/gitlab_requirements.zig");
+const reqif_output = @import("../output/reqif.zig");
 
 pub const What = cli.Export.What;
 
@@ -50,7 +52,26 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Export) !Workspace.Out
         .links => try exporter.links(),
         .citations => try exporter.citations(),
         .@"gitlab-requirements" => try exporter.gitlabRequirements(),
+        .reqif => try exporter.reqif(io, ws.root),
     } };
+}
+
+/// The time of the last commit of each file of `items`, and of the last
+/// commit at all; a fixed time outside a repository, so that the export
+/// stays the same for the same files
+fn commitTimes(io: Io, arena: std.mem.Allocator, root: Io.Dir, items: []const *const Graph.Item) !struct { std.StringHashMapUnmanaged([]const u8), []const u8 } {
+    var times: std.StringHashMapUnmanaged([]const u8) = .empty;
+    const last = try git.output(io, arena, root, &.{ "log", "-1", "--format=%cI" });
+    const fallback = if (last) |t| std.mem.trim(u8, t, " \r\n") else "";
+    const default = if (fallback.len > 0) fallback else "1970-01-01T00:00:00Z";
+    if (last == null) return .{ times, default };
+    for (items) |item| {
+        if (times.contains(item.file)) continue;
+        const t = try git.output(io, arena, root, &.{ "log", "-1", "--format=%cI", "--", item.file }) orelse continue;
+        const trimmed = std.mem.trim(u8, t, " \r\n");
+        if (trimmed.len > 0) try times.put(arena, item.file, trimmed);
+    }
+    return .{ times, default };
 }
 
 const Exporter = struct {
@@ -119,6 +140,21 @@ const Exporter = struct {
         try j.endArray();
         try j.endObject();
         return j.finish();
+    }
+
+    /// Every item of the export, removed ones too, as ReqIF
+    fn reqif(self: Exporter, io: Io, root: Io.Dir) ![]const u8 {
+        var list: std.ArrayList(*const Graph.Item) = .empty;
+        for (self.ctx.graph.items) |*item| if (self.included(item)) try list.append(self.ctx.arena, item);
+        const times, const default = try commitTimes(io, self.ctx.arena, root, list.items);
+        return reqif_output.write(self.ctx.arena, .{
+            .project = self.ctx.project,
+            .graph = self.ctx.graph,
+            .items = list.items,
+            .tool = @import("build_options").version,
+            .times = &times,
+            .default_time = default,
+        });
     }
 
     /// The items, not removed ones, as GitLab's requirements import takes them

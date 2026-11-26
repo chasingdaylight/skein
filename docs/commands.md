@@ -144,6 +144,7 @@ Writes the project's graph to standard output, for other tools.
 | `links` | CSV, one row per link: from, its type, the link type, to, its type, and the review state. A traceability matrix in its long form, ready for a pivot table. |
 | `citations` | CSV, one row per citation: the citation set, file, line, the item and its type. |
 | `gitlab-requirements` | CSV for GitLab's requirements import, `title,description`: see [forges](forge.md#gitlabs-requirements). |
+| `reqif` | ReqIF 1.2, for DOORS and other requirements tools: a spec object per item (its ID, category, status, verification and attributes as strings, its text as XHTML), a spec relation per link, and a specification per document with the items in order and their parts under them. Identifiers come from the IDs, so a later export updates the same objects; `LAST-CHANGE` is the time of the last commit of the item's file. |
 
 `--profile NAME` exports only the items of that profile, with their links and citations.
 

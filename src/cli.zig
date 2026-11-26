@@ -15,7 +15,8 @@ pub const usage =
     \\  diff [REV [REV]]  Show the items added, removed or changed since a commit
     \\  impact [REV]      Show what the changes since a commit reach
     \\  export [WHAT]     Write the graph as JSON, or items, links or citations as CSV,
-    \\                    or gitlab-requirements: a CSV for GitLab's requirements import
+    \\                    gitlab-requirements: a CSV for GitLab's requirements import,
+    \\                    or reqif: ReqIF 1.2, for DOORS and other requirements tools
     \\  render --out DIR  Write the documents as Markdown for a site generator
     \\  move OLD NEW      Give an item another ID, everywhere the old one is used
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
@@ -330,6 +331,8 @@ pub const Export = struct {
         citations,
         /// as CSV for GitLab's requirements import
         @"gitlab-requirements",
+        /// ReqIF 1.2, for DOORS and other requirements tools
+        reqif,
     };
 };
 
@@ -625,7 +628,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (try p.allow(&.{ "--root", "--profile", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 1) return .{ .misuse = "export takes one thing to export" };
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
-            return .{ .misuse = "export: json, items, links, citations or gitlab-requirements" };
+            return .{ .misuse = "export: json, items, links, citations, gitlab-requirements or reqif" };
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
     }
     if (eql(name, "baseline")) {

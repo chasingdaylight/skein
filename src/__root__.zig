@@ -51,6 +51,7 @@ test {
     _ = @import("forge/checks.zig");
     _ = @import("forge/gitlab.zig");
     _ = @import("forge/gitlab_requirements.zig");
+    _ = @import("output/reqif.zig");
     _ = @import("template/Template.zig");
     _ = @import("template/_test/use.zig");
     _ = @import("template/_test/start.zig");
