@@ -73,7 +73,8 @@ pub const usage =
     \\  --offline         the same commands, and pin: fetch nothing; a repository
     \\                    by url is read from what its cache holds
     \\  --results FILE    trace, coverage, render: test results besides the project's own
-    \\                    (TOML, JSON or YAML); may be given more than once
+    \\                    (TOML, JSON, YAML, JUnit XML or TAP); may be given more
+    \\                    than once
     \\  --alias, --no-alias
     \\                    move: keep the old ID as an alias, or not (default: kept
     \\                    when the project declares an id, so others can cite it)
@@ -88,7 +89,10 @@ pub const usage =
     \\  --note TEXT       result, time: what to keep with it
     \\  --evidence PATH   result: a file that shows it; may be given more than once
     \\  --implementation NAME
-    \\                    result: what produced it
+    \\                    result: what produced it; trace, coverage, render: what
+    \\                    produced the results of --results that name nothing
+    \\  --implementation-version VERSION
+    \\                    trace, coverage, render: its version
     \\  --type TYPE       import csv: the item type of the rows
     \\  --to DIR          import csv: where the item files go
     \\  --id-column NAME, --text-column NAME
@@ -203,8 +207,8 @@ pub const Trace = struct {
     common: Common = .{},
     id: []const u8,
     json: bool = false,
-    /// results files besides the project's own
-    results: []const []const u8 = &.{},
+    /// results files besides the project's own, and what produced them
+    results: Results.Given = .{},
 };
 
 pub const Coverage = struct {
@@ -213,8 +217,8 @@ pub const Coverage = struct {
     json: bool = false,
     /// as Markdown, for a job summary or a pull request
     markdown: bool = false,
-    /// results files besides the project's own
-    results: []const []const u8 = &.{},
+    /// results files besides the project's own, and what produced them
+    results: Results.Given = .{},
 };
 
 pub const Load = struct {
@@ -359,8 +363,8 @@ pub const Render = struct {
     format: Format = .markdown,
     /// only the items of this profile
     profile: ?[]const u8 = null,
-    /// results files besides the project's own
-    results: []const []const u8 = &.{},
+    /// results files besides the project's own, and what produced them
+    results: Results.Given = .{},
 
     pub const Format = enum {
         /// Markdown for a site generator
@@ -453,6 +457,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--results", .takes_value = true },
     .{ .name = "--note", .takes_value = true },
     .{ .name = "--implementation", .takes_value = true },
+    .{ .name = "--implementation-version", .takes_value = true },
     .{ .name = "--from-pull-request", .takes_value = true },
     .{ .name = "--evidence", .takes_value = true },
     .{ .name = "--as", .takes_value = true },
@@ -534,15 +539,15 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .pin = .{ .common = common, .name = if (words.len > 0) words[0] else null, .revision = if (words.len == 2) words[1] else null } };
     }
     if (eql(name, "trace")) {
-        if (try p.allow(&.{ "--root", "--json", "--current", "--working", "--offline", "--results" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version" })) |problem| return .{ .misuse = problem };
         if (words.len != 1) return .{ .misuse = "trace takes one item" };
-        return .{ .trace = .{ .common = common, .id = words[0], .json = p.flag("--json"), .results = try p.values("--results") } };
+        return .{ .trace = .{ .common = common, .id = words[0], .json = p.flag("--json"), .results = try p.results() } };
     }
     if (eql(name, "coverage")) {
-        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working", "--offline", "--results" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version" })) |problem| return .{ .misuse = problem };
         if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
-        return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.values("--results") } };
+        return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.results() } };
     }
     if (eql(name, "overlay")) {
         if (try p.allow(&.{ "--root", "--offline", "--remove" })) |problem| return .{ .misuse = problem };
@@ -635,12 +640,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .move = .{ .common = common, .old = words[0], .new = words[1], .alias = keep } };
     }
     if (eql(name, "render")) {
-        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline", "--results" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "render takes no items" };
         const format: Render.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Render.Format, f) orelse
             return .{ .misuse = "render: the formats are markdown, html and document" } else .markdown;
         const out = p.value("--out") orelse return .{ .misuse = "render: say where the files go, with --out DIR" };
-        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.values("--results") } };
+        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results() } };
     }
     if (eql(name, "import")) {
         const forms = "import: doorstop DIR..., or csv FILE --type TYPE --to DIR";
@@ -753,6 +758,11 @@ const Parsed = struct {
             if (eql(g.name, name)) try out.append(self.arena, g.value);
         }
         return out.items;
+    }
+
+    /// `--results`, and what produced those that name nothing
+    fn results(self: *const Parsed) !Results.Given {
+        return .{ .files = try self.values("--results"), .implementation = self.value("--implementation"), .version = self.value("--implementation-version") };
     }
 
     /// What is wrong when an option other than `allowed` was given

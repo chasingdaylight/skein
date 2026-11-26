@@ -84,7 +84,7 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     try time.check((try planning_forge.collect(io, arena, ws.root, &ws.project, &ws.graph, true)).works, &ws.report);
     try schedule_checks.run(io, arena, ws.root, &ws.project, &ws.graph, calendar, ws.common.offline, &ws.report);
     // the results the project keeps: a result that belongs to no item is to be looked at
-    const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, &.{}, &ws.report);
+    const results = try Results.load(io, arena, ws.root, &ws.project, &ws.graph, .{}, &ws.report);
     const idx = try results.index(arena, &ws.graph, &ws.citations);
     for (idx.unmatched) |i| {
         const r = results.all[i];

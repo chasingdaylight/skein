@@ -5,10 +5,13 @@ The user documentation is in `docs/results.md`.
 Test results say whether what the items require holds: a CI run's, given to one command, or a record the project keeps, as a project that files test reports must.
 
 %req[results.import]
-Skein shall read test results in a format of its own, record which implementation and version produced each, and attach them to the items they are about. JUnit XML and TAP are for later (#129).
+Skein shall read test results in a format of its own, record which implementation and version produced each, and attach them to the items they are about, and read the results test runners write themselves, JUnit XML and TAP (`results.junit-tap`).
 
 %req[results.formats]
 A results file shall be TOML, JSON or YAML, told apart by its extension (`.toml`, `.json`, `.yaml`, `.yml`), each a list of results with the same fields: `test` (its name), `file` (of the test, from the project's root), `item`, `items`, `result` (`pass`, `fail` or `skip`), `implementation`, `version` and `note`. In TOML the list is `[[result]]` tables; in JSON an array, or an object with a `result` array; in YAML a list, or a `result:` list. A file that cannot be read, a result without `result`, and a `result` other than the three are reported.
+
+%req[results.junit-tap]
+A results file shall also be JUnit XML (`.xml`) or TAP (`.tap`). In JUnit XML each `testcase` is a result: failed with a `failure` or `error` element, skipped with `skipped`, else passed; its file is the `file` attribute of the case or of the nearest `testsuite`; its `item`, `items`, `implementation` and `version` are `property` elements of the case or the nearest suite. In TAP each `ok` or `not ok` line, indented or not, is a result, skipped with a `# SKIP` or `# TODO` directive; a comment `# file: PATH` gives the file of the tests after it, a YAML block after a test its `file`, `item` and `items`, and comments `# implementation:` and `# version:` apply to the whole file; `Bail out!` is a failed result. Files are read with forward slashes and without a leading `./`. For results given with `--results` that name no implementation, `--implementation` and `--implementation-version` say what produced them.
 
 %req[results.kept]
 The results files a project keeps shall be read from the files and directories `[results] paths` names, by every command that uses results; `trace` and `coverage` also take `--results FILE`, more than once, for a run's results that are not kept.

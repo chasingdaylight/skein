@@ -10,6 +10,7 @@ pub const Report = @import("Report.zig");
 pub const Schema = @import("schema/Schema.zig");
 pub const stdio = @import("stdio.zig");
 pub const toml = @import("toml.zig");
+pub const xml = @import("xml.zig");
 
 pub const main = @import("__main__.zig").main;
 
@@ -23,6 +24,7 @@ test {
     _ = Schema;
     _ = stdio;
     _ = toml;
+    _ = xml;
     _ = @import("graph/walk.zig");
     _ = @import("planning/day.zig");
     _ = @import("planning/_test/work.zig");
