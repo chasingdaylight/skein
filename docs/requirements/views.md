@@ -148,6 +148,9 @@ A fenced code block of the language `skein` in a document shall be a request for
 %req[render.generated.matrix-columns]
 `matrix LINKTYPE [conditions] columns=C,... from.columns=C,...` shall give, after the item, the columns `columns` of the item pointed to and, after the items that link to it, the columns `from.columns` of each, one row per item that links to it when those are asked for. A column is `id`, `type`, `category`, `status`, `text` (the first paragraph) or an attribute; each value that is the ID of an item is a link to it, and the values of an attribute with several are joined by commas.
 
+%req[render.generated.history]
+`history [type=TYPE]` shall give, at each baseline (oldest first) and now, the number of items of each type, removed ones left out, or with `type=` of each status of that type, and the coverage of each expectation in percent, as Mermaid charts and a table of the numbers; a baseline's numbers come from the files of its commit, the cited files included. (Issue #104; design sections 6 and 12.)
+
 %req[render.generated.coverage]
 `coverage [profile=P]` shall give what `skein coverage` counts, as a table, with links to the items that are not covered.
 

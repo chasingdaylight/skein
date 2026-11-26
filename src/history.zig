@@ -105,6 +105,14 @@ pub fn snapshotIn(io: Io, arena: std.mem.Allocator, root: Io.Dir, revision: []co
         const listed = try git.output(io, arena, root, &.{ "ls-tree", "-d", "--name-only", commit, "--", source.path }) orelse continue;
         if (trimmed(listed).len > 0) try paths.append(arena, source.path);
     }
+    // and the files that cite items, for what coverage was then
+    for (out.project.citations) |c| {
+        const listed = try git.output(io, arena, root, &.{ "ls-tree", "--name-only", commit, "--", c.path }) orelse continue;
+        if (trimmed(listed).len == 0) continue;
+        for (paths.items) |p| {
+            if (std.mem.eql(u8, p, c.path)) break;
+        } else try paths.append(arena, c.path);
+    }
     if (paths.items.len > 0) _ = try extract(io, arena, root, dir, commit, paths.items);
     out.graph = try Graph.load(io, arena, dir, &out.project, &ignored);
     return out;

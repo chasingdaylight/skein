@@ -34,6 +34,7 @@ const Control = @import("control.zig");
 const boards = @import("boards.zig");
 const burnchart = @import("burnchart.zig");
 const gantt = @import("gantt.zig");
+const measures = @import("measures.zig");
 const walk = @import("../graph/walk.zig");
 
 pub const Error = std.mem.Allocator.Error;
@@ -57,6 +58,8 @@ pub const Context = struct {
     control: ?*const Control = null,
     /// the schedule, for Gantt charts
     planning: ?*const gantt.Plan = null,
+    /// the numbers of the baselines, for measurements over time
+    history: ?*measures.History = null,
 };
 
 /// Test results, and which items they belong to
@@ -80,7 +83,7 @@ pub fn render(ctx: Context, text: []const u8) Error![]const u8 {
     var words: std.ArrayList([]const u8) = .empty;
     var it = std.mem.tokenizeAny(u8, text, " \t\r\n");
     while (it.next()) |w| try words.append(a, w);
-    if (words.items.len == 0) return problem(a, "the request is empty: list, matrix, coverage, documents, gantt, burndown, burnup, board, roadmap or time", .{});
+    if (words.items.len == 0) return problem(a, "the request is empty: list, matrix, coverage, documents, gantt, burndown, burnup, board, roadmap, time or history", .{});
     const what = words.items[0];
     const args = words.items[1..];
     if (std.mem.eql(u8, what, "list")) return list(ctx, args);
@@ -93,7 +96,8 @@ pub fn render(ctx: Context, text: []const u8) Error![]const u8 {
     if (std.mem.eql(u8, what, "board")) return boards.board(ctx, args);
     if (std.mem.eql(u8, what, "roadmap")) return boards.roadmap(ctx, args);
     if (std.mem.eql(u8, what, "time")) return boards.timeTable(ctx, args);
-    return problem(a, "'{s}' is no request skein knows: list, matrix, coverage, documents, gantt, burndown, burnup, board, roadmap or time", .{what});
+    if (std.mem.eql(u8, what, "history")) return measures.render(ctx, args);
+    return problem(a, "'{s}' is no request skein knows: list, matrix, coverage, documents, gantt, burndown, burnup, board, roadmap, time or history", .{what});
 }
 
 fn problem(a: std.mem.Allocator, comptime fmt: []const u8, args: anytype) Error![]const u8 {
