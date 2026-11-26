@@ -100,6 +100,7 @@ normative = false
 | `example` | A table that makes the type one of tested examples: see [writing items](writing-items.md#tested-examples). |
 | `example.link` | The link type an example inside an item counts as, to that item: `"shows"`. |
 | `example.rejects` | The category of an example that must be rejected. Default `"rejects"`. |
+| `example.message` | The string attribute that holds the messages a rejected example must give: `"error"`, written `%example[.open rejects error="unterminated string"]`. Default: none. |
 | `example.extensions` | The file name extension of each language's examples: `{ cesium = ".csm" }`. Default: the language. |
 | `attributes.<name>.type` | `"string"` (the default), `"integer"`, `"boolean"` or `"date"`. |
 | `attributes.<name>.values` | The values a string attribute may take. |

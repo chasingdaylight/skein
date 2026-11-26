@@ -346,7 +346,7 @@ skein: c.one verifies lex.comment
 
 ## `skein examples --out DIR`
 
-Writes each tested example (see [writing items](writing-items.md#tested-examples)) to a file of its own in `DIR`, named after its ID with its language's extension, and `examples.json`, which lists for each its ID, file, language, whether it must be accepted or rejected, the items it shows, and where it is written:
+Writes each tested example (see [writing items](writing-items.md#tested-examples)) to a file of its own in `DIR`, named after its ID with its language's extension, and `examples.json`, which lists for each its ID, file, language, whether it must be accepted or rejected, the items it shows, where it is written, and the messages it must give (`messages`, empty unless the type names an `example.message`):
 
 ```json
 [
