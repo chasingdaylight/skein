@@ -27,6 +27,8 @@ Two tutorials, each a small project from nothing to a working setup, every comma
 
 ## The documentation
 
+These pages are of the release their menu names, the latest by default; the menu also lists the documentation of each earlier release, for a project that has not moved to the latest.
+
 | Page | What it covers |
 | --- | --- |
 | [Writing items](writing-items.md) | Markers, parts, item files, references in text, citations in code and tests. |
