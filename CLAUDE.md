@@ -85,7 +85,7 @@ The list is not complete (zfls's `CLAUDE.md` has a longer one); the standard lib
 
 ## Skills, scripts and tools
 
-- `.claude/skills/`: `land-a-change` (checks, pull request, merge, the standing pull request, CI), `roadmap-issue` (filing at a place in the Roadmap, Rank, whose action is next, the board), `skein-template` (adding or changing a template), `standard-text` (taking a standard's text into a template).
+- `.claude/skills/`: `land-a-change` (checks, pull request, merge, CI), `roadmap-issue` (filing at a place in the Roadmap, Rank, whose action is next, the board), `skein-template` (adding or changing a template), `standard-text` (taking a standard's text into a template).
 - `tools/agent/`: the scripts those skills run: `land.sh`, `file-issue.sh`, `rank.sh`, `board.sh`, and `register-templates.sh`, which writes the file list of `templates/__root__.zig` (run it after adding or removing a template's file).
 - `tools/` otherwise holds programs that are not part of the Skein program, built by `zig build` steps of their own, tested by `zig build test`, and listed in `.github/workflows/ci-only.txt`: `tools/pdf` (`zig build pdftext`, the text of a PDF with positions) and `tools/npr7150` (NPR 7150.2D's NODIS pages as Skein documents). They are kept for reuse, and may move into a library of file formats such as rstd.
 
