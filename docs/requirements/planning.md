@@ -86,3 +86,6 @@ The project's calendar shall be the `[calendar]` of the resources file: its work
 
 %req[planning.overallocation]
 `skein check` shall warn of each week in which a person has more work than hours to work, with both.
+
+%req[planning.level]
+`skein level` shall propose a schedule in which nobody has more work in a week than hours to work, by moving work later: in the order of the work's start, critical work first, each item no earlier than its predecessors' new finishes allow, on the first working day from which its hours, counted as `skein load` counts them, fit beside what its assignees have booked already; finished work stays and is booked, and work that finds no room within two years stays and is listed. It lists each item whose dates change, and with `--write` writes the moves into the work items for review: a new start (and finish, when the item gives one) for fixed work, a longer lag for float work that follows other work, a start (and the mode `fixed`, when it names `float`) for float work that follows none. (Design, section 10.2; issue #94.)
