@@ -173,6 +173,13 @@ pub fn markStale(self: *Results, arena: std.mem.Allocator, graph: *const Graph, 
 pub fn index(self: *const Results, arena: std.mem.Allocator, graph: *const Graph, citations: *const Graph.Citations) !Index {
     var out: Index = .{};
     var unmatched: std.ArrayList(usize) = .empty;
+    // the items cited in each file, so that a result finds its file's at once
+    var by_file: std.StringHashMapUnmanaged(std.ArrayList([]const u8)) = .empty;
+    for (citations.all) |c| {
+        const entry = try by_file.getOrPut(arena, c.file);
+        if (!entry.found_existing) entry.value_ptr.* = .empty;
+        try entry.value_ptr.append(arena, c.target);
+    }
     for (self.all, 0..) |r, i| {
         // what it verified has changed: it says nothing of the item now
         if (r.stale != null) continue;
@@ -182,9 +189,7 @@ pub fn index(self: *const Results, arena: std.mem.Allocator, graph: *const Graph
             try targets.append(arena, item.id);
             for (item.links) |l| try targets.append(arena, l.target);
         };
-        if (r.file) |file| for (citations.all) |c| {
-            if (std.mem.eql(u8, c.file, file)) try targets.append(arena, c.target);
-        };
+        if (r.file) |file| if (by_file.get(file)) |cited| try targets.appendSlice(arena, cited.items);
         var matched = false;
         for (targets.items) |t| {
             const item = graph.find(t) orelse graph.formerly(t) orelse continue;
