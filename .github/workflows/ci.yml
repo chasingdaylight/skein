@@ -17,6 +17,17 @@ name: CI
 # the commit is tagged, a GitHub release gets skein for each platform and the
 # VS Code extension, the extension is published to the Marketplace and to Open
 # VSX (marketplace.yml, open-vsx.yml), and the next version is begun on dev.
+#
+# Signing (#235), as zfls's ci.yml does it: only a release, and a run started
+# by hand with the `sign` input, signs the programs (never a pull request:
+# signings are limited per month). compile builds them unsigned; sign-windows
+# signs skein.exe (Azure Artifact Signing), sign-macos signs and notarizes the
+# macOS skein (Developer ID), pkg-macos makes the macOS installer package;
+# package then archives the signed programs and makes the VS Code packages
+# from them. Each signing job is skipped while its configuration is unset
+# (SIGN_AZURE_CLIENT_ID and the other SIGN_* variables; APPLE_SIGNING,
+# APPLE_PKG and the APPLE_* secrets), and the programs stay unsigned; a
+# signing job that fails fails the run.
 
 on:
   push:
@@ -25,6 +36,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      sign:
+        description: Sign and notarize the programs, as a release does
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -113,6 +129,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       release: ${{ steps.version.outputs.release }}
+      sign: ${{ steps.version.outputs.sign }}
       sha: ${{ steps.version.outputs.sha }}
     steps:
       - uses: actions/checkout@v7
@@ -123,6 +140,9 @@ jobs:
         id: version
         env:
           EVENT: ${{ github.event_name }}
+          INPUT_SIGN: ${{ inputs.sign }}
+          SIGN_WINDOWS: ${{ vars.SIGN_AZURE_CLIENT_ID }}
+          SIGN_MACOS: ${{ vars.APPLE_SIGNING }}
         run: |
           version=$(sed -nE 's/^\s*\.version = "([^"]+)",/\1/p' build.zig.zon)
           extension=$(sed -nE 's/^\s*"version": "([^"]+)",/\1/p' editors/vscode/package.json)
@@ -148,12 +168,23 @@ jobs:
               fi
             fi
           fi
+          # signing: for a release, or a run started by hand that asks, when
+          # a platform's signing is configured
+          sign=false
+          if [ "$release" = true ] || { [ "$EVENT" = workflow_dispatch ] && [ "$INPUT_SIGN" = true ]; }; then
+            if [ -n "$SIGN_WINDOWS" ] || [ "$SIGN_MACOS" = true ]; then
+              sign=true
+            else
+              echo "::warning::signing is not configured (SIGN_AZURE_CLIENT_ID, APPLE_SIGNING); the programs stay unsigned"
+            fi
+          fi
           {
             echo "version=$version"
             echo "release=$release"
+            echo "sign=$sign"
             echo "sha=$GITHUB_SHA"
           } >> "$GITHUB_OUTPUT"
-          echo "v$version, release: $release" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "v$version, release: $release, sign: $sign" | tee -a "$GITHUB_STEP_SUMMARY"
 
   test:
     name: Test ${{ matrix.os }}
@@ -236,10 +267,12 @@ jobs:
       - name: Bundle
         run: npm run build
 
-  # What a release publishes: skein for each platform, built on one runner
-  # (Zig compiles for all of them), and the VS Code extension.
-  package:
-    name: Package
+  # skein for each platform, built on one runner (Zig compiles for all of
+  # them), unsigned: out/skein-vVERSION-TARGET/ with bin/, the license and the
+  # readme, as a tar (which keeps the execute bits). The sign-* jobs sign the
+  # programs in it; package archives them.
+  compile:
+    name: Compile
     needs: [changes, version]
     if: needs.changes.outputs.ci == 'true' && needs.changes.outputs.scope == 'full'
     runs-on: ubuntu-24.04
@@ -253,23 +286,362 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
       - name: skein for each platform
         run: |
-          mkdir -p dist
           # the Linux programs are static (musl), so they run on any distribution
           for target in x86_64-linux-musl aarch64-linux-musl x86_64-macos aarch64-macos x86_64-windows aarch64-windows; do
             name="skein-v$VERSION-${target%-musl}"
             zig build -Dtarget="$target" -Doptimize=ReleaseSafe --prefix "out/$name"
             cp LICENSE readme.md "out/$name/"
-            case "$target" in
+          done
+          tar -C out -cf unsigned.tar .
+          tar -tvf unsigned.tar
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: unsigned
+          path: unsigned.tar
+          if-no-files-found: error
+
+  # Azure Artifact Signing, through the Entra identity whose federated
+  # credential trusts this repository's main (and a branch while a signing
+  # change is tested); skipped while SIGN_AZURE_CLIENT_ID is unset
+  sign-windows:
+    name: Sign skein.exe
+    needs: [version, compile]
+    if: ${{ !cancelled() && needs.compile.result == 'success' && needs.version.outputs.sign == 'true' && vars.SIGN_AZURE_CLIENT_ID != '' }}
+    runs-on: windows-2025
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned
+          path: unsigned
+
+      - name: Unpack the Windows programs
+        run: |
+          mkdir pkg
+          tar -C pkg -xf unsigned/unsigned.tar --wildcards "./skein-v*-windows/*"
+          ls pkg
+
+      - name: Sign in to Azure
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.SIGN_AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.SIGN_AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.SIGN_AZURE_SUBSCRIPTION_ID }}
+
+      # SHA-256 and a trusted timestamp: the certificates last 3 days, the
+      # signature must stay valid after
+      - name: Sign skein.exe
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
+        with:
+          endpoint: ${{ vars.SIGN_ENDPOINT }}
+          signing-account-name: ${{ vars.SIGN_ACCOUNT }}
+          certificate-profile-name: ${{ vars.SIGN_PROFILE }}
+          files-folder: ${{ github.workspace }}\pkg
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Verify the signatures
+        shell: pwsh
+        run: |
+          $exes = @(Get-ChildItem pkg -Recurse -Filter skein.exe)
+          if ($exes.Count -ne 2) { throw "expected 2 skein.exe, found $($exes.Count)" }
+          foreach ($exe in $exes) {
+            $sig = Get-AuthenticodeSignature $exe.FullName
+            "$($exe.FullName): $($sig.Status) $($sig.SignerCertificate.Subject)"
+            if ($sig.Status -ne 'Valid') { throw "$($exe.FullName) is not validly signed: $($sig.Status)" }
+            if ($null -eq $sig.TimeStamperCertificate) { throw "$($exe.FullName) has no timestamp" }
+          }
+
+      - name: The signed skein.exe runs (x86_64)
+        run: pkg/skein-v*-x86_64-windows/bin/skein.exe version
+
+      - name: Stage the signed programs
+        run: tar -C pkg -cf signed-windows.tar .
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-windows
+          path: signed-windows.tar
+          if-no-files-found: error
+
+  # The Developer ID, a hardened runtime and a secure timestamp, then Apple's
+  # notarization; skipped while the variable APPLE_SIGNING is not true
+  sign-macos:
+    name: Sign and notarize the macOS skein
+    needs: [version, compile]
+    if: ${{ !cancelled() && needs.compile.result == 'success' && needs.version.outputs.sign == 'true' && vars.APPLE_SIGNING == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      APPLE_DEVELOPER_ID_P12: ${{ secrets.APPLE_DEVELOPER_ID_P12 }}
+      APPLE_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+      APPLE_NOTARY_KEY: ${{ secrets.APPLE_NOTARY_KEY }}
+      APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+      APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned
+          path: unsigned
+
+      - name: Unpack the macOS programs
+        run: |
+          mkdir pkg
+          tar -C pkg -xf unsigned/unsigned.tar --include "./skein-v*-macos/*"
+          ls pkg
+
+      - name: Import the Developer ID certificate
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          pass=$(uuidgen)
+          echo "$APPLE_DEVELOPER_ID_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$pass" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$pass" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -P "$APPLE_DEVELOPER_ID_P12_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$pass" "$keychain"
+          security list-keychains -d user -s "$keychain" login.keychain-db
+          rm "$RUNNER_TEMP/cert.p12"
+          security find-identity -v -p codesigning "$keychain"
+
+      # skein needs no entitlements
+      - name: Sign
+        run: |
+          identity=$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' | head -1)
+          [ -n "$identity" ] || { echo "::error::no Developer ID Application identity"; exit 1; }
+          for exe in pkg/*/bin/skein; do
+            codesign --force --options runtime --timestamp --sign "$identity" "$exe"
+            codesign --verify --strict --verbose=2 "$exe"
+          done
+
+      # A bare executable cannot be stapled: Gatekeeper looks the ticket up
+      # online. notarytool takes a zip.
+      - name: Notarize
+        run: |
+          echo "$APPLE_NOTARY_KEY" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          auth=(--key "$RUNNER_TEMP/notary.p8" --key-id "$APPLE_NOTARY_KEY_ID" --issuer "$APPLE_NOTARY_ISSUER_ID")
+          ids=()
+          for dir in pkg/*/; do
+            name=$(basename "$dir")
+            ditto -c -k --keepParent "$dir/bin/skein" "$RUNNER_TEMP/$name.zip"
+            id=$(xcrun notarytool submit "$RUNNER_TEMP/$name.zip" --no-wait --output-format json "${auth[@]}" | jq -r .id)
+            echo "$name: submission $id"
+            ids+=("$id")
+          done
+          failed=0
+          for id in "${ids[@]}"; do
+            xcrun notarytool wait "$id" --timeout 90m --output-format json "${auth[@]}" > "$RUNNER_TEMP/result.json" || true
+            status=$(jq -r '.status // "no answer"' "$RUNNER_TEMP/result.json")
+            echo "submission $id: $status"
+            if [ "$status" != Accepted ]; then
+              xcrun notarytool log "$id" "${auth[@]}" || true
+              failed=1
+            fi
+          done
+          rm "$RUNNER_TEMP/notary.p8"
+          exit "$failed"
+
+      - name: Verify the signatures
+        run: |
+          for exe in pkg/*/bin/skein; do
+            codesign --verify --strict "$exe"
+            codesign -dv --verbose=2 "$exe" 2>&1 | grep -E "Authority|flags|Timestamp"
+          done
+
+      - name: The signed skein runs
+        run: |
+          pkg/skein-v*-aarch64-macos/bin/skein version
+          arch -x86_64 pkg/skein-v*-x86_64-macos/bin/skein version || echo "::warning::the x86_64 skein did not run here (Rosetta?)"
+
+      - name: Stage the signed programs
+        run: tar -C pkg -cf signed-macos.tar .
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-macos
+          path: signed-macos.tar
+          if-no-files-found: error
+
+  # A universal skein in a signed, notarized and stapled installer package
+  # (Developer ID Installer), installed into /usr/local; skipped while the
+  # variable APPLE_PKG is not true
+  pkg-macos:
+    name: macOS installer package
+    needs: [version, sign-macos]
+    if: ${{ !cancelled() && needs.sign-macos.result == 'success' && vars.APPLE_PKG == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      APPLE_DEVELOPER_ID_P12: ${{ secrets.APPLE_DEVELOPER_ID_P12 }}
+      APPLE_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+      APPLE_INSTALLER_P12: ${{ secrets.APPLE_INSTALLER_P12 }}
+      APPLE_INSTALLER_P12_PASSWORD: ${{ secrets.APPLE_INSTALLER_P12_PASSWORD }}
+      APPLE_NOTARY_KEY: ${{ secrets.APPLE_NOTARY_KEY }}
+      APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+      APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: signed-macos
+          path: signed
+
+      - name: Import the certificates
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          pass=$(uuidgen)
+          security create-keychain -p "$pass" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$pass" "$keychain"
+          for kind in DEVELOPER_ID INSTALLER; do
+            p12="APPLE_${kind}_P12"
+            pw="APPLE_${kind}_P12_PASSWORD"
+            echo "${!p12}" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+            security import "$RUNNER_TEMP/cert.p12" -P "${!pw}" -A -t cert -f pkcs12 -k "$keychain"
+            rm "$RUNNER_TEMP/cert.p12"
+          done
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$pass" "$keychain"
+          security list-keychains -d user -s "$keychain" login.keychain-db
+          security find-identity -v
+
+      # One universal skein (lipo of the two signed programs, signed again)
+      - name: Build the universal program and the installer
+        run: |
+          app=$(security find-identity -v | sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' | head -1)
+          inst=$(security find-identity -v | sed -n 's/.*"\(Developer ID Installer:.*\)"/\1/p' | head -1)
+          [ -n "$app" ] && [ -n "$inst" ] || { echo "::error::an identity is missing"; exit 1; }
+          mkdir pkg
+          tar -C pkg -xf signed/signed-macos.tar
+          root="$RUNNER_TEMP/root"
+          mkdir -p "$root/usr/local/bin" "$root/usr/local/share/doc/skein"
+          lipo -create pkg/skein-v*-x86_64-macos/bin/skein pkg/skein-v*-aarch64-macos/bin/skein -output "$root/usr/local/bin/skein"
+          lipo -info "$root/usr/local/bin/skein"
+          codesign --force --options runtime --timestamp --sign "$app" "$root/usr/local/bin/skein"
+          cp pkg/skein-v*-aarch64-macos/LICENSE "$root/usr/local/share/doc/skein/"
+          pkgbuild --root "$root" --identifier com.github.chasingdaylight.skein --version "$VERSION" \
+            --install-location / "$RUNNER_TEMP/skein-component.pkg"
+          mkdir out
+          productbuild --package "$RUNNER_TEMP/skein-component.pkg" --sign "$inst" --timestamp \
+            "out/skein-v$VERSION-macos.pkg"
+          pkgutil --check-signature "out/skein-v$VERSION-macos.pkg"
+
+      - name: Notarize and staple the installer
+        run: |
+          echo "$APPLE_NOTARY_KEY" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          auth=(--key "$RUNNER_TEMP/notary.p8" --key-id "$APPLE_NOTARY_KEY_ID" --issuer "$APPLE_NOTARY_ISSUER_ID")
+          pkg="out/skein-v$VERSION-macos.pkg"
+          xcrun notarytool submit "$pkg" --wait --timeout 90m --output-format json "${auth[@]}" > "$RUNNER_TEMP/result.json" || true
+          status=$(jq -r '.status // "no answer"' "$RUNNER_TEMP/result.json")
+          echo "notarization: $status"
+          if [ "$status" != Accepted ]; then
+            xcrun notarytool log "$(jq -r .id "$RUNNER_TEMP/result.json")" "${auth[@]}" || true
+            exit 1
+          fi
+          rm "$RUNNER_TEMP/notary.p8"
+          xcrun stapler staple "$pkg"
+          xcrun stapler validate "$pkg"
+
+      - name: The installer is accepted and its skein runs
+        run: |
+          pkg="out/skein-v$VERSION-macos.pkg"
+          spctl --assess --type install -vv "$pkg"
+          pkgutil --expand-full "$pkg" "$RUNNER_TEMP/expanded"
+          exe=$(find "$RUNNER_TEMP/expanded" -path '*usr/local/bin/skein' | head -1)
+          "$exe" version
+          arch -x86_64 "$exe" version || echo "::warning::the x86_64 slice did not run here (Rosetta?)"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-pkg
+          path: out/*.pkg
+          if-no-files-found: error
+
+  # What a release publishes: the archives of skein for each platform, signed
+  # where a signing job ran, the macOS installer package when there is one,
+  # and the VS Code extension's packages, made from the same programs.
+  package:
+    name: Package
+    needs: [changes, version, compile, sign-windows, sign-macos, pkg-macos]
+    # a signing job that was skipped (not asked for, or not configured)
+    # leaves the programs unsigned; one that failed fails the run
+    if: >-
+      ${{ !cancelled() && needs.compile.result == 'success'
+      && contains(fromJSON('["success","skipped"]'), needs.sign-windows.result)
+      && contains(fromJSON('["success","skipped"]'), needs.sign-macos.result)
+      && contains(fromJSON('["success","skipped"]'), needs.pkg-macos.result) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      WINDOWS: ${{ needs.sign-windows.result }}
+      MACOS: ${{ needs.sign-macos.result }}
+      PKG: ${{ needs.pkg-macos.result }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: unsigned
+          path: unsigned
+
+      - uses: actions/download-artifact@v8
+        if: env.WINDOWS == 'success' || env.MACOS == 'success'
+        with:
+          pattern: signed-*
+          path: signed
+
+      - uses: actions/download-artifact@v8
+        if: env.PKG == 'success'
+        with:
+          name: macos-pkg
+          path: macos-pkg
+
+      # The signed programs replace the unsigned ones (a single matching
+      # artifact is extracted into signed/ itself, several into a folder
+      # each: find covers both). A signing job that succeeded must have its
+      # programs used, or the release would ship unsigned ones.
+      - name: The programs to package
+        run: |
+          mkdir out
+          tar -C out -xf unsigned/unsigned.tar
+          used=" "
+          while IFS= read -r t; do
+            tar -C out -xf "$t"
+            used="$used$(basename "$t") "
+          done < <(find signed -name 'signed-*.tar' 2> /dev/null)
+          if [ "$WINDOWS" = success ]; then
+            case "$used" in *" signed-windows.tar "*) ;; *) echo "::error::skein.exe was signed but its signed copies were not found"; exit 1 ;; esac
+          fi
+          if [ "$MACOS" = success ]; then
+            case "$used" in *" signed-macos.tar "*) ;; *) echo "::error::the macOS skein was signed but its signed copies were not found"; exit 1 ;; esac
+          fi
+          echo "signed: windows $WINDOWS, macOS $MACOS"
+
+      - name: The archives
+        run: |
+          mkdir -p dist
+          for dir in out/skein-v*/; do
+            name=$(basename "$dir")
+            case "$name" in
               *windows) (cd out && zip -q -r "../dist/$name.zip" "$name") ;;
               *) tar -C out -czf "dist/$name.tar.gz" "$name" ;;
             esac
           done
+          if [ "$PKG" = success ]; then cp macos-pkg/*.pkg dist/; fi
           ls -l dist
 
       - name: The program for this runner runs
@@ -326,6 +698,20 @@ jobs:
             exit 1
           fi
 
+      # a signing that succeeded must be what ships, in the archives and the
+      # VS Code packages
+      - name: The Windows packages carry the signed skein.exe
+        if: env.WINDOWS == 'success'
+        run: |
+          t=$(find signed -name signed-windows.tar)
+          for p in win32-x64:x86_64-windows win32-arm64:aarch64-windows; do
+            target=${p#*:}
+            tar -xOf "$t" "./skein-v$VERSION-$target/bin/skein.exe" > "$RUNNER_TEMP/signed.exe"
+            unzip -p "dist/skein-vscode-v$VERSION-${p%%:*}.vsix" extension/bin/skein.exe | cmp - "$RUNNER_TEMP/signed.exe"
+            unzip -p "dist/skein-v$VERSION-$target.zip" "skein-v$VERSION-$target/bin/skein.exe" | cmp - "$RUNNER_TEMP/signed.exe"
+            echo "$target: the signed skein.exe"
+          done
+
       - uses: actions/upload-artifact@v7
         with:
           name: dist
@@ -337,7 +723,7 @@ jobs:
     # the one check main's ruleset requires: passes when every job passed or
     # was skipped for a change that needs none
     if: always()
-    needs: [changes, version, test, lint, extension, package]
+    needs: [changes, version, test, lint, extension, compile, sign-windows, sign-macos, pkg-macos, package]
     runs-on: ubuntu-24.04
     steps:
       - name: Check the jobs
