@@ -238,6 +238,16 @@ milestone = "pdr"                   # the attribute of the items that says what 
 
 `skein check` then warns of a document below its item's value of `pdr` (the npr7150.2d template gives each product's expected maturity at each review), of one with no maturity, and of one naming an item there is not.
 
+A milestone may also have a gate, as the handbook's review checklists set them (topic 7.09; the npr7150.2d template gives them):
+
+```toml
+[maturity.gates.pdr]
+tbd = 1          # at most 1% of the requirements undecided
+volatility = 20  # under 20% added, changed or removed since the last baseline
+```
+
+The items counted are those of the types with an undecided status, `tbd` or `tbr` (or the statuses `[maturity] tbd` lists), removed ones left out. `skein check` warns when the milestone's gate is not met, and `skein coverage` gives the numbers. The last baseline is the newest tag `skein baseline` made.
+
 ### Diagrams
 
 A fenced block of the language `mermaid` is drawn as a diagram in HTML (`--format html` and `--format document`), by mermaid.js, which Skein carries (`vendor/mermaid`): the site has one copy of it, which only the pages with a diagram load, and a standalone document with a diagram has it inside (about 5 MB more). Markdown output leaves the block for the site generator.
