@@ -1,3 +1,4 @@
+// cspell:ignore xychart
 //! `skein render --editions`, on a git repository made for the test: each
 //! baseline rendered beside the files as they are, and the page that lists
 //! them.
@@ -46,4 +47,27 @@ test "the baselines rendered beside the files as they are" {
     const html_dir = try std.Io.Dir.path.join(a, &.{ repo.root, "html" });
     _ = try render_command.run(testing.io, a, .{ .common = .{ .root = repo.root }, .out = html_dir, .format = .html, .editions = true });
     try expectContains(try read(&repo, "html/editions/index.html"), "<li><a href=\"v2/index.html\">v2</a>");
+}
+
+// req: render.generated.history
+test "measurements over time: items and coverage at each baseline and now" {
+    var repo: Repo = undefined;
+    try repo.init();
+    defer repo.deinit();
+    const a = repo.arena.allocator();
+    try repo.write("spec/history.md", "# History\n\n```skein\nhistory\n```\n");
+    try repo.commit("history page");
+    try testing.expect((try repo.baseline("v1", null)).ok);
+    try repo.write("spec/lex.md", "%rule[lex.a] A.\n\n%rule[lex.b] B.\n\n%rule[lex.c] C.\n");
+    try repo.write("tests/b.zig", "// spec: lex.b, lex.c\n");
+
+    const out_dir = try std.Io.Dir.path.join(a, &.{ repo.root, "site" });
+    _ = try render_command.run(testing.io, a, .{ .common = .{ .root = repo.root }, .out = out_dir });
+    const page = try repo.tmp.dir.readFileAlloc(testing.io, "site/spec/history.md", a, .limited(1 << 16));
+    try expectContains(page, "xychart-beta\n  title \"Items\"\n  x-axis [\"v1\", \"now\"]\n  y-axis \"Items\" 0 --> 3\n  line [2, 3]\n");
+    try expectContains(page, "title \"Coverage\"");
+    try expectContains(page, "  line [50, 100]\n");
+    try expectContains(page, "| Edition | Date | Items | test of rule |\n");
+    try expectContains(page, "| now |  | 3 | 100% |\n");
+    try expectContains(page, "| v1 | ");
 }

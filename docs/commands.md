@@ -199,6 +199,7 @@ list term
 | `matrix LINKTYPE [conditions]` | Each item the link type may point to, with the items that link to it; the gaps marked **none**. A traceability matrix. With `columns=text,classes` and `from.columns=status,evidence`, those columns of the item and of each item linking to it, one row per linking item: a compliance matrix. |
 | `coverage [profile=P]` | The coverage table, with links to the items that are not covered. |
 | `documents` | The register of documents: each document that gives its identifier, with its title, revision and last change. |
+| `history [type=TYPE]` | Measurements over time, for the measurement reports a standard asks for: at each baseline and now, the items of each type (or, with `type=`, of each status of that type) and the coverage of each expectation in percent, as Mermaid charts with a table of the numbers. A baseline is read from the files of its commit. |
 | `burndown MILESTONE [weight] [from=DATE] [to=DATE]`, `burnup ...` | A milestone's burndown (what remains, beside a guideline to none) or burnup (scope and done), day by day up to today, from the project as committed each day; `weight` counts estimates in place of items. Work is done in the statuses of `[planning] done`, by default the type's last status. |
 | `board [TYPE...] [conditions] [by=status\|assignee\|milestone]` | A board of the work items: a column for each status (or assignee, or milestone), a card for each item. |
 | `time [TYPE...] [conditions]` | Time spent on work items against their estimates, in hours, with who spent it: see `skein time`. |

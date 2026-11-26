@@ -15,6 +15,7 @@ const Project = @import("../Project.zig");
 const Schema = @import("../schema/Schema.zig");
 const coverage = @import("../graph/coverage.zig");
 const gantt = @import("gantt.zig");
+const measures = @import("measures.zig");
 const generated = @import("generated.zig");
 const html = @import("../html/inline.zig");
 const markdown = @import("../markdown.zig");
@@ -43,6 +44,8 @@ pub const Context = struct {
     control: ?*const Control = null,
     /// the schedule, for Gantt charts; null without work items
     planning: ?*const gantt.Plan = null,
+    /// the numbers of the baselines, for measurements over time
+    history: ?*measures.History = null,
 };
 
 /// The document `file`, whose text is `source`, rendered.
@@ -182,6 +185,7 @@ const Page = struct {
                 .results = self.ctx.results,
                 .control = self.ctx.control,
                 .planning = self.ctx.planning,
+                .history = self.ctx.history,
             }, request);
             try self.generated.put(self.ctx.arena, b.first_line, .{ .last_line = b.last_line, .text = std.mem.trimEnd(u8, text, "\n") });
         }
