@@ -63,18 +63,28 @@ pub const Result = struct {
     }
 };
 
-pub const extensions = [_][]const u8{ ".toml", ".json", ".yaml", ".yml" };
+pub const extensions = [_][]const u8{ ".toml", ".json", ".yaml", ".yml", ".xml", ".tap" };
+
+/// The results files a command is given besides the project's own
+/// (`--results`), and what produced those of their results that name
+/// nothing (`--implementation`, `--implementation-version`): JUnit XML and
+/// TAP have no place for it
+pub const Given = struct {
+    files: []const []const u8 = &.{},
+    implementation: ?[]const u8 = null,
+    version: ?[]const u8 = null,
+};
 
 /// The results of the project's results paths, and of the files `extra`
 /// (paths from the current directory). Files that cannot be read, and
 /// results that are not well formed, are reported.
-pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, extra: []const []const u8, report: *Report) !Results {
+pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, extra: Given, report: *Report) !Results {
     var out = try loadFiles(io, arena, root, project, extra, report);
     try out.markStale(arena, graph, &project.schema);
     return out;
 }
 
-fn loadFiles(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, extra: []const []const u8, report: *Report) !Results {
+fn loadFiles(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, extra: Given, report: *Report) !Results {
     var out: std.ArrayList(Result) = .empty;
     for (project.results) |path| {
         const found = if (read.formatOf(path) != null) &.{path} else files.list(io, arena, root, path, &extensions) catch |e| switch (e) {
@@ -84,14 +94,14 @@ fn loadFiles(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Pro
                 continue;
             },
         };
-        for (found) |file| try readFile(io, arena, root, file, &out, report);
+        for (found) |file| try readFile(io, arena, root, file, .{}, &out, report);
     }
-    for (extra) |file| try readFile(io, arena, Io.Dir.cwd(), file, &out, report);
+    for (extra.files) |file| try readFile(io, arena, Io.Dir.cwd(), file, extra, &out, report);
     return .{ .all = out.items };
 }
 
-fn readFile(io: Io, arena: std.mem.Allocator, dir: Io.Dir, file: []const u8, out: *std.ArrayList(Result), report: *Report) !void {
-    const format = read.formatOf(file) orelse return report.add(file, 0, 0, "a results file is .toml, .json, .yaml or .yml", .{});
+fn readFile(io: Io, arena: std.mem.Allocator, dir: Io.Dir, file: []const u8, told: Given, out: *std.ArrayList(Result), report: *Report) !void {
+    const format = read.formatOf(file) orelse return report.add(file, 0, 0, "a results file is .toml, .json, .yaml, .yml, .xml (JUnit) or .tap", .{});
     const text = dir.readFileAlloc(io, file, arena, .limited(1 << 26)) catch |e| switch (e) {
         error.OutOfMemory => return error.OutOfMemory,
         else => return report.add(file, 0, 0, "cannot read the file ({s})", .{@errorName(e)}),
@@ -121,8 +131,9 @@ fn readFile(io: Io, arena: std.mem.Allocator, dir: Io.Dir, file: []const u8, out
             .date = r.get("date"),
             .commit = r.get("commit"),
             .outcome = outcome,
-            .implementation = r.get("implementation") orelse "",
-            .version = r.get("version"),
+            // one that names nothing: what the command was told produced it
+            .implementation = r.get("implementation") orelse told.implementation orelse "",
+            .version = r.get("version") orelse if (r.get("implementation") == null) told.version else null,
             .note = r.get("note"),
             .source = file,
             .index = n,
@@ -235,5 +246,6 @@ pub fn implementationName(self: *const Results, arena: std.mem.Allocator, implem
 
 test {
     _ = read;
+    _ = @import("_test/formats.zig");
     _ = @import("_test/results.zig");
 }

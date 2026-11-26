@@ -1,10 +1,13 @@
 //! Reading results files: TOML (`[[result]]` tables), JSON (an array of
 //! objects, or an object with a `result` array) and YAML (a `result:` list
-//! of mappings, or a list), told apart by the extension. Each result is
+//! of mappings, or a list), JUnit XML (junit.zig) and TAP (tap.zig), told
+//! apart by the extension. Each result is
 //! read into its fields, by name, whatever the format.
 
 const std = @import("std");
 
+const junit = @import("junit.zig");
+const tap = @import("tap.zig");
 const toml = @import("../toml.zig");
 const yaml = @import("../import/doorstop/yaml.zig");
 
@@ -26,13 +29,15 @@ pub const Record = struct {
     }
 };
 
-pub const Format = enum { toml, json, yaml };
+pub const Format = enum { toml, json, yaml, junit, tap };
 
 /// The format of the file `path`, by its extension
 pub fn formatOf(path: []const u8) ?Format {
     if (std.ascii.endsWithIgnoreCase(path, ".toml")) return .toml;
     if (std.ascii.endsWithIgnoreCase(path, ".json")) return .json;
     if (std.ascii.endsWithIgnoreCase(path, ".yaml") or std.ascii.endsWithIgnoreCase(path, ".yml")) return .yaml;
+    if (std.ascii.endsWithIgnoreCase(path, ".xml")) return .junit;
+    if (std.ascii.endsWithIgnoreCase(path, ".tap")) return .tap;
     return null;
 }
 
@@ -43,6 +48,8 @@ pub fn records(arena: std.mem.Allocator, format: Format, text: []const u8, why: 
         .toml => fromToml(arena, text, why),
         .json => fromJson(arena, text, why),
         .yaml => fromYaml(arena, text, why),
+        .junit => junit.records(arena, text, why),
+        .tap => tap.records(arena, text, why),
     };
 }
 
@@ -197,5 +204,6 @@ test "the same results in TOML, JSON and YAML" {
     }
     try std.testing.expectError(error.BadResults, records(a, .json, "{\"result\": 3}", &why));
     try std.testing.expectEqual(.yaml, formatOf("run.yml").?);
-    try std.testing.expectEqual(null, formatOf("run.xml"));
+    try std.testing.expectEqual(.junit, formatOf("run.xml").?);
+    try std.testing.expectEqual(null, formatOf("run.txt"));
 }

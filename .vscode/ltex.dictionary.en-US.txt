@@ -87,3 +87,4 @@ xcrun
 lipo
 spctl
 xattr
+apos

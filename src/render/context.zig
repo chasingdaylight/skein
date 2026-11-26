@@ -17,8 +17,8 @@ const plan = @import("plan.zig");
 
 pub const Options = struct {
     profile: ?*const Schema.Profile = null,
-    /// results files besides the project's own
-    results: []const []const u8 = &.{},
+    /// results files besides the project's own, and what produced them
+    results: Results.Given = .{},
     /// read the forge's issues from the cache only
     offline: bool = false,
     /// read document control from git
