@@ -121,6 +121,9 @@ Each reference, in the text of an item or in narrative text, shall be replaced b
 %req[render.markdown.item-files]
 A rendered item file shall start with YAML front matter that gives the ID as the title, in place of the TOML front matter, followed by the category and status when the item has them, and the text. A file in a source of item files that is not an item is written unchanged.
 
+%req[render.editions]
+With `--editions`, `skein render` shall also render each baseline, from the files of its commit, into `DIR/editions/NAME/` in the same format, without results, and write a page there (`index.md`, or `index.html` for the HTML formats) that lists the files as they are now and then the baselines, newest first, with their dates and links; a baseline that cannot be rendered is said so and left out. (Issue #103; design section 8.)
+
 %req[render.markdown.output]
 `skein render` shall create `DIR` when it does not exist, shall not change any file of the project, and shall say how many files or pages it wrote. Without `--out` it is refused. The formats are `markdown` (the default) and `html`.
 

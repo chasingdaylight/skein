@@ -119,6 +119,8 @@ pub const usage =
     \\                    html: the site itself, or document: one file per document;
     \\                    check: text (the default), github: annotations for
     \\                    GitHub Actions, or gitlab: a Code Quality report
+    \\  --editions        render: each baseline too, under editions/NAME/, with
+    \\                    a page that lists them
     \\
 ;
 
@@ -381,6 +383,8 @@ pub const Render = struct {
     profile: ?[]const u8 = null,
     /// results files besides the project's own, and what produced them
     results: Results.Given = .{},
+    /// each baseline too, under editions/NAME/
+    editions: bool = false,
 
     pub const Format = enum {
         /// Markdown for a site generator
@@ -475,6 +479,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--implementation", .takes_value = true },
     .{ .name = "--implementation-version", .takes_value = true },
     .{ .name = "--gitlab-requirements", .takes_value = true },
+    .{ .name = "--editions", .takes_value = false },
     .{ .name = "--from-pull-request", .takes_value = true },
     .{ .name = "--evidence", .takes_value = true },
     .{ .name = "--as", .takes_value = true },
@@ -657,12 +662,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .move = .{ .common = common, .old = words[0], .new = words[1], .alias = keep } };
     }
     if (eql(name, "render")) {
-        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--editions" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "render takes no items" };
         const format: Render.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Render.Format, f) orelse
             return .{ .misuse = "render: the formats are markdown, html and document" } else .markdown;
         const out = p.value("--out") orelse return .{ .misuse = "render: say where the files go, with --out DIR" };
-        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results() } };
+        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results(), .editions = p.flag("--editions") } };
     }
     if (eql(name, "import")) {
         const forms = "import: doorstop DIR..., csv FILE or reqif FILE with --type TYPE --to DIR, or gitlab-requirements FILE";
