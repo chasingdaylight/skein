@@ -38,6 +38,8 @@ pub const usage =
     \\                    Turn Doorstop documents into skein items, in place
     \\  import csv FILE --type TYPE --to DIR
     \\                    Make an item file in DIR of each row of a CSV file
+    \\  import reqif FILE --type TYPE --to DIR
+    \\                    Make an item file in DIR of each spec object of a ReqIF file
     \\  import gitlab-requirements FILE
     \\                    Record the GitLab requirement of each item, from the CSV
     \\                    GitLab exports of a project's requirements
@@ -101,12 +103,12 @@ pub const usage =
     \\  --gitlab-requirements FILE
     \\                    coverage: also write GitLab's requirements report, for a CI
     \\                    job's artifacts
-    \\  --type TYPE       import csv: the item type of the rows
-    \\  --to DIR          import csv: where the item files go
+    \\  --type TYPE       import csv, reqif: the item type of the rows
+    \\  --to DIR          import csv, reqif: where the item files go
     \\  --id-column NAME, --text-column NAME
     \\                    import csv: the columns of the IDs and the text
     \\                    (default: id, text)
-    \\  --replace         import csv: write over item files that are there
+    \\  --replace         import csv, reqif: write over item files that are there
     \\  --headings-as-text
     \\                    import doorstop: non-normative items as plain Markdown
     \\  --status-from NAME, --verification-from NAME
@@ -411,7 +413,7 @@ pub const Import = struct {
     /// doorstop: the attribute whose values are the verification methods
     verification_from: ?[]const u8 = null,
 
-    pub const Format = enum { doorstop, csv, @"gitlab-requirements" };
+    pub const Format = enum { doorstop, csv, reqif, @"gitlab-requirements" };
 };
 
 pub const Review = struct {
@@ -663,7 +665,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results() } };
     }
     if (eql(name, "import")) {
-        const forms = "import: doorstop DIR..., csv FILE --type TYPE --to DIR, or gitlab-requirements FILE";
+        const forms = "import: doorstop DIR..., csv FILE or reqif FILE with --type TYPE --to DIR, or gitlab-requirements FILE";
         if (words.len == 0) return .{ .misuse = forms };
         const format = std.meta.stringToEnum(Import.Format, words[0]) orelse return .{ .misuse = forms };
         switch (format) {
@@ -692,6 +694,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
                     .text_column = p.value("--text-column"),
                     .replace = p.flag("--replace"),
                 } };
+            },
+            .reqif => {
+                if (try p.allow(&.{ "--root", "--type", "--to", "--replace" })) |problem| return .{ .misuse = problem };
+                if (words.len != 2) return .{ .misuse = "import reqif: name one ReqIF file" };
+                return .{ .import = .{ .common = common, .format = format, .paths = words[1..], .item_type = p.value("--type"), .to = p.value("--to"), .replace = p.flag("--replace") } };
             },
             .@"gitlab-requirements" => {
                 if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };

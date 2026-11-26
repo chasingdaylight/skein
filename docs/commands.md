@@ -304,6 +304,10 @@ Turns Doorstop documents into Skein items, where they are; see [importing](impor
 
 Makes an item file in `DIR` of each row of a CSV file; see [importing](importing.md).
 
+## `skein import reqif FILE --type TYPE --to DIR`
+
+Makes an item file in `DIR` of each spec object of a ReqIF file, as DOORS and other requirements tools write them; see [importing](importing.md#from-a-reqif-file).
+
 ## `skein import gitlab-requirements FILE`
 
 Records the GitLab requirement of each item, from the CSV GitLab exports of a project's requirements, in `.skein/gitlab-requirements.toml`; see [forges](forge.md#gitlabs-requirements).

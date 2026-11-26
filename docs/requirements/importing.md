@@ -41,3 +41,8 @@ When the project has no item type with the given name, one shall be created, wit
 
 %req[import.csv.all-or-nothing]
 Nothing shall be written unless every row can become an item and no existing item file would be overwritten. With `--replace`, existing files are overwritten.
+
+## From ReqIF
+
+%req[import.reqif]
+`skein import reqif FILE --type TYPE --to DIR` shall make an item file of each spec object of a ReqIF 1.2 file, as `import csv` does of each row (with its item type, sources, refusals and `--replace`), in the order of the file's specifications: the ID from the attribute `id` (as `skein export reqif` writes it), else `ReqIF.ForeignID`, else the object's identifier; the text from the XHTML attribute `text` or `ReqIF.Text`, else the first XHTML one, as Markdown; the identifier as the attribute `reqif`; the other attributes by their long names, an enumeration as the names of its values; and each spec relation as a link of the type named as the relation type, to the item its target became. What `skein export reqif` writes comes back as the same items. (Issue #241.)

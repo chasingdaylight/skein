@@ -79,3 +79,22 @@ Empty cells are left out. Names are matched without regard to case, so `ID` and 
 When the project has no item type of the name given, one is made: with an attribute for each such column, and the ID scheme the IDs show (`SWE-013`: numbered; `sys.start`: hierarchical). When it has one, the type is left as it is, and `skein check` says what the items do not fit. The directory is added to the project's sources unless it is one already.
 
 Nothing is written unless every row can be an item. An item file that is already there stops the import, unless `--replace` is given: that is how a newer export of the same list is brought in, and `git diff` then shows what changed in it.
+
+## From a ReqIF file
+
+```text
+skein import reqif srs.reqif --type srs --to docs/requirements
+```
+
+ReqIF is how DOORS and other requirements tools exchange requirements; `skein export reqif` writes it too. Each spec object becomes an item file, as each row of a CSV file does (see above for the item type, the directory, `--replace` and what is refused), in the order of the file's specifications:
+
+| In the ReqIF file | Becomes |
+| --- | --- |
+| the attribute `id`, else `ReqIF.ForeignID` (DOORS's object number), else the object's identifier | the item's ID |
+| the XHTML attribute `text` or `ReqIF.Text`, else the first XHTML one | the item's text, as Markdown: paragraphs, lists, line breaks, bold, italics, code and links |
+| the object's identifier | the attribute `reqif`, to find it again (and `ReqIF.ForeignID`, when there is one, the attribute `reqif-foreign-id`) |
+| an attribute `status`, `category` or `verification` | that |
+| a spec relation | a link of the type named as the relation type, when the project has that link type, to the item its target became |
+| any other attribute | an attribute named as its long name; an enumeration gives its values' names |
+
+Declare the link types before importing, so that relations become links. Attributes named `type` or `text` that are not the text become `reqif-type` and `reqif-text`. A newer export of the same specification is brought in with `--replace`; `skein diff` and `git diff` show what changed. A `.reqifz` file is a ZIP archive: unpack it first.
