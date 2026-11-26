@@ -91,7 +91,7 @@ Inline Markdown shall be rendered: emphasis and strong with `*` and `_` (not `_`
 ## Examples
 
 %req[examples.command]
-`skein examples --out DIR` shall write the code of each example that is not removed to a file of its own in `DIR`, named after its ID with the extension the example type gives for its language (else the language itself), and `examples.json`: for each, its ID, file, language, whether it must be accepted or rejected, the items it shows (its links of the type's link type, or all its links when the type gives none), and its source file and line. Skein runs none of them.
+`skein examples --out DIR` shall write the code of each example that is not removed to a file of its own in `DIR`, named after its ID with the extension the example type gives for its language (else the language itself), and `examples.json`: for each, its ID, file, language, whether it must be accepted or rejected, the items it shows (its links of the type's link type, or all its links when the type gives none), its source file and line, and the messages it must give (`examples.messages`; none when the type names no `message`). Skein runs none of them.
 
 ## Export
 

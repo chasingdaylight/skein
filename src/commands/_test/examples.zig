@@ -141,3 +141,53 @@ test "what cannot be an example is reported" {
     try expectContains(out, "spec/bad.md:3:1: error: an example outside an item needs an ID: %example[ID]");
     try expectContains(out, "spec/bad.md:7:1: error: a 'rule' cannot be a code block: only an item type with [example] can");
 }
+
+// req: examples.messages
+test "a rejected example may state the messages it must give" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    const a = f.arena.allocator();
+    try write(f.tmp.dir, ".skein/types/example.toml",
+        \\categories = ["accepts", "rejects"]
+        \\
+        \\[attributes.error]
+        \\list = true
+        \\
+        \\[example]
+        \\link = "shows"
+        \\message = "error"
+        \\
+    );
+    try write(f.tmp.dir, "spec/msg.md",
+        \\%rule[lex.string syntax] A string ends on its line.
+        \\
+        \\```cesium %example[.open rejects error="unterminated string" error=E0012]
+        \\"open
+        \\```
+        \\
+        \\```cesium %example[.closed]
+        \\"closed"
+        \\```
+        \\
+    );
+    try expectContains((try check_command.run(testing.io, a, .{ .root = f.root })).text, "no problems");
+    const out_dir = try std.Io.Dir.path.join(a, &.{ f.root, "out" });
+    _ = try examples_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .out = out_dir });
+    const index = try f.tmp.dir.readFileAlloc(testing.io, "out/examples.json", a, .limited(1 << 16));
+    try expectContains(index, "\"source\": \"spec/msg.md\",\n    \"line\": 3,\n    \"messages\": [\n      \"unterminated string\",\n      \"E0012\"\n    ]");
+    try expectContains(index, "\"source\": \"spec/msg.md\",\n    \"line\": 7,\n    \"messages\": []");
+
+    // an accepted example gives none, and the attribute must be a string one
+    try write(f.tmp.dir, "spec/msg.md",
+        \\%rule[lex.string syntax] A string ends on its line.
+        \\
+        \\```cesium %example[.closed error=E0012]
+        \\"closed"
+        \\```
+        \\
+    );
+    try expectContains((try check_command.run(testing.io, a, .{ .root = f.root })).text, "spec/msg.md:3:1: error: lex.string.closed: an example that must be accepted gives no message: 'error' is for one that is 'rejects'");
+    try write(f.tmp.dir, ".skein/types/example.toml", "categories = [\"accepts\", \"rejects\"]\n\n[example]\nlink = \"shows\"\nmessage = \"error\"\n");
+    try expectContains((try check_command.run(testing.io, a, .{ .root = f.root })).text, "'error' is not a string attribute of the type");
+}

@@ -44,6 +44,9 @@ An item type with an `[example]` table in its file shall be one of tested exampl
 %req[examples.parts]
 An example inside the text of an item shall be a part of it: with a leading-dot ID it is named within the item, and without an ID it is numbered in the item, `ID.example-1` and on. When the example type gives a link type (`link`), the part has a link of that type to the item, unless it gives one itself. An example outside an item needs an ID. An example with the category the type gives as `rejects` must be rejected; one without a category must be accepted, so an example type requires none.
 
+%req[examples.messages]
+An example type may name a string attribute of its own as `message` in its `[example]` table; that attribute of a rejected example shall hold the messages it must give (`%example[.open rejects error="unterminated string"]`), so that the project's driver can check them, not only that the code was refused. An example that must be accepted and has the attribute is reported, and so is a `message` that names no string attribute of the type.
+
 %req[examples.coverage]
 The links of examples, given or added for a part, shall count for coverage as any links do, so that `skein coverage` counts the items that have an example.
 

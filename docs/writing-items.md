@@ -148,6 +148,7 @@ An example is a fenced code block with the marker on its opening line, after the
 - **Inside an item,** an example is a part of it and shows it: the first above is `lex.comment.example-1`, the second `lex.comment.open`, and both have a `shows` link to `lex.comment`. So `skein coverage` counts the rules that have an example, when `shows` is expected.
 - **Elsewhere,** an example needs an ID, and says what it shows: ```` ```cesium %example[ex.both shows=lex.comment shows=lex.token] ````. A key that takes several values may be given more than once.
 - **Accepted or rejected:** an example with the category `rejects` (or the one `example.rejects` names) must be rejected; one without a category must be accepted.
+- **Expected messages:** where the type names a string attribute as `example.message` (`message = "error"`), a rejected example can say what it must be refused with, `%example[.open rejects error="unterminated string"]`, and `examples.json` lists it for the driver to compare. Declare the attribute with `list = true` for several; an example that must be accepted cannot have one.
 
 `skein examples --out DIR` writes each example to a file and lists them in `examples.json`, for the project's test driver: see [commands](commands.md).
 

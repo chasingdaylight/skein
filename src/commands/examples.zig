@@ -6,6 +6,8 @@
 const std = @import("std");
 const Io = std.Io;
 
+const Example = @import("../schema/Example.zig");
+const Item = @import("../graph/Item.zig");
 const Json = @import("../output/Json.zig");
 const Workspace = @import("Workspace.zig");
 const cli = @import("../cli.zig");
@@ -56,6 +58,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Examples) !Workspace.O
         try j.string(item.file);
         try j.key("line");
         try j.integer(item.line);
+        try j.key("messages");
+        try j.strings(try messages(arena, item, ex));
         try j.endObject();
         count += 1;
     }
@@ -63,6 +67,18 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Examples) !Workspace.O
     out.writeFile(io, .{ .sub_path = index_file, .data = try j.finish() }) catch |e|
         return misuse(arena, "cannot write '{s}' ({s})", .{ index_file, @errorName(e) });
     return .{ .text = try arena.print("skein: wrote {d} example{s} and {s} to {s}\n", .{ count, if (count == 1) "" else "s", index_file, options.out }) };
+}
+
+/// The messages the example must give: the values of the type's `message`
+/// attribute, none when it has none
+fn messages(arena: std.mem.Allocator, item: *const Item, ex: Example) ![]const []const u8 {
+    const name = ex.message orelse return &.{};
+    for (item.attributes) |a| {
+        if (!std.mem.eql(u8, a.name, name)) continue;
+        if (a.values.len > 0) return a.values;
+        return try arena.dupe([]const u8, &.{a.value});
+    }
+    return &.{};
 }
 
 fn misuse(arena: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !Workspace.Outcome {

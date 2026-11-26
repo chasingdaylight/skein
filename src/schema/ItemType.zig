@@ -146,6 +146,10 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
     if (try r.child("example")) |e| {
         out.example = try Example.read(e);
         if (out.categories.len > 0 and !names.contains(out.categories, out.example.?.rejects)) try e.complain("rejects", "'{s}' is not one of the categories", .{out.example.?.rejects});
+        if (out.example.?.message) |m| {
+            const declared = out.attribute(m);
+            if (declared == null or declared.?.kind != .string) try e.complain("message", "'{s}' is not a string attribute of the type", .{m});
+        }
     }
     if (try r.child("planning")) |p| {
         out.planning = try Planning.read(p, out.attributes);

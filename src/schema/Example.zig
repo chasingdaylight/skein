@@ -14,14 +14,17 @@ link: ?[]const u8 = null,
 /// the category of an example that must be rejected; any other must be
 /// accepted
 rejects: []const u8 = "rejects",
+/// the string attribute that holds the messages a rejected example must
+/// give; null when examples state none
+message: ?[]const u8 = null,
 /// the file name extension of the examples of each language
 extensions: []const Extension = &.{},
 
 pub const Extension = struct { language: []const u8, extension: []const u8 };
 
 pub fn read(r: Reader) Reader.Error!Example {
-    try r.known(&.{ "link", "rejects", "extensions" });
-    var out: Example = .{ .link = try r.string("link") };
+    try r.known(&.{ "link", "rejects", "message", "extensions" });
+    var out: Example = .{ .link = try r.string("link"), .message = try r.string("message") };
     if (try r.string("rejects")) |c| out.rejects = c;
     if (try r.child("extensions")) |e| {
         var list: std.ArrayList(Extension) = .empty;

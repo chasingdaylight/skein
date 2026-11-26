@@ -1,5 +1,10 @@
 description = "Code that shows a rule: accepted, or rejected"
 categories = ["accepts", "rejects"]
 
+# the messages a rejected example must give
+[attributes.error]
+list = true
+
 [example]
 link = "shows"
+message = "error"

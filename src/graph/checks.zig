@@ -145,6 +145,10 @@ fn checkAttributes(ctx: Context, item: *const Item, item_type: *const Schema.Ite
         }
     }
     if (item.isTombstone(item_type)) return;
+    if (item_type.example) |ex| if (ex.message) |m| {
+        const rejected = if (item.category) |c| std.mem.eql(u8, c, ex.rejects) else false;
+        if (!rejected and item.attribute(m) != null) try ctx.problem(item, 0, "an example that must be accepted gives no message: '{s}' is for one that is '{s}'", .{ m, ex.rejects });
+    };
     for (item_type.attributes) |declared| {
         if (declared.required and item.attribute(declared.name) == null) try ctx.problem(item, 0, "a '{s}' needs the attribute '{s}'", .{ item_type.name, declared.name });
     }
