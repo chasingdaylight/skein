@@ -1,0 +1,4 @@
+# NPR 8705.2C and NASA-STD-8719.29 as NASA publishes them: read-only, written by skein init from the template
+[[sources]]
+path = "standards/human-rating"
+read_only = true
