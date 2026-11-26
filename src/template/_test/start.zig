@@ -251,6 +251,36 @@ test "systems engineering under NPR 7123.1D: its requirements and its reviews" {
     try expectContains(criteria, "- %criteria[.e1] ");
 }
 
+// req: templates.human-rating
+test "human-rating under NPR 8705.2C and NASA-STD-8719.29, alone and with NPR 7150.2D" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"human-rating"} })).status);
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    const coverage = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text;
+    try expectContains(coverage, "complies-hr links to hrc items: 0 of ");
+    try expectContains(coverage, "complies-hr links to hr items: 0 of ");
+    const npr = try tmp.dir.readFileAlloc(testing.io, "standards/human-rating/npr8705.2c.md", a, .limited(1 << 20));
+    try expectContains(npr, "%hrc[HRC-2.2.2 srr=I sdr=U pdr=U cdr=U orr=U title=");
+    try expectContains(npr, "- %hrc[.a] A list of the significant risk contributors");
+    const std_text = try tmp.dir.readFileAlloc(testing.io, "standards/human-rating/nasa-std-8719.29.md", a, .limited(1 << 20));
+    try expectContains(std_text, "%hr[HR-4.3.1] The space system shall provide at least single failure tolerance");
+
+    var tmp2 = testing.tmpDir(.{});
+    defer tmp2.cleanup();
+    const root2 = try rootOf(a, tmp2);
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root2, .templates = &.{ "npr7150.2d", "human-rating" } })).status);
+    // class A: the software of a crewed system
+    const config = try tmp2.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    try tmp2.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = try std.mem.replaceOwned(u8, a, config, "# \"class\" = \"\"", "\"class\" = \"A\"") });
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root2 })).text, "no problems");
+}
+
 // req: templates.npr7120.5f
 test "program and project management under NPR 7120.5F, with NPR 7123.1D" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);

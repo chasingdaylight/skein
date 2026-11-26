@@ -1,0 +1,8 @@
+description = "A technical requirement for human-rating of NASA-STD-8719.29, named by its paragraph (HR-4.3.1); read-only, from skein's template"
+id = "numbered"
+prefix = "HR"
+digits = 1
+
+# the paragraph's title, where the standard gives one
+[attributes.title]
+normative = false

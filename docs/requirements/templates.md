@@ -31,6 +31,9 @@ Skein shall carry a template for AI risk management under the NIST AI RMF, `nist
 %req[templates.npr7150.2d-ai]
 Skein shall carry a template for AI in software projects under NPR 7150.2D, `npr7150.2d-ai`, to be used with `npr7150.2d`: what topics 7.25 (engineering) and 8.25 (assurance) of the NASA Software Engineering Handbook say bears on each requirement of the NPR, in Skein's words, linked to the requirements, the six principles of NASA's framework for the ethical use of AI (NASA/TM-20210012886), and a skeleton of the assurance documents the handbook expects.
 
+%req[templates.human-rating]
+Skein shall carry a template for the human-rating of crewed space systems, `human-rating`: the certification requirements of NPR 8705.2C (Chapter 2, and the roles of section 1.4), each with its title and, from Appendix D, what the Human-Rating Certification Package holds of it at each review, and the technical requirements of NASA-STD-8719.29, each with its notes and rationale, as read-only sources written into the project; the rows of a compliance matrix for both; and skeletons of the matrix and of the certification package. It goes with `npr7150.2d` or alone. (Issue #176.)
+
 %req[templates.npr7123.1d]
 Skein shall carry a template for systems engineering under NASA's NPR 7123.1D, `npr7123.1d`: its 62 requirements and the entrance and success criteria of its 21 review tables (Appendix G) as a read-only source written into the project, the rows of its compliance matrix (Appendix H), the project's reviews with their kind and date, the checks of their criteria, and skeletons of the compliance matrix, the reviews and the systems engineering management plan.
 
