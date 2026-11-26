@@ -18,6 +18,22 @@ pub const Error = error{
     SnapshotFailed,
 } || std.mem.Allocator.Error;
 
+/// What the message of a baseline's tag starts with (`skein baseline`)
+pub const baseline_mark = "skein baseline";
+
+/// The newest baseline: the last tag, by its date, whose message starts
+/// with the mark; null when there is none or no git
+pub fn lastBaseline(io: Io, arena: std.mem.Allocator, root: Io.Dir) std.mem.Allocator.Error!?[]const u8 {
+    const refs = try git.output(io, arena, root, &.{ "for-each-ref", "--sort=creatordate", "--format=%(refname:short)%09%(contents:subject)", "refs/tags" }) orelse return null;
+    var last: ?[]const u8 = null;
+    var lines = std.mem.splitScalar(u8, refs, '\n');
+    while (lines.next()) |line| {
+        const tab = std.mem.findScalar(u8, line, '\t') orelse continue;
+        if (std.mem.startsWith(u8, std.mem.trimEnd(u8, line[tab + 1 ..], "\r"), baseline_mark ++ " ")) last = line[0..tab];
+    }
+    return last;
+}
+
 pub const Snapshot = struct {
     io: Io,
     /// where the files are

@@ -54,6 +54,27 @@ schema: Schema = .{},
 pub const Maturity = struct {
     order: []const []const u8 = &.{},
     milestone: ?[]const u8 = null,
+    /// the statuses of an item not yet decided; the items of the types that
+    /// have one are the ones the gates count
+    tbd: []const []const u8 = &.{ "tbd", "tbr" },
+    /// `[maturity.gates.NAME]`: the numbers each milestone holds them to
+    gates: []const Gate = &.{},
+
+    pub const Gate = struct {
+        milestone: []const u8,
+        /// the most of them that may be undecided, in percent
+        tbd: ?i64 = null,
+        /// what share of them may have changed since the last baseline:
+        /// less than this, in percent
+        volatility: ?i64 = null,
+    };
+
+    /// The gate of the milestone the project is at; null when it has none
+    pub fn gate(self: Maturity) ?Gate {
+        const m = self.milestone orelse return null;
+        for (self.gates) |g| if (std.mem.eql(u8, g.milestone, m)) return g;
+        return null;
+    }
 
     /// The rank of `value` in the order; null for one outside it (X, PPS)
     pub fn rank(self: Maturity, value: []const u8) ?usize {
@@ -163,8 +184,22 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
     self.templates = try template_use.readAll(r);
     self.forge = try Forge.read(r);
     if (try r.child("maturity")) |m| {
-        try m.known(&.{ "order", "milestone" });
+        try m.known(&.{ "order", "milestone", "tbd", "gates" });
         self.maturity = .{ .order = try m.strings("order"), .milestone = try m.string("milestone") };
+        if (m.table.get("tbd") != null) self.maturity.tbd = try m.strings("tbd");
+        if (try m.child("gates")) |gates| {
+            var list: std.ArrayList(Maturity.Gate) = .empty;
+            for (gates.table.keys()) |name| {
+                const g = try gates.child(name) orelse continue;
+                try g.known(&.{ "tbd", "volatility" });
+                const gate: Maturity.Gate = .{ .milestone = name, .tbd = try g.integer("tbd"), .volatility = try g.integer("volatility") };
+                for ([_]?i64{ gate.tbd, gate.volatility }, [_][]const u8{ "tbd", "volatility" }) |v, key| {
+                    if (v) |n| if (n < 0 or n > 100) try g.complain(key, "a share in percent, 0 to 100", .{});
+                }
+                try list.append(r.arena, gate);
+            }
+            self.maturity.gates = list.items;
+        }
     }
     if (try r.child("schedule")) |s| {
         try s.known(&.{"also"});

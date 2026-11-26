@@ -13,11 +13,12 @@ const check = @import("check.zig");
 const cli = @import("../cli.zig");
 const coverage = @import("../graph/coverage.zig");
 const git = @import("../git.zig");
+const history = @import("../history.zig");
 const Workspace = @import("Workspace.zig");
 
 /// What the message of a baseline's tag starts with, which tells a
 /// baseline from another tag
-pub const mark = "skein baseline";
+pub const mark = history.baseline_mark;
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Baseline) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options.common)) {
@@ -101,4 +102,5 @@ fn list(io: Io, arena: std.mem.Allocator, ws: *const Workspace) !Workspace.Outco
 
 test {
     _ = @import("_test/baseline.zig");
+    _ = @import("_test/gates.zig");
 }
