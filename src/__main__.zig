@@ -6,6 +6,7 @@ const diff = @import("commands/diff.zig");
 const exporter = @import("commands/export.zig");
 const import_csv = @import("commands/import_csv.zig");
 const import_gitlab = @import("commands/import_gitlab.zig");
+const import_reqif = @import("import/reqif.zig");
 const lsp = @import("commands/lsp.zig");
 const mcp = @import("commands/mcp.zig");
 const agents = @import("commands/agents.zig");
@@ -70,6 +71,7 @@ pub fn main(init: std.process.Init) !void {
         .import => |options| switch (options.format) {
             .doorstop => try import_doorstop.run(io, arena, options),
             .csv => try import_csv.run(io, arena, options),
+            .reqif => try import_csv.importRows(io, arena, options, "reqif", import_reqif.rows),
             .@"gitlab-requirements" => try import_gitlab.run(io, arena, options),
         },
         .trace => |options| try trace.run(io, arena, options),

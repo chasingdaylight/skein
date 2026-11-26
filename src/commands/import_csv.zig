@@ -24,8 +24,28 @@ const csv = @import("../import/csv.zig");
 const write = @import("../toml/write.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Import) !Workspace.Outcome {
-    const type_name = options.item_type orelse return fail(arena, "import csv: name the item type with --type", .{});
-    const to = std.mem.trimEnd(u8, options.to orelse return fail(arena, "import csv: name the directory for the items with --to", .{}), "/");
+    return importRows(io, arena, options, "csv", csvRows);
+}
+
+/// What a file's reader gives: its rows, the first naming the columns, or
+/// what is wrong with it
+pub const Rows = union(enum) { rows: []const []const []const u8, failed: []const u8 };
+
+pub const Reader = *const fn (arena: std.mem.Allocator, text: []const u8, file: []const u8) std.mem.Allocator.Error!Rows;
+
+fn csvRows(arena: std.mem.Allocator, text: []const u8, file: []const u8) std.mem.Allocator.Error!Rows {
+    const rows = csv.parse(arena, text) catch |e| switch (e) {
+        error.OutOfMemory => return error.OutOfMemory,
+        error.UnclosedQuote => return .{ .failed = try arena.print("{s}: a quoted field is never closed", .{file}) },
+    };
+    return .{ .rows = rows };
+}
+
+/// The import of the rows `reader` reads from the file of `options`, as
+/// for CSV; `format` names the import in messages
+pub fn importRows(io: Io, arena: std.mem.Allocator, options: cli.Import, format: []const u8, reader: Reader) !Workspace.Outcome {
+    const type_name = options.item_type orelse return fail(arena, "import {s}: name the item type with --type", .{format});
+    const to = std.mem.trimEnd(u8, options.to orelse return fail(arena, "import {s}: name the directory for the items with --to", .{format}), "/");
     if (!Schema.names.valid(type_name)) return fail(arena, "'{s}' cannot be an item type: {s}", .{ type_name, Schema.names.rule });
 
     // where the project is, or is to be: an import does not look for one
@@ -38,9 +58,9 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Import) !Workspace.Out
 
     const file = options.paths[0];
     const text = root.readFileAlloc(io, file, arena, .limited(1 << 28)) catch return fail(arena, "cannot read '{s}'", .{file});
-    const rows = csv.parse(arena, text) catch |e| switch (e) {
-        error.OutOfMemory => return error.OutOfMemory,
-        error.UnclosedQuote => return fail(arena, "{s}: a quoted field is never closed", .{file}),
+    const rows = switch (try reader(arena, text, file)) {
+        .rows => |r| r,
+        .failed => |why| return fail(arena, "{s}", .{why}),
     };
     if (rows.len < 2) return fail(arena, "{s}: no rows after the one that names the columns", .{file});
 
@@ -190,4 +210,5 @@ fn schemeOf(arena: std.mem.Allocator, ids: []const []const u8) ![]const u8 {
 test {
     _ = csv;
     _ = @import("_test/import_csv.zig");
+    _ = @import("_test/import_reqif.zig");
 }
