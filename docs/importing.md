@@ -93,8 +93,19 @@ ReqIF is how DOORS and other requirements tools exchange requirements; `skein ex
 | the attribute `id`, else `ReqIF.ForeignID` (DOORS's object number), else the object's identifier | the item's ID |
 | the XHTML attribute `text` or `ReqIF.Text`, else the first XHTML one | the item's text, as Markdown: paragraphs, lists, line breaks, bold, italics, code and links |
 | the object's identifier | the attribute `reqif`, to find it again (and `ReqIF.ForeignID`, when there is one, the attribute `reqif-foreign-id`) |
+| `ReqIF.Name` (an object's title, as Jama Connect writes it) | the attribute `title` |
 | an attribute `status`, `category` or `verification` | that |
 | a spec relation | a link of the type named as the relation type, when the project has that link type, to the item its target became |
 | any other attribute | an attribute named as its long name; an enumeration gives its values' names |
 
 Declare the link types before importing, so that relations become links. Attributes named `type` or `text` that are not the text become `reqif-type` and `reqif-text`. A newer export of the same specification is brought in with `--replace`; `skein diff` and `git diff` show what changed. A `.reqifz` file is a ZIP archive: unpack it first.
+
+## With Jama Connect
+
+Jama Connect exchanges requirements as ReqIF, through its Data Exchange or Jama Connect Interchange, so a Skein project works beside one kept in Jama through `skein export reqif` and `skein import reqif`; no connection to Jama is needed.
+
+- **Skein to Jama:** `skein export reqif --profile NAME > items.reqif`, then import the file in Jama. Map each spec object type (one per item type) to a Jama item type, `ReqIF.Text` to the item's description, `id` to its name or a field of its own, and each spec relation type (one per link type) to a relationship type. Use Data Exchange in its Exchange mode, or Interchange matching items on the `id` field, so that the identifiers are kept: a later export from Skein then updates the same Jama items instead of making new ones, since Skein's identifiers come from the IDs.
+- **Jama to Skein:** export the project or set from Jama as ReqIF, with the relationships and both ends of each, then `skein import reqif that-export.reqif --type TYPE --to DIR`. The ID comes from an attribute `id`, else `ReqIF.ForeignID` (map Jama's ID or document key there), else the object's identifier; `ReqIF.Name` becomes the attribute `title` and `ReqIF.Text` the text. Declare the link types first, named as Jama's relationship types, so that relationships become links.
+- **Through a spreadsheet:** Jama's Excel export and import, with `skein export items` and `skein import csv`, carry the items and their fields, but not relationships.
+
+Which of these a Jama instance offers depends on its edition and setup. Reading and publishing through Jama's REST API is #251.

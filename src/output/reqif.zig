@@ -1,7 +1,8 @@
 //! The items as ReqIF 1.2 (OMG), for DOORS and the other tools that
 //! exchange requirements in it (#102). Each item type is a spec object type
 //! with string attributes for the ID, category, status, verification and
-//! its declared attributes, and an XHTML one for the text; each link type a
+//! its declared attributes, and an XHTML one, `ReqIF.Text`, for the text
+//! (the name DOORS and Jama Connect take for an object's text); each link type a
 //! spec relation type; each document (an item file's directory, for items
 //! of their own) a specification, its items in order with their parts
 //! under them. Identifiers come from the IDs, so an export of a later
@@ -69,7 +70,7 @@ pub fn write(arena: std.mem.Allocator, given: Input) ![]const u8 {
             try xml.escape(w, f);
             try w.writeAll("\">\n              <TYPE><DATATYPE-DEFINITION-STRING-REF>dt-string</DATATYPE-DEFINITION-STRING-REF></TYPE>\n            </ATTRIBUTE-DEFINITION-STRING>\n");
         }
-        try w.print("            <ATTRIBUTE-DEFINITION-XHTML IDENTIFIER=\"{f}\" LAST-CHANGE=\"{s}\" LONG-NAME=\"text\">\n", .{ ident2(t.name, "text"), now });
+        try w.print("            <ATTRIBUTE-DEFINITION-XHTML IDENTIFIER=\"{f}\" LAST-CHANGE=\"{s}\" LONG-NAME=\"ReqIF.Text\">\n", .{ ident2(t.name, "text"), now });
         try w.writeAll("              <TYPE><DATATYPE-DEFINITION-XHTML-REF>dt-xhtml</DATATYPE-DEFINITION-XHTML-REF></TYPE>\n            </ATTRIBUTE-DEFINITION-XHTML>\n");
         try w.writeAll("          </SPEC-ATTRIBUTES>\n        </SPEC-OBJECT-TYPE>\n");
     }
