@@ -99,7 +99,7 @@ A command-line tool, `skein`, with subcommands that each do one thing and fail w
 | `apply` | Writes a planning overlay's values to the forge and removes them from `.skein/` (section 10.4). |
 | `mirror` / `sync` / `publish` | Copies the forge's data into a full plain-text mirror, writes offline edits back to the forge, and re-creates mirrored data on another forge (section 10.4). |
 | `import` | Converts Doorstop trees; imports items from CSV (requirements from a spreadsheet or a DOORS export, an external standard); imports test results. |
-| `export` | Writes the whole graph as JSON (for other tools and agents) and any matrix or list as CSV; later ReqIF for interchange with DOORS and similar. |
+| `export` | Writes the whole graph as JSON (for other tools and agents) and any matrix or list as CSV, and ReqIF for interchange with DOORS and similar tools. |
 | `render` | Builds the site, and each document as a single file for delivery (section 8). |
 | `lsp` | The language server (section 9). Later. |
 

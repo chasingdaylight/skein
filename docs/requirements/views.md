@@ -104,6 +104,9 @@ Inline Markdown shall be rendered: emphasis and strong with `*` and `_` (not `_`
 %req[export.profile]
 With `--profile`, an export shall hold only the items of that profile, with their links and citations.
 
+%req[export.reqif]
+`skein export reqif` shall give the items as ReqIF 1.2 (OMG), for DOORS and other requirements tools: a spec object type per item type, with string attributes for the ID, the category, status and verification method where the type has them, and each declared attribute, and an XHTML attribute for the text (a paragraph to each block); a spec object per item; a spec relation type per link type and a spec relation per link between exported items; and a specification per document (an item file's directory, for items of their own), its items in order with their parts under them. Identifiers come from the IDs, so that the export of a later commit updates the same objects; `LAST-CHANGE` is the time of the last commit of the item's file, or of the last commit, or a fixed time outside a repository, so that the same files give the same bytes. (Issue #102.)
+
 ## Render
 
 %req[render.markdown]
