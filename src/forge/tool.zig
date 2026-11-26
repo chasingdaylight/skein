@@ -58,16 +58,25 @@ pub fn send(io: Io, arena: std.mem.Allocator, program: []const u8, hostname: ?[]
 
 /// GET `url` with `headers`; `host` and `name` are for the reasons
 pub fn https(io: Io, arena: std.mem.Allocator, url: []const u8, headers: []const std.http.Header, host: []const u8, name: []const u8) !github.Reply {
+    return httpsSend(io, arena, .GET, url, headers, null, host, name);
+}
+
+/// `method` to `url` with `headers` and the JSON `payload`, for a forge
+/// that has no program of its own to send through (Forgejo)
+pub fn httpsSend(io: Io, arena: std.mem.Allocator, method: std.http.Method, url: []const u8, headers: []const std.http.Header, payload: ?[]const u8, host: []const u8, name: []const u8) !github.Reply {
     var client: std.http.Client = .{ .allocator = arena, .io = io };
     defer client.deinit();
     var body: Io.Writer.Allocating = .init(arena);
     const result = client.fetch(.{
         .location = .{ .url = url },
+        .method = method,
+        .payload = payload,
+        .headers = .{ .content_type = if (payload != null) .{ .override = "application/json" } else .default },
         .response_writer = &body.writer,
         .privileged_headers = headers,
     }) catch |e| return .{ .unreachable_ = try arena.print("{s} could not be reached ({t})", .{ host, e }) };
     return switch (result.status) {
-        .ok => .{ .body = body.written() },
+        .ok, .created, .no_content => .{ .body = body.written() },
         .not_found, .gone => .missing,
         else => .{ .unreachable_ = try arena.print("{s} answered {d}", .{ name, @backingInt(result.status) }) },
     };

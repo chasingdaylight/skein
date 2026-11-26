@@ -9,7 +9,7 @@ Everything Skein stores about a project shall be in plain text files in the repo
 Every command that reads the current project shall work with nothing but the files. Skein shall need the `git` program only for information that only git has: the name of the user, and the content of the files at an earlier commit.
 
 %req[principle.forge-neutral planned]
-Skein shall reach a forge (GitHub, GitLab, Forgejo) only through an adapter, and no feature of Skein shall depend on something that one of the three lacks. Built: GitHub's and GitLab's adapters (`forge.gitlab`); Forgejo's is to come.
+Skein shall reach a forge (GitHub, GitLab, Forgejo) only through an adapter, and no feature of Skein shall depend on something that one of the three lacks. Built: the adapters of all three (`forge.gitlab`, `forge.forgejo`).
 
 %req[principle.schema-driven]
 Skein shall have no built-in item type, link type, attribute, category or status. A project declares them, and Skein checks the items of the project against those declarations.

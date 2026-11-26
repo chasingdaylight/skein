@@ -50,6 +50,7 @@ test {
     _ = @import("commands/_test/check_formats.zig");
     _ = @import("forge/checks.zig");
     _ = @import("forge/gitlab.zig");
+    _ = @import("forge/forgejo.zig");
     _ = @import("forge/gitlab_requirements.zig");
     _ = @import("output/reqif.zig");
     _ = @import("template/Template.zig");
