@@ -82,20 +82,10 @@ fn summary(arena: std.mem.Allocator, ws: *const Workspace, name: []const u8, mes
     return out.items;
 }
 
-/// The baselines: the tags whose message starts with the mark, oldest
-/// first
+/// The baselines, oldest first
 fn list(io: Io, arena: std.mem.Allocator, ws: *const Workspace) !Workspace.Outcome {
-    const refs = try git.output(io, arena, ws.root, &.{ "for-each-ref", "--sort=creatordate", "--format=%(refname:short)%09%(creatordate:short)%09%(contents:subject)", "refs/tags" }) orelse "";
     var out: std.ArrayList(u8) = .empty;
-    var lines = std.mem.splitScalar(u8, refs, '\n');
-    while (lines.next()) |line| {
-        var fields = std.mem.splitScalar(u8, std.mem.trimEnd(u8, line, "\r"), '\t');
-        const tag = fields.next() orelse continue;
-        const date = fields.next() orelse continue;
-        const subject = fields.next() orelse continue;
-        if (!std.mem.startsWith(u8, subject, mark ++ " ")) continue;
-        try out.print(arena, "{s}  {s}\n", .{ tag, date });
-    }
+    for (try history.baselines(io, arena, ws.root)) |b| try out.print(arena, "{s}  {s}\n", .{ b.name, b.date });
     if (out.items.len == 0) return .{ .text = "skein: there is no baseline yet\n" };
     return .{ .text = out.items };
 }
@@ -103,4 +93,5 @@ fn list(io: Io, arena: std.mem.Allocator, ws: *const Workspace) !Workspace.Outco
 test {
     _ = @import("_test/baseline.zig");
     _ = @import("_test/gates.zig");
+    _ = @import("_test/editions.zig");
 }

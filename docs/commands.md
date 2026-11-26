@@ -179,6 +179,10 @@ The project itself is not changed. `DIR` is created when needed and is best kept
 
 Every link is relative and the styles are inside each page, so `DIR` can be served from any address (GitHub Pages, a file share) or opened straight from disk. The pages follow the reader's light or dark setting.
 
+### `--editions`: each baseline beside the files as they are
+
+With `--editions`, `skein render` also renders each baseline (see `skein baseline`) as it was, into `DIR/editions/NAME/`, in the same format, and writes `DIR/editions/index.md` (or `index.html`) listing them, newest first, after the files as they are now. Readers then pick the edition that matches a release. An edition shows no test results, which are of the files now; one that cannot be rendered (its configuration was not sound then) is said so and left out.
+
 ### Generated pages
 
 A document can ask for a page that Skein makes from the project, in a fenced code block of the language `skein`. `skein render` replaces the block with the page, in both formats; elsewhere (on GitHub, in an editor) the request shows as the code it is.
