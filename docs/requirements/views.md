@@ -143,7 +143,16 @@ The site shall have a front page that lists its pages with their titles and file
 Every link and every reference to a file in the site shall be relative, and nothing shall be loaded from another address: the styles are in each page. So the site can be served under any address, or opened from disk.
 
 %req[serve.site]
-`skein serve [--port N]` shall serve the site `render.site.pages` writes, rendered in memory from the project's files, on this computer only (127.0.0.1, port 8080 by default), until it is stopped. Before it answers for a page, it shall render the site again when the project's files have changed since it last did (their paths, sizes and times of change, without git's own files), and each page shall ask every second whether they have and load itself again when they have. A configuration or schema with problems shall be a page that says them, served until they are fixed. It shall write no file. (Issue #278; #105.)
+`skein serve [--port N]` shall serve the site `render.site.pages` writes, rendered in memory from the project's files, on this computer only (127.0.0.1, port 8080 by default), until it is stopped. Before it answers for a page, it shall render the site again when the project's files have changed since it last did (their paths, sizes and times of change, without git's own files), and each page shall ask every second whether they have and load itself again when they have. A configuration or schema with problems shall be a page that says them, served until they are fixed. It shall write no file but what is saved from a page (`serve.edit`). (Issue #278; #105.)
+
+%req[serve.edit]
+Each page of `skein serve` of a document or item file shall offer to edit the file's Markdown, and each item on a page, and a new item, in a form built from its type as the language server's forms are: its category, status, verification method, attributes and links, and for a new item its type, ID, text, and the document it goes at the end of. A save shall write the file, or the values into the item's marker or front matter, as an editor's form does, or start the new item as `skein new` does. A file of a read-only source, or that is not a file of a source, shall not be written; nor shall a file that changed since the page read it, which the page says, nothing being saved. While a form or file is open, the page shall not load itself again. (Issue #279; #105.)
+
+%req[serve.check]
+While a file or a form is edited in `skein serve`, the page shall show what `skein check` finds with the file as typed, or the item as the form would write it, without saving it: the problems of that file with their lines, and how many the other files have. (Issue #279.)
+
+%req[serve.local]
+`skein serve` shall answer only requests addressed to `127.0.0.1` or `localhost` at its port, and change a file only for a request that carries its own header (`x-skein`), which a page of another site cannot send without the browser asking first, which it refuses. (Issues #278, #279.)
 
 %req[render.generated]
 A fenced code block of the language `skein` in a document shall be a request for a page that Skein generates from the graph: `skein render` puts the page in its place, as Markdown and as HTML alike, and its links lead to the items from the page they are on. A request Skein cannot read is replaced by a note that says what is wrong. Removed items are never listed.

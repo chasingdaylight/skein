@@ -3,6 +3,7 @@
 const std = @import("std");
 
 const Network = @import("network/Network.zig");
+const Project = @import("Project.zig");
 const Results = @import("results/Results.zig");
 
 pub const usage =
@@ -202,6 +203,8 @@ pub const Common = struct {
     state: Network.State = .recorded,
     /// fetch nothing; repositories by url are read from their caches
     offline: bool = false,
+    /// files read as given here, not as they are on disk (`skein serve`)
+    unsaved: []const Project.Unsaved = &.{},
 };
 
 pub const TemplateCommand = struct {

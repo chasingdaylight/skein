@@ -75,6 +75,7 @@ pub fn open(io: Io, arena: std.mem.Allocator, common: cli.Common) !Opened {
         .common = common,
     };
     self.project = try Project.load(io, arena, self.root, &self.report);
+    self.project.unsaved = common.unsaved;
     // items are read against the schema: a broken one would only add noise
     if (self.report.ok()) {
         self.items_read = true;

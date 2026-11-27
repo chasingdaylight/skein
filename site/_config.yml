@@ -52,6 +52,8 @@ nav:
     url: /writing-items.html
   - title: Project files
     url: /project-files.html
+  - title: The web interface
+    url: /web.html
   - title: Commands
     url: /commands.html
   - title: Reviewing

@@ -20,6 +20,7 @@
 - [Overview](index.md): what Skein is, getting it, where to start
 - [Quickstart](quickstart.md): a project from a template, a requirement, a test that cites it, a site, in five minutes
 - [Writing items](writing-items.md): markers, parts, item files, references, citations
+- [The web interface](web.md): skein serve, the site in a browser, editing files and items there
 - [Project files](project-files.md): `.skein/config.toml`, item types, link types, profiles
 - [Commands](commands.md): every command, and the CI job
 - [Templates](templates.md): the built-in templates, their options, what they bring along

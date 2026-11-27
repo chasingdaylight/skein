@@ -8,6 +8,8 @@ const Io = std.Io;
 const Project = @import("../Project.zig");
 const Site = @import("../serve/Site.zig");
 const answer = @import("../serve/answer.zig");
+const edit_api = @import("../serve/edit_api.zig");
+const guard = @import("../serve/guard.zig");
 const cli = @import("../cli.zig");
 const stdio = @import("../stdio.zig");
 
@@ -75,38 +77,37 @@ fn connection(io: Io, arena: std.mem.Allocator, stream: Io.net.Stream, s: *Site)
     var writer = stream.writer(io, &out_buf);
     var http: std.http.Server = .init(&reader.interface, &writer.interface);
     var request = try http.receiveHead();
-    // a page of another site that a name of its own leads here (DNS rebinding) gets nothing
-    if (!localHost(&request, s.options.port)) {
-        return request.respond("skein serve answers only for 127.0.0.1 and localhost\n", .{ .status = .misdirected_request, .keep_alive = false });
+    const target = try arena.dupe(u8, request.head.target);
+    const path = target[0 .. std.mem.findScalar(u8, target, '?') orelse target.len];
+    const query = if (std.mem.findScalar(u8, target, '?')) |at| target[at + 1 ..] else "";
+    var host: ?[]const u8 = null;
+    var skein_header = false;
+    var it = request.iterateHeaders();
+    while (it.next()) |h| {
+        if (std.ascii.eqlIgnoreCase(h.name, "host")) host = try arena.dupe(u8, h.value);
+        if (std.ascii.eqlIgnoreCase(h.name, "x-skein")) skein_header = true;
     }
-    if (request.head.method != .GET and request.head.method != .HEAD) {
-        return request.respond("skein serve answers GET\n", .{ .status = .method_not_allowed, .keep_alive = false });
+    const allowed = switch (guard.check(.{ .method = request.head.method, .path = path, .host = host, .skein_header = skein_header }, s.options.port)) {
+        .refused => |r| return request.respond(r.text, .{ .status = r.status, .keep_alive = false }),
+        .allowed => |x| x,
+    };
+    var body: []const u8 = "";
+    if (allowed.method == .post) {
+        var body_buf: [16 * 1024]u8 = undefined;
+        const r = try request.readerExpectContinue(&body_buf);
+        body = try r.allocRemaining(arena, .limited(1 << 26));
     }
     const a = blk: {
         try s.mutex.lock(io);
         defer s.mutex.unlock(io);
-        break :blk try answer.get(arena, s, request.head.target);
+        if (allowed.api) break :blk try edit_api.handle(arena, s, allowed.method, path[guard.api_prefix.len..], query, body);
+        break :blk try answer.get(arena, s, target);
     };
     var headers: std.ArrayList(std.http.Header) = .empty;
     try headers.append(arena, .{ .name = "content-type", .value = a.content_type });
     try headers.append(arena, .{ .name = "cache-control", .value = "no-store" });
     if (a.location) |l| try headers.append(arena, .{ .name = "location", .value = l });
     try request.respond(a.body, .{ .status = a.status, .keep_alive = false, .extra_headers = headers.items });
-}
-
-/// Whether the request names this computer as its host
-fn localHost(request: *std.http.Server.Request, port: u16) bool {
-    var it = request.iterateHeaders();
-    while (it.next()) |h| {
-        if (!std.ascii.eqlIgnoreCase(h.name, "host")) continue;
-        var buf: [32]u8 = undefined;
-        for ([_][]const u8{ "127.0.0.1", "localhost" }) |name| {
-            const want = std.mem.print(&buf, "{s}:{d}", .{ name, port }) catch return false;
-            if (std.ascii.eqlIgnoreCase(h.value, want)) return true;
-        }
-        return false;
-    }
-    return false;
 }
 
 fn say(io: Io, text: []const u8) !void {

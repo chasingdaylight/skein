@@ -137,7 +137,7 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Proj
             },
         };
         for (paths) |file| {
-            const text = root.readFileAlloc(io, file, arena, .limited(1 << 26)) catch |e| switch (e) {
+            const text = if (project.unsavedText(file)) |given| given else root.readFileAlloc(io, file, arena, .limited(1 << 26)) catch |e| switch (e) {
                 error.OutOfMemory => return error.OutOfMemory,
                 else => {
                     try report.add(file, 0, 0, "cannot read the file ({s})", .{@errorName(e)});
