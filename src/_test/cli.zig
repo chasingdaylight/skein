@@ -1,6 +1,6 @@
 //! The command line: commands, their options, and the mistakes reported.
 
-// req: cli.commands, cli.options, principle.no-silent-mistakes
+// req: cli.commands, cli.options, cli.exclusive, principle.no-silent-mistakes
 const std = @import("std");
 const testing = std.testing;
 
@@ -132,7 +132,7 @@ test "lsp takes nothing but the transport" {
     var f: Fixture = .init();
     defer f.deinit();
     try testing.expectEqual(.lsp, try f.run(&.{"lsp"}));
-    try testing.expectEqual(.lsp, try f.run(&.{ "lsp", "--stdio" }));
+    try testing.expectEqual(Command.lsp, try f.run(&.{ "lsp", "--stdio" }));
     try testing.expectEqualStrings("lsp takes no arguments", (try f.run(&.{ "lsp", "--port", "1" })).misuse);
 }
 
@@ -215,4 +215,18 @@ test "pin, and the state of the other repositories" {
     try testing.expect((try f.run(&.{ "pin", "--offline" })).pin.common.offline);
     try testing.expect((try f.run(&.{ "render", "--out", "x", "--offline" })).render.common.offline);
     try testing.expectEqualStrings("--current does not go with pin", (try f.run(&.{ "pin", "--current" })).misuse);
+    try testing.expect((try f.run(&.{ "schedule", "--offline" })).schedule.common.offline);
+    try testing.expect((try f.run(&.{ "load", "--offline" })).load.common.offline);
+}
+
+test "options that would be ignored are refused" {
+    var f: Fixture = .init();
+    defer f.deinit();
+    try testing.expectEqualStrings("approve --from-pull-request takes the pull request's number alone", (try f.run(&.{ "approve", "--from-pull-request", "#12", "--sign" })).misuse);
+    try testing.expectEqualStrings("approve --from-pull-request takes the pull request's number alone", (try f.run(&.{ "approve", "--from-pull-request", "12", "--as", "pm" })).misuse);
+    try testing.expectEqual(12, (try f.run(&.{ "approve", "--from-pull-request", "#12" })).approve.from_pull_request.?);
+    try testing.expectEqualStrings("render --controlled: with --format document", (try f.run(&.{ "render", "--out", "x", "--controlled" })).misuse);
+    try testing.expect((try f.run(&.{ "render", "--out", "x", "--format", "document", "--controlled" })).render.controlled);
+    try testing.expectEqualStrings("render --wasm: with --edit", (try f.run(&.{ "render", "--out", "x", "--format", "html", "--wasm", "s.wasm" })).misuse);
+    try testing.expectEqualStrings("give --json or --markdown, not both", (try f.run(&.{ "coverage", "--json", "--markdown" })).misuse);
 }

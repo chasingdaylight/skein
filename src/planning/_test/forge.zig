@@ -2,7 +2,7 @@
 //! its due day, and state are the forge's, read through the adapter, which
 //! the test stands in for.
 
-// req: planning.forge-fields
+// req: planning.forge-fields, planning.forge
 const std = @import("std");
 const testing = std.testing;
 

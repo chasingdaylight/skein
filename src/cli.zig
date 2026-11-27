@@ -93,14 +93,15 @@ pub const usage =
     \\  --root DIR        The project, or a directory inside it (default: here)
     \\  --json            trace, coverage, diff, impact, load, time: as JSON
     \\  --markdown        coverage, diff, impact: as Markdown, for a pull request
-    \\  --profile NAME    coverage, export, render: only the items of this profile
-    \\  --current         check, trace, coverage, export, render: read the other
+    \\  --profile NAME    coverage, export, render, serve, jama, gitlab-requirements:
+    \\                    only the items of this profile
+    \\  --current         check, trace, coverage, export, render, serve: read the other
     \\                    repositories at the commit each has checked out, not the
     \\                    one pinned
     \\  --working         the same, with their files as they are, committed or not
     \\  --offline         the same commands, and pin: fetch nothing; a repository
     \\                    by url is read from what its cache holds
-    \\  --results FILE    trace, coverage, render: test results besides the project's own
+    \\  --results FILE    trace, coverage, render, serve: test results besides the project's own
     \\                    (TOML, JSON, YAML, JUnit XML or TAP); may be given more
     \\                    than once
     \\  --alias, --no-alias
@@ -140,6 +141,7 @@ pub const usage =
     \\  --status-from NAME, --verification-from NAME
     \\                    import doorstop: the attribute that gives the status,
     \\                    or the verification method
+    \\  --message TEXT    baseline: what the baseline is, in its tag
     \\  --port N          serve: the port (default 8080)
     \\  --listen ADDR     serve: the address to listen on (default 127.0.0.1); another
     \\                    needs --sign-in and --url
@@ -770,12 +772,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .level = .{ .common = common, .write = p.flag("--write") } };
     }
     if (eql(name, "schedule")) {
-        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "schedule takes no items" };
         return .{ .schedule = .{ .common = common } };
     }
     if (eql(name, "load")) {
-        if (try p.allow(&.{ "--root", "--json" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "load takes no items" };
         return .{ .load = .{ .common = common, .json = p.flag("--json") } };
     }
@@ -825,6 +827,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         const out = p.value("--out") orelse return .{ .misuse = "render: say where the files go, with --out DIR" };
         if (p.flag("--edit") and (format != .html or p.value("--wasm") == null)) return .{ .misuse = "render --edit: with --format html, and --wasm FILE, skein built for WebAssembly (zig build wasm, or a release's skein-vVERSION-wasm32-wasi.wasm)" };
         if (p.value("--wasm") != null and !p.flag("--edit")) return .{ .misuse = "render --wasm: with --edit" };
+        if (p.flag("--controlled") and format != .document) return .{ .misuse = "render --controlled: with --format document" };
         return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results(), .editions = p.flag("--editions"), .controlled = p.flag("--controlled"), .wasm = p.value("--wasm") } };
     }
     if (eql(name, "api")) {
@@ -915,7 +918,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
     if (eql(name, "approve")) {
         if (try p.allow(&.{ "--root", "--by", "--on", "--from-pull-request", "--as", "--sign" })) |problem| return .{ .misuse = problem };
         if (p.value("--from-pull-request")) |n| {
-            if (words.len > 0 or p.flag("--by") or p.flag("--on")) return .{ .misuse = "approve --from-pull-request takes the pull request's number alone" };
+            if (words.len > 0 or p.flag("--by") or p.flag("--on") or p.flag("--as") or p.flag("--sign")) return .{ .misuse = "approve --from-pull-request takes the pull request's number alone" };
             const number = std.fmt.parseInt(u64, std.mem.trimStart(u8, n, "#"), 10) catch return .{ .misuse = "approve --from-pull-request: the number of a pull request" };
             return .{ .approve = .{ .common = common, .ids = &.{}, .from_pull_request = number } };
         }
