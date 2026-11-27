@@ -1,7 +1,8 @@
 //! `skein init [--template NAME]...`: starts a project here: `.skein/` with
 //! its configuration, and, from each template, what the template's
 //! `config.toml` adds to it, its document skeletons (`documents/`) under
-//! `docs/`, and its `project/` files where they say; and what coding agents
+//! `docs/`, and its standards (`project/standards/`, which skein provides and
+//! git leaves out: template/standards.zig); and what coding agents
 //! should know of Skein, in the project's agent instructions (agents.zig).
 
 const std = @import("std");
@@ -9,6 +10,7 @@ const Io = std.Io;
 
 const Project = @import("../Project.zig");
 const Template = @import("../template/Template.zig");
+const standards = @import("../template/standards.zig");
 const Workspace = @import("Workspace.zig");
 const agents = @import("agents.zig");
 const cli = @import("../cli.zig");
@@ -31,8 +33,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
             const path = try arena.print("docs/{s}", .{f.path["documents/".len..]});
             if (try writeNew(io, root, path, try Template.substitute(arena, f.data, values))) written += 1;
         }
-        // files that go where the template puts them, such as a standard's read-only text
-        for (try Template.filesOf(arena, name, "project/")) |f| _ = try writeNew(io, root, f.path["project/".len..], f.data);
+        // the standards it carries, which skein provides, kept out of git
+        _ = try standards.writeFor(io, arena, root, name);
     }
     try root.createDirPath(io, "docs");
     // what coding agents should know of it, in the project's instructions for them

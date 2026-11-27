@@ -87,6 +87,7 @@ pub const Repository = @import("network/Repository.zig");
 pub const Forge = @import("forge/Forge.zig");
 const ForgeMap = @import("forge/Map.zig");
 pub const Template = @import("template/Template.zig");
+const template_standards = @import("template/standards.zig");
 const template_use = @import("template/use.zig");
 
 /// A place whose files cite items in comments
@@ -147,6 +148,8 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
     if (try readToml(io, arena, root, config_file, report)) |table| {
         try out.readConfig(.{ .report = report, .arena = arena, .file = config_file, .table = table });
     }
+    // the standards of the templates it names, which skein provides
+    try template_standards.provide(io, arena, root, &out, report);
     if (out.forge) |*f| if (f.formerly.len > 0) {
         f.moved = try ForgeMap.load(io, arena, root);
     };
