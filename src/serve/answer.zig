@@ -13,6 +13,8 @@ pub const Answer = struct {
     body: []const u8,
     /// where a redirect goes
     location: ?[]const u8 = null,
+    /// a cookie to set: the session of someone who signed in
+    set_cookie: ?[]const u8 = null,
 };
 
 /// Where a page asks whether the files changed
@@ -20,7 +22,7 @@ pub const stamp_path = "/_skein/stamp";
 /// The script that edits, which every page loads (edit.js)
 pub const script_path = "/_skein/edit.js";
 
-/// The answer to a GET of `target`; the caller holds the site's mutex.
+/// The answer to a GET of `target`; the caller holds the server's lock.
 /// The body is in `arena`.
 pub fn get(arena: std.mem.Allocator, s: *Site, target: []const u8) !Answer {
     const path_part = target[0 .. std.mem.findAny(u8, target, "?#") orelse target.len];

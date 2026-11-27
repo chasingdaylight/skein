@@ -1,17 +1,21 @@
-//! `skein serve`: the site of the project, served on this computer
-//! (localhost only: it has no sign-in), rendered from the checkout as the
-//! files change, with pages that load again when they do (serve/).
+//! `skein serve`: the site of the project, rendered from the checkout as
+//! the files change, with pages that load again when they do, and edit
+//! them (serve/). On this computer alone by default; for a team, on
+//! another address with people signed in (`--listen`, `--url`, `--sign-in`).
 
 const std = @import("std");
 const Io = std.Io;
 
+const People = @import("../serve/People.zig");
 const Project = @import("../Project.zig");
+const Server = @import("../serve/Server.zig");
 const Site = @import("../serve/Site.zig");
-const answer = @import("../serve/answer.zig");
+const Sites = @import("../serve/Sites.zig");
+const Workspace = @import("Workspace.zig");
 const changes = @import("../serve/changes.zig");
-const edit_api = @import("../serve/edit_api.zig");
-const guard = @import("../serve/guard.zig");
 const cli = @import("../cli.zig");
+const env = @import("../env.zig");
+const sign_in = @import("../serve/sign_in.zig");
 const stdio = @import("../stdio.zig");
 
 /// How many requests are answered at once: a browser opens several
@@ -29,89 +33,102 @@ pub fn serve(io: Io, gpa: std.mem.Allocator, options: cli.Serve) !u8 {
     };
     var root = try Io.Dir.cwd().openDir(io, root_path, .{ .iterate = true });
     defer root.close(io);
-    var s: Site = .init(gpa, io, options, root);
-    defer s.deinit();
-    s.start_branch = try changes.current(io, a, root);
-    try s.refresh();
+    var site: Site = .init(gpa, io, options, root);
+    defer site.deinit();
+    site.start_branch = try changes.current(io, a, root);
+    try site.refresh();
 
-    const address = try Io.net.IpAddress.parse("127.0.0.1", options.port);
-    var server = address.listen(io, .{ .reuse_address = true }) catch |e| {
-        try say(io, try a.print("skein: cannot serve on 127.0.0.1:{d} ({t}); give another --port\n", .{ options.port, e }));
+    const setup = switch (try setUp(io, a, options)) {
+        .ok => |s| s,
+        .failed => |why| {
+            try say(io, try a.print("skein: {s}\n", .{why}));
+            return 2;
+        },
+    };
+    var server: Server = .{
+        .io = io,
+        .gpa = gpa,
+        .main = &site,
+        .people = .init(gpa),
+        .sites = .init(gpa, io),
+        .setup = setup,
+        .public_host = if (options.url) |u| hostOf(u) else null,
+    };
+    defer server.people.deinit();
+    defer server.sites.deinit();
+
+    const address = try Io.net.IpAddress.parse(options.listen, options.port);
+    var listener = address.listen(io, .{ .reuse_address = true }) catch |e| {
+        try say(io, try a.print("skein: cannot serve on {s}:{d} ({t}); give another --port\n", .{ options.listen, options.port, e }));
         return 2;
     };
-    defer server.deinit(io);
-    try say(io, try a.print("skein: serving {s} at http://127.0.0.1:{d}/ until stopped (Ctrl+C){s}\n", .{
-        if (s.name.len > 0) s.name else root_path, options.port, if (s.failed != null) "; it cannot be rendered yet: see the page" else "",
+    defer listener.deinit(io);
+    const at = options.url orelse try a.print("http://{s}:{d}/", .{ options.listen, options.port });
+    try say(io, try a.print("skein: serving {s} at {s} until stopped (Ctrl+C){s}{s}\n", .{
+        if (site.name.len > 0) site.name else root_path,
+        at,
+        switch (options.sign_in) {
+            .none => "",
+            .proxy => "; people sign in through the proxy",
+            .forge => "; people sign in through the forge",
+        },
+        if (site.failed != null) "; it cannot be rendered yet: see the page" else "",
     }));
 
     var group: Io.Group = .init;
     defer group.cancel(io);
     var started: usize = 0;
-    while (started < workers) : (started += 1) group.concurrent(io, work, .{ io, gpa, &server, &s }) catch break;
+    while (started < workers) : (started += 1) group.concurrent(io, Server.work, .{ &server, &listener }) catch break;
     // with no concurrency to be had, one at a time here
-    if (started == 0) try work(io, gpa, &server, &s);
+    if (started == 0) try server.work(&listener);
     try group.await(io);
     return 0;
 }
 
-fn work(io: Io, gpa: std.mem.Allocator, server: *Io.net.Server, s: *Site) Io.Cancelable!void {
-    var arena: std.heap.ArenaAllocator = .init(gpa);
-    defer arena.deinit();
-    while (true) {
-        _ = arena.reset(.retain_capacity);
-        const stream = server.accept(io) catch |e| switch (e) {
-            error.Canceled => return error.Canceled,
-            else => continue,
-        };
-        defer stream.close(io);
-        connection(io, arena.allocator(), stream, s) catch |e| switch (e) {
-            error.Canceled => return error.Canceled,
-            else => {},
-        };
+/// How people sign in, from the options, the project's forge and the
+/// environment; or why it cannot be set up
+fn setUp(io: Io, a: std.mem.Allocator, options: cli.Serve) !union(enum) { ok: sign_in.Setup, failed: []const u8 } {
+    var setup: sign_in.Setup = .{ .mode = options.sign_in, .url = options.url orelse "", .user_header = options.user_header, .email_header = options.email_header };
+    switch (options.sign_in) {
+        .none => {},
+        .proxy => {
+            var proxies: std.ArrayList(Io.net.IpAddress) = .empty;
+            const given: []const []const u8 = if (options.proxies.len > 0) options.proxies else &.{ "127.0.0.1", "::1" };
+            for (given) |p| try proxies.append(a, Io.net.IpAddress.parse(p, 0) catch return .{ .failed = try a.print("serve --proxy: '{s}' is not an IP address", .{p}) });
+            setup.proxies = proxies.items;
+        },
+        .forge => {
+            var ws = switch (try Workspace.open(io, a, options.common)) {
+                .ok => |w| w,
+                .failed => |o| return .{ .failed = std.mem.trimEnd(u8, o.text, "\n") },
+            };
+            defer ws.close();
+            setup.forge = ws.project.forge orelse return .{ .failed = "serve --sign-in forge: the project names no forge ([forge] in .skein/config.toml)" };
+            const id = env.get("SKEIN_OAUTH_CLIENT_ID") orelse "";
+            const secret = env.get("SKEIN_OAUTH_CLIENT_SECRET") orelse "";
+            if (id.len == 0 or secret.len == 0) return .{ .failed = "serve --sign-in forge: set SKEIN_OAUTH_CLIENT_ID and SKEIN_OAUTH_CLIENT_SECRET, an OAuth app's id and secret on the forge, whose callback is URL/_skein/oauth" };
+            setup.app = .{ .id = id, .secret = secret };
+        },
     }
+    return .{ .ok = setup };
 }
 
-/// Answers one request on `stream`, and closes it
-fn connection(io: Io, arena: std.mem.Allocator, stream: Io.net.Stream, s: *Site) !void {
-    var in_buf: [16 * 1024]u8 = undefined;
-    var reader = stream.reader(io, &in_buf);
-    var out_buf: [16 * 1024]u8 = undefined;
-    var writer = stream.writer(io, &out_buf);
-    var http: std.http.Server = .init(&reader.interface, &writer.interface);
-    var request = try http.receiveHead();
-    const target = try arena.dupe(u8, request.head.target);
-    const path = target[0 .. std.mem.findScalar(u8, target, '?') orelse target.len];
-    const query = if (std.mem.findScalar(u8, target, '?')) |at| target[at + 1 ..] else "";
-    var host: ?[]const u8 = null;
-    var skein_header = false;
-    var it = request.iterateHeaders();
-    while (it.next()) |h| {
-        if (std.ascii.eqlIgnoreCase(h.name, "host")) host = try arena.dupe(u8, h.value);
-        if (std.ascii.eqlIgnoreCase(h.name, "x-skein")) skein_header = true;
-    }
-    const allowed = switch (guard.check(.{ .method = request.head.method, .path = path, .host = host, .skein_header = skein_header }, s.options.port)) {
-        .refused => |r| return request.respond(r.text, .{ .status = r.status, .keep_alive = false }),
-        .allowed => |x| x,
-    };
-    var body: []const u8 = "";
-    if (allowed.method == .post) {
-        var body_buf: [16 * 1024]u8 = undefined;
-        const r = try request.readerExpectContinue(&body_buf);
-        body = try r.allocRemaining(arena, .limited(1 << 26));
-    }
-    const a = blk: {
-        try s.mutex.lock(io);
-        defer s.mutex.unlock(io);
-        if (allowed.api) break :blk try edit_api.handle(arena, s, allowed.method, path[guard.api_prefix.len..], query, body);
-        break :blk try answer.get(arena, s, target);
-    };
-    var headers: std.ArrayList(std.http.Header) = .empty;
-    try headers.append(arena, .{ .name = "content-type", .value = a.content_type });
-    try headers.append(arena, .{ .name = "cache-control", .value = "no-store" });
-    if (a.location) |l| try headers.append(arena, .{ .name = "location", .value = l });
-    try request.respond(a.body, .{ .status = a.status, .keep_alive = false, .extra_headers = headers.items });
+/// `reqs.example.com` of `https://reqs.example.com/`, with its port when it has one
+fn hostOf(url: []const u8) []const u8 {
+    const after = if (std.mem.find(u8, url, "://")) |at| url[at + 3 ..] else url;
+    return after[0 .. std.mem.findScalar(u8, after, '/') orelse after.len];
 }
 
 fn say(io: Io, text: []const u8) !void {
     try stdio.stderr().writeStreamingAll(io, text);
+}
+
+test hostOf {
+    try std.testing.expectEqualStrings("reqs.example.com", hostOf("https://reqs.example.com/"));
+    try std.testing.expectEqualStrings("10.0.0.5:8080", hostOf("http://10.0.0.5:8080"));
+}
+
+test {
+    _ = People;
+    _ = Sites;
 }

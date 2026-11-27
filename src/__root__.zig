@@ -51,6 +51,13 @@ test {
     _ = @import("serve/saving.zig");
     _ = @import("serve/changes.zig");
     _ = @import("serve/workflow_checks.zig");
+    _ = @import("serve/worktrees.zig");
+    _ = @import("serve/propose.zig");
+    _ = @import("serve/oauth.zig");
+    _ = @import("serve/sign_in.zig");
+    _ = @import("serve/query.zig");
+    _ = @import("serve/People.zig");
+    _ = @import("serve/Server.zig");
     _ = @import("edit/form.zig");
     _ = @import("edit/item_form.zig");
     _ = @import("commands/move.zig");

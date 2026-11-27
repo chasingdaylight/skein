@@ -31,8 +31,6 @@ name: []const u8 = "",
 /// the branch checked out when it started: where changes go, unless
 /// `[serve] branch` says
 start_branch: ?[]const u8 = null,
-/// held while the site is read or rendered again
-mutex: Io.Mutex = .init,
 
 pub fn init(gpa: std.mem.Allocator, io: Io, options: cli.Serve, root: Io.Dir) Site {
     return .{ .gpa = gpa, .io = io, .options = options, .root = root, .arena = .init(gpa) };
@@ -43,7 +41,7 @@ pub fn deinit(self: *Site) void {
 }
 
 /// Renders the site again when the files changed since it was; the
-/// caller holds the mutex
+/// caller holds the server's lock
 pub fn refresh(self: *Site) !void {
     const now = try stamps.of(self.io, self.gpa, self.root);
     if (self.rendered and std.mem.eql(u8, &now, &self.stamp)) return;

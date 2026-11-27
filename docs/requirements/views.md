@@ -157,8 +157,14 @@ A save from `skein serve` shall reach git as the project's `[serve] save` says (
 %req[serve.save.warnings]
 None of the ways of saving can be enforced in a checkout, so `skein check` shall warn where one was not followed, from the commit that set `[serve] save`, and refuse nothing. With `commit` and `[serve] editors`, it warns of commits to the sources by anyone not listed. With `branch` or `pull-request`, it warns of commits straight on the branch changes go to that were not merged from a change; a squashed pull request, `(#N)` at the end of its subject, counts as merged. (Issue #280.)
 
+%req[serve.team]
+`skein serve` shall keep each change in a git worktree of its own, so that the checkout that serves stays on the branch changes go to and several people's changes are edited at once, each person with their own open change, whose site the pages show. Commits and approvals made from its pages shall carry the name of the person signed in, or git's user on this computer alone. An item whose type asks for approvals shall be approved from its form, as `skein approve` approves it, and saved as an edit is. When the branch changes go to has an upstream, it shall be pulled before a change starts from it and pushed after a merge or a commit to it. (Issue #281.)
+
+%req[serve.sign-in]
+`skein serve --listen ADDR` on an address other than this computer's own shall be refused without `--sign-in` and `--url`. With `--sign-in proxy`, the person is the one a header names (`X-Forwarded-User`, `X-Forwarded-Email`), believed only from the proxy's addresses (`--proxy`, this computer's by default). With `--sign-in forge`, people sign in with the project's forge through OAuth's authorization code flow, the OAuth app's id and secret taken from the environment, a `state` that only a sign-in begun there is accepted with, and a session kept in an HTTP-only cookie. Anyone shall read the pages; a request that changes or approves anything shall be refused unless someone is signed in (emanspeaks, 2026-11-27, #288). (Issue #281.)
+
 %req[serve.local]
-`skein serve` shall answer only requests addressed to `127.0.0.1` or `localhost` at its port, and change a file only for a request that carries its own header (`x-skein`), which a page of another site cannot send without the browser asking first, which it refuses. (Issues #278, #279.)
+`skein serve` shall answer only requests addressed to `127.0.0.1` or `localhost` at its port, or to the host of its `--url`, and change a file only for a request that carries its own header (`x-skein`), which a page of another site cannot send without the browser asking first, which it refuses. (Issues #278, #279.)
 
 %req[render.generated]
 A fenced code block of the language `skein` in a document shall be a request for a page that Skein generates from the graph: `skein render` puts the page in its place, as Markdown and as HTML alike, and its links lead to the items from the page they are on. A request Skein cannot read is replaced by a note that says what is wrong. Removed items are never listed.

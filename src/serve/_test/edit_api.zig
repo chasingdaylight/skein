@@ -4,7 +4,7 @@
 const std = @import("std");
 const testing = std.testing;
 
-const Site = @import("../Site.zig");
+const Served = @import("Served.zig");
 const edit_api = @import("../edit_api.zig");
 
 fn write(dir: std.Io.Dir, path: []const u8, data: []const u8) !void {
@@ -25,15 +25,15 @@ fn has(text: []const u8, part: []const u8) !void {
 
 const Project = struct {
     tmp: testing.TmpDir,
-    site: Site,
+    served: Served,
 
     fn deinit(p: *Project) void {
-        p.site.deinit();
+        p.served.deinit();
         p.tmp.cleanup();
     }
 };
 
-fn project(a: std.mem.Allocator) !Project {
+fn project(a: std.mem.Allocator, p: *Project) !void {
     const tmp = testing.tmpDir(.{ .iterate = true });
     const dir = tmp.dir;
     try write(dir, ".skein/config.toml", "[project]\nname = \"Example\"\n[[sources]]\npath = \"spec\"\n[[sources]]\npath = \"std\"\nread_only = true\n");
@@ -42,24 +42,26 @@ fn project(a: std.mem.Allocator) !Project {
     try write(dir, "spec/lex.md", "# Lexing\n\n%rule[lex.comment syntax] A comment.\n\n%rule[lex.space syntax] Spaces.\n");
     try write(dir, "std/base.md", "%rule[std.base syntax] Given.\n");
     const root = try dir.realPathFileAlloc(testing.io, ".", a);
-    return .{ .tmp = tmp, .site = .init(testing.allocator, testing.io, .{ .common = .{ .root = root } }, dir) };
+    p.tmp = tmp;
+    try p.served.init(root, dir);
 }
 
-fn get(a: std.mem.Allocator, s: *Site, path: []const u8, query: []const u8) ![]const u8 {
-    return (try edit_api.handle(a, s, .get, path, query, "")).body;
+fn get(a: std.mem.Allocator, s: *Served, path: []const u8, q: []const u8) ![]const u8 {
+    return s.get(a, path, q);
 }
 
-fn post(a: std.mem.Allocator, s: *Site, path: []const u8, body: []const u8) ![]const u8 {
-    return (try edit_api.handle(a, s, .post, path, "", body)).body;
+fn post(a: std.mem.Allocator, s: *Served, path: []const u8, body: []const u8) ![]const u8 {
+    return s.post(a, path, body);
 }
 
 test "a page's file, checked as typed and saved unless it changed meanwhile" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
-    var p = try project(a);
+    var p: Project = undefined;
+    try project(a, &p);
     defer p.deinit();
-    const s = &p.site;
+    const s = &p.served;
 
     const info = try get(a, s, "page", "file=spec%2Flex.md");
     try has(info, "\"editable\":true");
@@ -92,9 +94,10 @@ test "an item's form, previewed and saved" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
-    var p = try project(a);
+    var p: Project = undefined;
+    try project(a, &p);
     defer p.deinit();
-    const s = &p.site;
+    const s = &p.served;
 
     const form = try get(a, s, "form", "id=lex.space");
     try has(form, "\"statuses\":[\"draft\",\"approved\"]");

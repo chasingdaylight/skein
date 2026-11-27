@@ -19,8 +19,8 @@ pub const usage =
     \\                    gitlab-requirements: a CSV for GitLab's requirements import,
     \\                    or reqif: ReqIF 1.2, for DOORS and other requirements tools
     \\  render --out DIR  Write the documents as Markdown for a site generator
-    \\  serve [--port N]  Serve the site on this computer (localhost), rendered as the
-    \\                    files change (default port 8080)
+    \\  serve [--port N]  Serve the site, rendered as the files change, and edit it
+    \\                    there: on this computer, or for a team with --sign-in
     \\  move OLD NEW     Give an item another ID, everywhere the old one is used
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  link FROM TYPE TO Add a link of a type from one item to another
@@ -134,7 +134,18 @@ pub const usage =
     \\  --status-from NAME, --verification-from NAME
     \\                    import doorstop: the attribute that gives the status,
     \\                    or the verification method
-    \\  --port N          serve: the port on localhost (default 8080)
+    \\  --port N          serve: the port (default 8080)
+    \\  --listen ADDR     serve: the address to listen on (default 127.0.0.1); another
+    \\                    needs --sign-in and --url
+    \\  --url URL         serve: the address people reach it at, behind a proxy
+    \\  --sign-in proxy|forge
+    \\                    serve: people sign in through a reverse proxy's header, or
+    \\                    the project's forge (SKEIN_OAUTH_CLIENT_ID, _SECRET)
+    \\  --user-header NAME, --email-header NAME
+    \\                    serve --sign-in proxy: the headers that name the person
+    \\                    (default X-Forwarded-User, X-Forwarded-Email)
+    \\  --proxy IP        serve --sign-in proxy: an address the proxy connects from
+    \\                    (default this computer's); may be given more than once
     \\  --out DIR         render, examples: where the files go
     \\  --format NAME     render: markdown for a site generator (the default),
     \\                    html: the site itself, or document: one file per document;
@@ -449,8 +460,32 @@ pub const Serve = struct {
     profile: ?[]const u8 = null,
     /// results files besides the project's own, and what produced them
     results: Results.Given = .{},
+    /// the address it listens on: this computer's own by default
+    listen: []const u8 = "127.0.0.1",
+    /// the address people reach it at, behind a proxy (`https://reqs.example.com`)
+    url: ?[]const u8 = null,
+    /// how people sign in; none on this computer alone
+    sign_in: SignIn = .none,
+    /// with `proxy`: the headers that name the signed-in user, and their email
+    user_header: []const u8 = "X-Forwarded-User",
+    email_header: []const u8 = "X-Forwarded-Email",
+    /// with `proxy`: the addresses the proxy connects from (default: this computer)
+    proxies: []const []const u8 = &.{},
 
     pub const default_port = 8080;
+
+    /// Whether `ip` is this computer's own address
+    pub fn loopback(ip: []const u8) bool {
+        return std.mem.startsWith(u8, ip, "127.") or std.mem.eql(u8, ip, "::1");
+    }
+
+    pub const SignIn = enum {
+        none,
+        /// a reverse proxy signs people in and names them in a header
+        proxy,
+        /// the project's forge, through OAuth
+        forge,
+    };
 };
 
 pub const Import = struct {
@@ -555,6 +590,11 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--file", .takes_value = true },
     .{ .name = "--url", .takes_value = true },
     .{ .name = "--port", .takes_value = true },
+    .{ .name = "--proxy", .takes_value = true },
+    .{ .name = "--email-header", .takes_value = true },
+    .{ .name = "--user-header", .takes_value = true },
+    .{ .name = "--sign-in", .takes_value = true },
+    .{ .name = "--listen", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -750,10 +790,21 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results(), .editions = p.flag("--editions"), .controlled = p.flag("--controlled") } };
     }
     if (eql(name, "serve")) {
-        if (try p.allow(&.{ "--root", "--port", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--port", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--listen", "--url", "--sign-in", "--user-header", "--email-header", "--proxy" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "serve takes no items" };
         const port = if (p.value("--port")) |n| std.fmt.parseInt(u16, n, 10) catch return .{ .misuse = "serve --port: a port's number, as 8080" } else Serve.default_port;
-        return .{ .serve = .{ .common = common, .port = port, .profile = p.value("--profile"), .results = try p.results() } };
+        const sign_in: Serve.SignIn = if (p.value("--sign-in")) |s| std.meta.stringToEnum(Serve.SignIn, s) orelse return .{ .misuse = "serve --sign-in: proxy or forge" } else .none;
+        var o: Serve = .{ .common = common, .port = port, .profile = p.value("--profile"), .results = try p.results(), .url = p.value("--url"), .sign_in = sign_in, .proxies = try p.values("--proxy") };
+        if (p.value("--listen")) |l| o.listen = l;
+        if (p.value("--user-header")) |h| o.user_header = h;
+        if (p.value("--email-header")) |h| o.email_header = h;
+        _ = std.Io.net.IpAddress.parse(o.listen, port) catch return .{ .misuse = "serve --listen: an IP address, as 0.0.0.0 or 10.0.0.5" };
+        if (!Serve.loopback(o.listen)) {
+            if (sign_in == .none) return .{ .misuse = "serve --listen: on an address other than this computer's own, people sign in: give --sign-in proxy or forge" };
+            if (o.url == null) return .{ .misuse = "serve --listen: give --url, the address people reach it at" };
+        }
+        if (sign_in == .forge and o.url == null) return .{ .misuse = "serve --sign-in forge: give --url, the address the forge sends people back to" };
+        return .{ .serve = o };
     }
     if (eql(name, "import")) {
         const forms = "import: doorstop DIR..., csv FILE, reqif FILE or jama PROJECT with --type TYPE --to DIR, or gitlab-requirements FILE";
