@@ -90,7 +90,7 @@ repository = "owner/repo"
 # url = "https://git.example.com"   # for a server of one's own; codeberg.org otherwise
 ```
 
-Everything of GitHub works the same here: `#97` is issue 97 of the repository, a pull request's approvals are read for `skein approve --from-pull-request` (a reviewer's last review that approved or asked for changes counts, and a dismissed one does not), and the planning fields are read and written back by `skein apply`. Forgejo has no program that holds a sign-in as `gh` and `glab` do, so Skein calls its API itself, with the token in `FORGEJO_TOKEN` (an access token with the issue scope): public repositories are read without one, and writing needs one. Publishing a mirror to Forgejo (`skein publish forgejo:...`) is not built yet.
+Everything of GitHub works the same here: `#97` is issue 97 of the repository, a pull request's approvals are read for `skein approve --from-pull-request` (a reviewer's last review that approved or asked for changes counts, and a dismissed one does not), and the planning fields are read and written back by `skein apply`. Forgejo has no program that holds a sign-in as `gh` and `glab` do, so Skein calls its API itself, with the token in `FORGEJO_TOKEN` (an access token with the issue scope): public repositories are read without one, and writing needs one. `skein publish --to forgejo:OWNER/REPO` re-creates a mirror there as on the others (`--url` for a server other than codeberg.org).
 
 ## Rendered
 
