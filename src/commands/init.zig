@@ -12,6 +12,7 @@ const Project = @import("../Project.zig");
 const Template = @import("../template/Template.zig");
 const files = @import("../files.zig");
 const standards = @import("../template/standards.zig");
+const todo = @import("../agents/todo.zig");
 const Workspace = @import("Workspace.zig");
 const agents = @import("agents.zig");
 const cli = @import("../cli.zig");
@@ -40,26 +41,33 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
     try root.createDirPath(io, "docs");
     // what coding agents should know of it, in the project's instructions for them
     var agents_file: []const u8 = "";
+    // and what is still to do, which the agent that ran it is told too
+    var still: []const []const u8 = &.{};
     switch (try Workspace.open(io, arena, .{ .root = options.root })) {
         .ok => |ws_ok| {
             var ws = ws_ok;
             defer ws.close();
             agents_file = try agents.write(io, arena, &ws, false, null);
+            still = try todo.list(io, arena, &ws);
         },
-        .failed => {},
+        .failed => |outcome| still = try arena.dupe([]const u8, &.{try arena.print("Give the options the templates need in `.skein/config.toml`, then run `skein agents`, which says what else is to do:\n  {s}", .{std.mem.trim(u8, outcome.text, " \n")})}),
     }
     const from = if (options.templates.len == 0) "" else try arena.print(", from the template{s} {s}", .{
         if (options.templates.len == 1) "" else "s",
         try std.mem.join(arena, " and ", options.templates),
     });
     const told = if (agents_file.len == 0) "" else try arena.print("; {s} tells coding agents about Skein", .{agents_file});
-    return .{ .text = try arena.print("skein: a project in {s}{s}, with {d} document{s} to start from; 'skein check' checks it{s}\n", .{
+    var text: std.ArrayList(u8) = .empty;
+    try text.print(arena, "skein: a project in {s}{s}, with {d} document{s} to start from; 'skein check' checks it{s}\n", .{
         options.root,
         from,
         written,
         if (written == 1) "" else "s",
         told,
-    }) };
+    });
+    if (still.len > 0) try text.appendSlice(arena, "Still to do:\n");
+    for (still) |t| try text.print(arena, "- {s}\n", .{t});
+    return .{ .text = text.items };
 }
 
 const Configuration = struct {
