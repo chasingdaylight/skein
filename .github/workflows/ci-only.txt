@@ -17,3 +17,5 @@ tools/pdf/*
 tools/mermaid/*
 # the generator of a large project for timing skein: run by hand, not shipped
 tools/bench/*
+# the public key CI checks the release signature of SHA256SUMS against (#292)
+SIGNING-KEY.asc

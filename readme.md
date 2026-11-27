@@ -16,6 +16,15 @@ Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as
 
 Releases from 0.2.0 on are signed: `skein.exe` with an Authenticode signature, and `skein` on macOS, in the archives and the installer package, with a Developer ID and notarized by Apple; the programs in the VS Code extension are the same signed ones. A browser still marks what it downloads as coming from the internet. On macOS, double-clicking the unpacked `skein` in Finder then shows a warning, as it does for any command-line program marked that way: run it from a terminal instead, or use the installer package. Unpack the archive with `tar -xzf` in a terminal (Finder's Archive Utility passes the mark on to what it unpacks); if a mark is on `skein` already, remove it with `xattr -d com.apple.quarantine skein`. On Windows, SmartScreen may still ask about a program it has not seen often: unblock the zip before unpacking it (`Unblock-File`, or "Unblock" in its Properties).
 
+From 0.2.0 on, `SHA256SUMS` is also signed (`SHA256SUMS.asc`) with the release signing key in [`SIGNING-KEY.asc`](SIGNING-KEY.asc), fingerprint `9431 3677 98CC D8E2 8BC0  E589 BB30 DEF7 34E5 F690`, and each file has a build attestation of the workflow that built it. To check a download:
+
+```text
+gpg --import SIGNING-KEY.asc
+gpg --verify SHA256SUMS.asc SHA256SUMS
+sha256sum --ignore-missing -c SHA256SUMS
+gh attestation verify skein-v0.2.0-x86_64-linux.tar.gz --repo chasingdaylight/skein
+```
+
 For VS Code and editors built on it, the extension [Skein](editors/vscode/readme.md) (`chasingdaylight.skein`, on the Visual Studio Marketplace and Open VSX) highlights markers and references in Markdown and carries the `skein` program for its platform, on the `PATH` of its terminals.
 
 ## Trying it
