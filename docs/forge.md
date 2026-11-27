@@ -55,10 +55,10 @@ requirements:
     - skein coverage --results junit.xml --gitlab-requirements requirements.json
   artifacts:
     reports:
-      requirements: requirements.json
+      requirements_v2: requirements.json  # requirements: on a project without work items
 ```
 
-Run the first two steps again when items are added. Creating and updating GitLab's requirements through its API is still to come (#247).
+Run the first two steps again when items are added, or let the API do both: `skein gitlab-requirements [--profile NAME]` creates a requirement for each item that has none (recording it in the map), brings the title and description of the others back to their items, archives the requirements of removed items and reopens those of items that are back; `--dry-run` says what it would do. It works through `glab` when it is installed, else with the token in `GITLAB_TOKEN`, and needs work items with the Requirement type (Ultimate). Changes made in GitLab are undone by the next run: the items are the truth.
 
 ## Forgejo
 

@@ -38,7 +38,7 @@ pub fn importCsv(arena: std.mem.Allocator, items: []const *const Graph.Item) ![]
 }
 
 /// `ID: first sentence`, cut to GitLab's limit
-fn title(arena: std.mem.Allocator, item: *const Graph.Item) ![]const u8 {
+pub fn title(arena: std.mem.Allocator, item: *const Graph.Item) ![]const u8 {
     const named = item.attribute("title");
     const line_end = std.mem.findAny(u8, item.text, "\r\n") orelse item.text.len;
     var first = named orelse item.text[0..line_end];

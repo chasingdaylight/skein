@@ -50,6 +50,9 @@ pub const usage =
     \\                    Record a result a person obtained, such as a procedure
     \\                    carried out by hand, in the results the project keeps
     \\  schedule          Schedule the work items, and write .skein/schedule.toml
+    \\  gitlab-requirements [--profile NAME] [--dry-run]
+    \\                    Bring the project's GitLab requirements to its items, through
+    \\                    GitLab's API: create, update, archive; and keep the map
     \\  level [--write]   Move work later so that nobody has more work than time; list
     \\                    the moves, or write them into the work items
     \\  time [ITEM HOURS] Log hours spent on a work item; without them, spent against estimate
@@ -135,6 +138,7 @@ pub const Command = union(enum) {
     load: Load,
     schedule: Schedule,
     level: Level,
+    gitlab_requirements: GitlabRequirements,
     time: TimeSpent,
     overlay: OverlayCommand,
     apply: Apply,
@@ -241,6 +245,12 @@ pub const Coverage = struct {
 pub const Load = struct {
     common: Common = .{},
     json: bool = false,
+};
+
+pub const GitlabRequirements = struct {
+    common: Common = .{},
+    profile: ?[]const u8 = null,
+    dry_run: bool = false,
 };
 
 pub const Level = struct {
@@ -622,6 +632,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (try p.allow(&.{ "--root", "--by", "--on", "--note", "--json", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len != 0 and words.len != 2) return .{ .misuse = "time takes a work item and the hours spent, or nothing for the report" };
         return .{ .time = .{ .common = common, .id = if (words.len == 2) words[0] else null, .hours = if (words.len == 2) words[1] else null, .by = p.value("--by"), .on = p.value("--on"), .note = p.value("--note"), .json = p.flag("--json") } };
+    }
+    if (eql(name, "gitlab-requirements")) {
+        if (try p.allow(&.{ "--root", "--profile", "--dry-run" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "gitlab-requirements takes no items" };
+        return .{ .gitlab_requirements = .{ .common = common, .profile = p.value("--profile"), .dry_run = p.flag("--dry-run") } };
     }
     if (eql(name, "level")) {
         if (try p.allow(&.{ "--root", "--write", "--offline" })) |problem| return .{ .misuse = problem };

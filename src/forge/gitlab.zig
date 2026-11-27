@@ -116,6 +116,24 @@ pub fn update(io: Io, arena: std.mem.Allocator, forge: *const Forge, r: Forge.Re
     };
 }
 
+/// Sends the GraphQL request `json` (`{"query": ..., "variables": ...}`):
+/// through `glab` when it is installed, else over HTTPS with `GITLAB_TOKEN`
+pub fn graphql(io: Io, arena: std.mem.Allocator, forge: *const Forge, json: []const u8, body_path: []const u8) anyerror!github.Reply {
+    const reply = try tool.send(io, arena, "glab", null, forge.url, &.{"Content-Type: application/json"}, "POST", "graphql", json, body_path);
+    switch (reply) {
+        .unreachable_ => |why| if (std.mem.startsWith(u8, why, "glab is not installed")) {
+            const base = forge.url orelse try arena.print("https://{s}", .{forge.host()});
+            var headers: std.ArrayList(std.http.Header) = .empty;
+            try headers.append(arena, .{ .name = "User-Agent", .value = "skein" });
+            const token = env.get("GITLAB_TOKEN") orelse return .{ .unreachable_ = "writing to GitLab needs glab, signed in, or a token in GITLAB_TOKEN" };
+            try headers.append(arena, .{ .name = "Authorization", .value = try arena.print("Bearer {s}", .{token}) });
+            return tool.httpsSend(io, arena, .POST, try arena.print("{s}/api/graphql", .{base}), headers.items, json, forge.host(), "GitLab");
+        },
+        else => {},
+    }
+    return reply;
+}
+
 /// Sends `json` to `path` of the forge's REST API, through `glab`
 pub fn send(io: Io, arena: std.mem.Allocator, forge: *const Forge, method: []const u8, path: []const u8, json: []const u8, body_path: []const u8) !github.Reply {
     return tool.send(io, arena, "glab", null, forge.url, &.{"Content-Type: application/json"}, method, path, json, body_path);
