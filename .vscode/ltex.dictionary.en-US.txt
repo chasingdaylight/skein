@@ -108,3 +108,5 @@ burndown
 jamasoftware
 Wyhash
 reqs
+smimesign
+gpgsm
