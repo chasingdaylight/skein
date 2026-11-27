@@ -43,6 +43,9 @@ pub const usage =
     \\                    Make an item file in DIR of each row of a CSV file
     \\  import reqif FILE --type TYPE --to DIR
     \\                    Make an item file in DIR of each spec object of a ReqIF file
+    \\  import jama PROJECT --jama-type KEY --type TYPE --to DIR
+    \\                    Make an item file in DIR of each item of a Jama Connect
+    \\                    project, through its REST API
     \\  import gitlab-requirements FILE
     \\                    Record the GitLab requirement of each item, from the CSV
     \\                    GitLab exports of a project's requirements
@@ -56,6 +59,9 @@ pub const usage =
     \\  gitlab-requirements [--profile NAME] [--dry-run]
     \\                    Bring the project's GitLab requirements to its items, through
     \\                    GitLab's API: create, update, archive; and keep the map
+    \\  jama [--profile NAME] [--dry-run]
+    \\                    Bring a Jama Connect project's items to the items, through
+    \\                    its REST API (.skein/jama.toml): create, update, relate
     \\  level [--write]   Move work later so that nobody has more work than time; list
     \\                    the moves, or write them into the work items
     \\  time [ITEM HOURS] Log hours spent on a work item; without them, spent against estimate
@@ -113,12 +119,13 @@ pub const usage =
     \\  --gitlab-requirements FILE
     \\                    coverage: also write GitLab's requirements report, for a CI
     \\                    job's artifacts
-    \\  --type TYPE       import csv, reqif: the item type of the rows
-    \\  --to DIR          import csv, reqif: where the item files go
+    \\  --type TYPE       import csv, reqif, jama: the item type of the rows
+    \\  --to DIR          import csv, reqif, jama: where the item files go
     \\  --id-column NAME, --text-column NAME
     \\                    import csv: the columns of the IDs and the text
     \\                    (default: id, text)
-    \\  --replace         import csv, reqif: write over item files that are there
+    \\  --replace         import csv, reqif, jama: write over item files that are there
+    \\  --jama-type KEY   import jama: the Jama item type to take (REQ)
     \\  --headings-as-text
     \\                    import doorstop: non-normative items as plain Markdown
     \\  --status-from NAME, --verification-from NAME
@@ -146,6 +153,7 @@ pub const Command = union(enum) {
     schedule: Schedule,
     level: Level,
     gitlab_requirements: GitlabRequirements,
+    jama: GitlabRequirements,
     time: TimeSpent,
     overlay: OverlayCommand,
     apply: Apply,
@@ -256,6 +264,7 @@ pub const Load = struct {
     json: bool = false,
 };
 
+/// `gitlab-requirements` and `jama`: the items published to another tool
 pub const GitlabRequirements = struct {
     common: Common = .{},
     profile: ?[]const u8 = null,
@@ -447,7 +456,10 @@ pub const Import = struct {
     /// doorstop: the attribute whose values are the verification methods
     verification_from: ?[]const u8 = null,
 
-    pub const Format = enum { doorstop, csv, reqif, @"gitlab-requirements" };
+    /// jama: the Jama Connect item type to take, by its key (`REQ`)
+    jama_type: ?[]const u8 = null,
+
+    pub const Format = enum { doorstop, csv, reqif, @"gitlab-requirements", jama };
 };
 
 pub const Review = struct {
@@ -509,6 +521,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--implementation", .takes_value = true },
     .{ .name = "--implementation-version", .takes_value = true },
     .{ .name = "--gitlab-requirements", .takes_value = true },
+    .{ .name = "--jama-type", .takes_value = true },
     .{ .name = "--editions", .takes_value = false },
     .{ .name = "--controlled", .takes_value = false },
     .{ .name = "--write", .takes_value = false },
@@ -651,6 +664,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (words.len > 0) return .{ .misuse = "gitlab-requirements takes no items" };
         return .{ .gitlab_requirements = .{ .common = common, .profile = p.value("--profile"), .dry_run = p.flag("--dry-run") } };
     }
+    if (eql(name, "jama")) {
+        if (try p.allow(&.{ "--root", "--profile", "--dry-run" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "jama takes no items" };
+        return .{ .jama = .{ .common = common, .profile = p.value("--profile"), .dry_run = p.flag("--dry-run") } };
+    }
     if (eql(name, "level")) {
         if (try p.allow(&.{ "--root", "--write", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "level takes no items" };
@@ -713,7 +731,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results(), .editions = p.flag("--editions"), .controlled = p.flag("--controlled") } };
     }
     if (eql(name, "import")) {
-        const forms = "import: doorstop DIR..., csv FILE or reqif FILE with --type TYPE --to DIR, or gitlab-requirements FILE";
+        const forms = "import: doorstop DIR..., csv FILE, reqif FILE or jama PROJECT with --type TYPE --to DIR, or gitlab-requirements FILE";
         if (words.len == 0) return .{ .misuse = forms };
         const format = std.meta.stringToEnum(Import.Format, words[0]) orelse return .{ .misuse = forms };
         switch (format) {
@@ -747,6 +765,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
                 if (try p.allow(&.{ "--root", "--type", "--to", "--replace" })) |problem| return .{ .misuse = problem };
                 if (words.len != 2) return .{ .misuse = "import reqif: name one ReqIF file" };
                 return .{ .import = .{ .common = common, .format = format, .paths = words[1..], .item_type = p.value("--type"), .to = p.value("--to"), .replace = p.flag("--replace") } };
+            },
+            .jama => {
+                if (try p.allow(&.{ "--root", "--type", "--to", "--replace", "--jama-type" })) |problem| return .{ .misuse = problem };
+                if (words.len != 2) return .{ .misuse = "import jama: name the Jama project by its id" };
+                return .{ .import = .{ .common = common, .format = format, .paths = words[1..], .item_type = p.value("--type"), .to = p.value("--to"), .replace = p.flag("--replace"), .jama_type = p.value("--jama-type") } };
             },
             .@"gitlab-requirements" => {
                 if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };

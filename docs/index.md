@@ -44,7 +44,7 @@ These pages are of the release their menu names, the latest by default; the menu
 | [Test results](results.md) | Reading test results, and what they say of each item. |
 | [The forge](forge.md) | Issues and pull requests, checked against GitHub. |
 | [Templates](templates.md) | Common ways of working, built into Skein: a project names one in one line. |
-| [Importing](importing.md) | Bringing in Doorstop documents and CSV files. |
+| [Importing](importing.md) | Bringing in Doorstop documents, CSV and ReqIF files (DOORS, Jama), and Jama Connect projects through its API. |
 | [Design](design.md) | What Skein is for, how it is built, and what is planned. |
 | [Requirements](requirements/readme.md) | What Skein is required to do, written in Skein and checked by Skein. |
 

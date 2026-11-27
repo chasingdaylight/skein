@@ -64,6 +64,11 @@ pub fn https(io: Io, arena: std.mem.Allocator, url: []const u8, headers: []const
 /// `method` to `url` with `headers` and the JSON `payload`, for a forge
 /// that has no program of its own to send through (Forgejo)
 pub fn httpsSend(io: Io, arena: std.mem.Allocator, method: std.http.Method, url: []const u8, headers: []const std.http.Header, payload: ?[]const u8, host: []const u8, name: []const u8) !github.Reply {
+    return httpsSendAs(io, arena, method, url, headers, payload, "application/json", host, name);
+}
+
+/// As `httpsSend`, with the payload of the type `content_type`
+pub fn httpsSendAs(io: Io, arena: std.mem.Allocator, method: std.http.Method, url: []const u8, headers: []const std.http.Header, payload: ?[]const u8, content_type: []const u8, host: []const u8, name: []const u8) !github.Reply {
     var client: std.http.Client = .{ .allocator = arena, .io = io };
     defer client.deinit();
     var body: Io.Writer.Allocating = .init(arena);
@@ -71,7 +76,7 @@ pub fn httpsSend(io: Io, arena: std.mem.Allocator, method: std.http.Method, url:
         .location = .{ .url = url },
         .method = method,
         .payload = payload,
-        .headers = .{ .content_type = if (payload != null) .{ .override = "application/json" } else .default },
+        .headers = .{ .content_type = if (payload != null) .{ .override = content_type } else .default },
         .response_writer = &body.writer,
         .privileged_headers = headers,
     }) catch |e| return .{ .unreachable_ = try arena.print("{s} could not be reached ({t})", .{ host, e }) };

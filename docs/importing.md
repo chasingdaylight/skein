@@ -108,4 +108,19 @@ Jama Connect exchanges requirements as ReqIF, through its Data Exchange or Jama 
 - **Jama to Skein:** export the project or set from Jama as ReqIF, with the relationships and both ends of each, then `skein import reqif that-export.reqif --type TYPE --to DIR`. The ID comes from an attribute `id`, else `ReqIF.ForeignID` (map Jama's ID or document key there), else the object's identifier; `ReqIF.Name` becomes the attribute `title` and `ReqIF.Text` the text. Declare the link types first, named as Jama's relationship types, so that relationships become links.
 - **Through a spreadsheet:** Jama's Excel export and import, with `skein export items` and `skein import csv`, carry the items and their fields, but not relationships.
 
-Which of these a Jama instance offers depends on its edition and setup. Reading and publishing through Jama's REST API is #251.
+Which of these a Jama instance offers depends on its edition and setup. Skein can also read and write Jama itself, through Jama's REST API: below, and [the forge](forge.md#jama-connect) for keeping Jama to the items.
+
+### Through Jama's REST API
+
+`skein import jama PROJECT --jama-type KEY --type TYPE --to DIR` reads the items of one Jama item type of a project, page by page, and makes an item file of each, as `import reqif` does:
+
+```sh
+export JAMA_URL=https://example.jamacloud.com
+export JAMA_CLIENT_ID=... JAMA_CLIENT_SECRET=...   # an API client, from Jama's profile page
+skein import jama 42 --jama-type REQ --type requirement --to docs/requirements
+skein import jama 42 --jama-type TC --type test --to docs/tests
+```
+
+`PROJECT` is the project's id, as in Jama's URL of it; `KEY` is the item type's key (`REQ`, `TC`). One Jama item type goes to one Skein type, since a type's IDs follow one scheme: the ID is the item's document key (`RVR-REQ-12`), and the type `skein import` makes, when the project has none of the name, is numbered with that key's prefix. The description (HTML) becomes the text, as Markdown; the name the attribute `title`; the item's id `jama` and its type `jama-type`. Each relationship from the item becomes a link of the type named as the relationship type (`verified-by`), to the item it goes to, of whatever type: import its type too, and the link has its target. Declare the link types first, so that relationships become links rather than attributes.
+
+The sign-in comes from the environment, never from the repository: an API client's `JAMA_CLIENT_ID` and `JAMA_CLIENT_SECRET` (OAuth client credentials), else a user's `JAMA_USERNAME` and `JAMA_PASSWORD` (basic authentication, which an instance with single sign-on refuses). The instance is `url` in `.skein/jama.toml` when the project has one, else `JAMA_URL`. Jama limits its REST API to users with a creator license.

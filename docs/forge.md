@@ -60,6 +60,27 @@ requirements:
 
 Run the first two steps again when items are added, or let the API do both: `skein gitlab-requirements [--profile NAME]` creates a requirement for each item that has none (recording it in the map), brings the title and description of the others back to their items, archives the requirements of removed items and reopens those of items that are back; `--dry-run` says what it would do. It works through `glab` when it is installed, else with the token in `GITLAB_TOKEN`, and needs work items with the Requirement type (Ultimate). Changes made in GitLab are undone by the next run: the items are the truth.
 
+## Jama Connect
+
+Jama Connect is not a forge, but a project whose truth is Skein can keep a Jama project to its items, for the people who read and review in Jama. `.skein/jama.toml`, written by hand, says where they go:
+
+```toml
+url = "https://example.jamacloud.com"
+project = 42           # the Jama project's id
+parent = 1201          # the folder or set new items go in; the project's root when left out
+
+[types]                # the Jama item type (its id) of each item type that goes to Jama
+requirement = 89
+
+[links]                # the relationship type (its id) of each link type
+derives = 4            # from the link's source to its target
+verifies = { type = 5, reverse = true }   # from its target to its source, as "Verified By"
+```
+
+`skein jama [--profile NAME]` then brings Jama to the items. An item without a Jama item gets one, named by its ID and first sentence (as for GitLab) with its text as the description, and its id is recorded in `.skein/jama-map.toml`, which the project commits. An item whose Jama item says otherwise, compared as plain text since Jama rewrites the HTML it is given, has it brought back, and the run says so: someone changed it in Jama. A removed item's Jama item is reported and left, for its owners to delete. Each link of a type `[links]` names becomes a relationship between the two Jama items; a relationship of such a type between two mapped items that no link calls for is reported, to be linked in Skein or taken out of Jama. `--dry-run` asks Jama and changes nothing.
+
+It signs in as `skein import jama` does, from `JAMA_CLIENT_ID` and `JAMA_CLIENT_SECRET`, else `JAMA_USERNAME` and `JAMA_PASSWORD`; in CI, from the job's secrets. The ids of item and relationship types are on Jama's admin pages, or in `GET /rest/v1/itemtypes` and `/relationshiptypes`. The requests follow Jama's REST reference (rest.jamasoftware.com) and Jama's Python client for the bodies it leaves out; they are tested against recorded answers, not a Jama instance, so try `--dry-run` first.
+
 ## Forgejo
 
 ```toml

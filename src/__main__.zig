@@ -6,6 +6,8 @@ const diff = @import("commands/diff.zig");
 const exporter = @import("commands/export.zig");
 const import_csv = @import("commands/import_csv.zig");
 const import_gitlab = @import("commands/import_gitlab.zig");
+const import_jama = @import("commands/import_jama.zig");
+const jama_publish = @import("commands/jama.zig");
 const import_reqif = @import("import/reqif.zig");
 const lsp = @import("commands/lsp.zig");
 const mcp = @import("commands/mcp.zig");
@@ -75,6 +77,7 @@ pub fn main(init: std.process.Init) !void {
             .csv => try import_csv.run(io, arena, options),
             .reqif => try import_csv.importRows(io, arena, options, "reqif", import_reqif.rows),
             .@"gitlab-requirements" => try import_gitlab.run(io, arena, options),
+            .jama => try import_jama.run(io, arena, options),
         },
         .trace => |options| try trace.run(io, arena, options),
         .coverage => |options| try coverage.run(io, arena, options),
@@ -82,6 +85,7 @@ pub fn main(init: std.process.Init) !void {
         .schedule => |options| try schedule.run(io, arena, options),
         .level => |options| try level.run(io, arena, options),
         .gitlab_requirements => |options| try gitlab_publish.run(io, arena, options),
+        .jama => |options| try jama_publish.run(io, arena, options),
         .time => |options| try time_spent.run(io, arena, options),
         .overlay => |options| try overlay.run(io, arena, options),
         .apply => |options| try apply.run(io, arena, options),
