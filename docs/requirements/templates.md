@@ -13,6 +13,9 @@ A project shall name the templates it uses in `.skein/config.toml`: `template = 
 %req[templates.commands]
 `skein template list` shall name the templates, each with its description, and `skein template show NAME` give a template's description, its options (their values and defaults) and its files, by kind.
 
+%req[templates.includes]
+A template shall be able to bring along the templates of the standards it defers to (`[[includes]]` in its `template.toml`), always or when one of its options has one of given values; a template brought along takes the options of the same names as the one that brings it, and its other options at their defaults (one without a default is reported, to be given in its own `[template."NAME"]`). `skein template show` shall list what a template brings along, when and why; `skein template documents` shall write the document skeletons of every template in use that are not in `docs/` yet; and `skein check` shall warn of a template brought along none of whose documents is in the project. `npr7150.2d` brings `nasa-std-8739.8b` for classes A to E (SWE-022, SWE-205), `nasa-std-7009b` with `models-and-simulations` (SWE-070, SWE-073), `npr7120.5f` and `npr7123.1d` for a space flight program, `npr7120.7a` for an IT one, and `human-rating` for a crewed system (NPR 7150.2D, P.4). (Issue #264.)
+
 %req[templates.standards-provided]
 The standards a template carries (its `project/standards/NAME/`) shall be provided by Skein to every project that names the template, not copied into its repository: written to `standards/NAME/` with a `.gitignore` there that keeps them out of git, written again only when Skein's text differs, and read as read-only sources without a `[[sources]]` in the configuration. A project whose configuration names such a source itself keeps its own copy, and `skein check` shall warn when that copy is the template's text unchanged, so that it can go. (Issue #263.)
 

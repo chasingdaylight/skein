@@ -66,6 +66,7 @@ pub const files = [_]File{
     .{ .template = "nasa-std-8739.8b", .path = "documents/sa-analyses.md", .data = @embedFile("nasa-std-8739.8b/documents/sa-analyses.md") },
     .{ .template = "nasa-std-8739.8b", .path = "documents/sa-rmm.md", .data = @embedFile("nasa-std-8739.8b/documents/sa-rmm.md") },
     .{ .template = "nasa-std-8739.8b", .path = "documents/sa-status.md", .data = @embedFile("nasa-std-8739.8b/documents/sa-status.md") },
+    .{ .template = "nasa-std-8739.8b", .path = "documents/safety-criticality.md", .data = @embedFile("nasa-std-8739.8b/documents/safety-criticality.md") },
     .{ .template = "nasa-std-8739.8b", .path = "documents/safety-plan.md", .data = @embedFile("nasa-std-8739.8b/documents/safety-plan.md") },
     .{ .template = "nasa-std-8739.8b", .path = "links/assures.toml", .data = @embedFile("nasa-std-8739.8b/links/assures.toml") },
     .{ .template = "nasa-std-8739.8b", .path = "links/ivv-performs.toml", .data = @embedFile("nasa-std-8739.8b/links/ivv-performs.toml") },

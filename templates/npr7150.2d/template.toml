@@ -59,3 +59,56 @@ applies = '["always", "safety-critical"]'
 
 [options.safety-critical.sets.false]
 applies = '["always"]'
+
+# What the project's software is part of, which decides the standards it brings along
+[options.program]
+description = "The program and project management directive the software's project is under (NPR 7150.2D, P.4): space-flight (NPR 7120.5F, with NPR 7123.1D's systems engineering), it (NPR 7120.7A), or none (managed within another project, or under NPR 7120.8)"
+values = ["space-flight", "it", "none"]
+default = "none"
+
+[options.models-and-simulations]
+description = "Whether software models, simulations or analysis tools are used to qualify flight software or flight equipment (SWE-070, SWE-073), which brings NASA-STD-7009B"
+values = ["true", "false"]
+default = "false"
+
+[options.crewed]
+description = "Whether the software is part of a crewed space system to be human-rated (NPR 8705.2, P.4), which brings NPR 8705.2C and NASA-STD-8719.29"
+values = ["true", "false"]
+default = "false"
+
+# The standards NPR 7150.2D defers to, whose products the project delivers too
+[[includes]]
+template = "nasa-std-8739.8b"
+option = "class"
+values = ["A", "B", "C", "D", "E"]
+because = "SWE-022 (software assurance, software safety and IV&V per NASA-STD-8739.8) and SWE-205 (the safety-critical software determination), classes A to E"
+
+[[includes]]
+template = "nasa-std-7009b"
+option = "models-and-simulations"
+values = ["true"]
+because = "SWE-070 and SWE-073: models, simulations and tools validated and accredited, as the handbook reads them, per NASA-STD-7009"
+
+[[includes]]
+template = "npr7120.5f"
+option = "program"
+values = ["space-flight"]
+because = "P.4 and SWE-126, SWE-141, SWE-143, SWE-153, SWE-218: the software's space flight program or project under NPR 7120.5"
+
+[[includes]]
+template = "npr7123.1d"
+option = "program"
+values = ["space-flight"]
+because = "the systems engineering of an NPR 7120.5 project (NPR 7123.1), which the handbook ties to SWE-121, SWE-153 and others"
+
+[[includes]]
+template = "npr7120.7a"
+option = "program"
+values = ["it"]
+because = "P.4 and SWE-126: an information technology program or project under NPR 7120.7"
+
+[[includes]]
+template = "human-rating"
+option = "crewed"
+values = ["true"]
+because = "P.4: NPR 8705.2, human-rating requirements for space systems"
