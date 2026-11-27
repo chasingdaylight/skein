@@ -251,6 +251,36 @@ test "systems engineering under NPR 7123.1D: its requirements and its reviews" {
     try expectContains(criteria, "- %criteria[.e1] ");
 }
 
+// req: templates.standards-provided
+test "a template's standards come from skein, kept out of git, and a copy of them is told it can go" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7123.1d"} })).status);
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    try testing.expect(std.mem.find(u8, config, "standards/") == null);
+    try expectContains(try tmp.dir.readFileAlloc(testing.io, "standards/npr7123.1d/.gitignore", a, .limited(1 << 16)), "\n*\n");
+    // read as a read-only source, though the configuration names none
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies-se links to se items: 0 of 62");
+    // gone, it is written again
+    try tmp.dir.deleteTree(testing.io, "standards");
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    _ = try tmp.dir.readFileAlloc(testing.io, "standards/npr7123.1d/requirements.md", a, .limited(1 << 20));
+
+    // a project that named the source itself keeps its copy, and is told when it is unchanged
+    try tmp.dir.deleteFile(testing.io, "standards/npr7123.1d/.gitignore");
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = try a.print("{s}\n[[sources]]\npath = \"standards/npr7123.1d\"\nread_only = true\n", .{config}) });
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "standards/npr7123.1d is the template npr7123.1d's own text, unchanged: skein provides it, so the directory and its [[sources]] can go");
+    const req = try tmp.dir.readFileAlloc(testing.io, "standards/npr7123.1d/requirements.md", a, .limited(1 << 20));
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = "standards/npr7123.1d/requirements.md", .data = try a.print("{s}\nA note of the project's.\n", .{req}) });
+    try testing.expect(std.mem.find(u8, (try check_command.run(testing.io, a, .{ .root = root })).text, "can go") == null);
+}
+
 // req: templates.human-rating
 test "human-rating under NPR 8705.2C and NASA-STD-8719.29, alone and with NPR 7150.2D" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);

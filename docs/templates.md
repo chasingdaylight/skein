@@ -23,6 +23,8 @@ $ skein template show langspec
 
 `skein init --template langspec` starts a project in the current directory (or `--root DIR`): `.skein/config.toml` that uses the template, with its options at their defaults, and the template's document skeletons under `docs/`, ready for `skein check`. `--template` may be given more than once, for a template and the overlays that go with it. Without `--template`, `skein init` writes the configuration alone.
 
+A template that carries a standard (NPR 7150.2D, NASA-STD-8739.8B and the others below) gives its text as read-only items from Skein itself: it is written to `standards/NAME/` with a `.gitignore` there, so it is never committed, and written again when a newer Skein corrects it. The repository holds only what the project writes. A project started before this, with the standard copied in and named in a `[[sources]]` of its own, keeps its copy; `skein check` says when the copy is the template's text unchanged, so that the directory and its `[[sources]]` can go.
+
 `skein template eject langspec` writes the template's types, links and profiles into `.skein/`, as the project's options make them. They become the project's own files and replace the template's, to be changed as the project likes; a file the project has already is left as it is.
 
 ## Several templates, and options
@@ -104,7 +106,7 @@ The standard's text was taken from its PDF on 2026-11-22 (with Skein's `tools/pd
 
 ## Writing one
 
-A template is a directory of `templates/` in Skein's repository, laid out as `.skein/` is (`types/`, `links/`, `profiles/`), with `documents/` for the skeletons `skein init` writes under `docs/`, an optional `config.toml` that `skein init` adds to the project's configuration (citation sets, say, which a template cannot declare), `project/` for files `skein init` writes where they stand (a standard's read-only text), and a `template.toml`:
+A template is a directory of `templates/` in Skein's repository, laid out as `.skein/` is (`types/`, `links/`, `profiles/`), with `documents/` for the skeletons `skein init` writes under `docs/`, an optional `config.toml` that `skein init` adds to the project's configuration (citation sets, say, which a template cannot declare), `project/standards/NAME/` for a standard's read-only text, which Skein provides to every project that uses the template (see above), and a `template.toml`:
 
 ```toml
 description = "What it is for, in one line"

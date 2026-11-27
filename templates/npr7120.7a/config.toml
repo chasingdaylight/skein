@@ -1,5 +1,0 @@
-
-# NPR 7120.7A's requirements: read-only, written by skein init from the template
-[[sources]]
-path = "standards/npr7120.7a"
-read_only = true
