@@ -12,6 +12,7 @@ const Project = @import("../Project.zig");
 const Template = @import("../template/Template.zig");
 const files = @import("../files.zig");
 const standards = @import("../template/standards.zig");
+const template_documents = @import("../template/documents.zig");
 const todo = @import("../agents/todo.zig");
 const Workspace = @import("Workspace.zig");
 const agents = @import("agents.zig");
@@ -25,8 +26,15 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
         return misuse(arena, "there is a project here already: '{s}' has a {s}/", .{ options.root, Project.dir_name });
     } else |_| {}
     for (options.templates) |name| if (!Template.exists(name)) return misuse(arena, "skein has no template '{s}' ('skein template list' names them)", .{name});
+    const given = try arena.alloc(Given, options.options.len);
+    for (options.options, given) |o, *g| {
+        const eq = std.mem.findScalar(u8, o, '=') orelse return misuse(arena, "--option takes NAME=VALUE, not '{s}'", .{o});
+        g.* = .{ .name = o[0..eq], .value = o[eq + 1 ..] };
+    }
 
-    const config = try configuration(arena, options.templates);
+    const full = root.realPathFileAlloc(io, ".", arena) catch "";
+    const config = try configuration(arena, try projectName(arena, Io.Dir.path.basename(full)), options.templates, given);
+    if (config.problem) |p| return misuse(arena, "{s}", .{p});
     root.createDirPath(io, Project.dir_name) catch |e| return misuse(arena, "cannot make {s}/ ({s})", .{ Project.dir_name, @errorName(e) });
     try root.writeFile(io, .{ .sub_path = Project.config_file, .data = config.text });
 
@@ -50,6 +58,10 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
         .ok => |ws_ok| {
             var ws = ws_ok;
             defer ws.close();
+            // the documents of the templates the options bring along
+            for (ws.project.templates) |u| if (u.brought_by != null) {
+                written += try template_documents.write(io, arena, ws.root, u);
+            };
             agents_file = try agents.write(io, arena, &ws, false, null);
             still = try todo.list(io, arena, &ws);
         },
@@ -75,17 +87,24 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
     return .{ .text = text.items };
 }
 
+/// An option given with `--option NAME=VALUE`
+const Given = struct { name: []const u8, value: []const u8, used: bool = false };
+
 const Configuration = struct {
-    text: []const u8,
-    /// the option values of each template, by default, for its documents
-    values: []const []const Template.Value,
+    text: []const u8 = "",
+    /// the option values of each template, given or by default, for its documents
+    values: []const []const Template.Value = &.{},
+    /// what is wrong with the options given
+    problem: ?[]const u8 = null,
 };
 
 /// `.skein/config.toml`: the templates, the source of documents, each
-/// template's options at their defaults (one without a default written as
-/// a comment, to be given), and what each template's `config.toml` adds
-fn configuration(arena: std.mem.Allocator, templates: []const []const u8) !Configuration {
-    const sources = "# where the items are: Markdown documents whose paragraphs can be items\n[[sources]]\npath = \"docs\"\n";
+/// template's options as given, else at their defaults (one without a
+/// default written as a comment, to be given), and what each template's
+/// `config.toml` adds
+fn configuration(arena: std.mem.Allocator, name_of_project: ?[]const u8, templates: []const []const u8, given: []Given) !Configuration {
+    var sources: []const u8 = "# where the items are: Markdown documents whose paragraphs can be items\n[[sources]]\npath = \"docs\"\n";
+    if (name_of_project) |n| sources = try arena.print("# the project's name, for reports\n[project]\nname = \"{s}\"\n\n{s}", .{ n, sources });
     var text: std.ArrayList(u8) = .empty;
     var all: std.ArrayList([]const Template.Value) = .empty;
     var any_options = false;
@@ -102,13 +121,27 @@ fn configuration(arena: std.mem.Allocator, templates: []const []const u8) !Confi
     for (templates) |name| {
         var values: std.ArrayList(Template.Value) = .empty;
         if (any_options) try text.print(arena, "\n[template.\"{s}\"]\n", .{name});
-        for ((try Template.info(arena, name)).options) |o| if (o.default) |d| {
-            try values.append(arena, .{ .name = o.name, .value = d });
-            try values.appendSlice(arena, o.setBy(d));
-            try text.print(arena, "# {s}\n\"{s}\" = \"{s}\"\n", .{ o.description, o.name, d });
-        } else try text.print(arena, "# {s} (needed)\n# \"{s}\" = \"\"\n", .{ o.description, o.name });
+        for ((try Template.info(arena, name)).options) |o| {
+            const g: ?*Given = for (given) |*g| {
+                if (std.mem.eql(u8, g.name, o.name)) break g;
+            } else null;
+            if (g) |x| {
+                x.used = true;
+                if (o.values.len > 0) for (o.values) |v| {
+                    if (std.mem.eql(u8, v, x.value)) break;
+                } else return .{ .problem = try arena.print("'{s}' is not a value of the option '{s}' of '{s}': {s}", .{ x.value, o.name, name, try std.mem.join(arena, ", ", o.values) }) };
+            }
+            const value = if (g) |x| x.value else o.default orelse {
+                try text.print(arena, "# {s} (needed)\n# \"{s}\" = \"\"\n", .{ o.description, o.name });
+                continue;
+            };
+            try values.append(arena, .{ .name = o.name, .value = value });
+            try values.appendSlice(arena, o.setBy(value));
+            try text.print(arena, "# {s}\n\"{s}\" = \"{s}\"\n", .{ o.description, o.name, value });
+        }
         try all.append(arena, values.items);
     }
+    for (given) |g| if (!g.used) return .{ .problem = try arena.print("no template named has the option '{s}' ('skein template show NAME' lists a template's options)", .{g.name}) };
     // what the templates add to a project's configuration, such as citations
     for (templates, all.items) |name, values| {
         for (try Template.filesOf(arena, name, "config.toml")) |f| try text.appendSlice(arena, try Template.substitute(arena, f.data, values));
@@ -116,7 +149,18 @@ fn configuration(arena: std.mem.Allocator, templates: []const []const u8) !Confi
     return .{ .text = text.items, .values = all.items };
 }
 
-/// Writes `data` at `path` unless a file is there already; whether it did
+/// The project's name from its directory's: lowercase, with `-` for what a
+/// name cannot hold; null when nothing of it is left
+fn projectName(arena: std.mem.Allocator, dir: []const u8) !?[]const u8 {
+    const out = try arena.alloc(u8, dir.len);
+    for (dir, out) |c, *o| o.* = switch (std.ascii.toLower(c)) {
+        'a'...'z', '0'...'9', '-', '_', '.' => std.ascii.toLower(c),
+        else => '-',
+    };
+    const trimmed = std.mem.trim(u8, out, "-.");
+    return if (trimmed.len == 0) null else trimmed;
+}
+
 fn misuse(arena: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !Workspace.Outcome {
     return .{ .text = try arena.print("skein: " ++ fmt ++ "\n", args), .status = .misuse };
 }

@@ -17,7 +17,7 @@ How the project performs the 17 common technical processes of chapter 3 and sect
 
 ## Technical reviews
 
-The reviews and their entrance and success criteria ([reviews](reviews.md)), peer reviews, and how their actions are tracked.
+The reviews and their entrance and success criteria ([reviews](se-reviews.md)), peer reviews, and how their actions are tracked.
 
 ## Technical performance and risk
 

@@ -10,6 +10,7 @@ const coverage_command = @import("../../commands/coverage.zig");
 const render_command = @import("../../commands/render.zig");
 const init_command = @import("../../commands/init.zig");
 const template_command = @import("../../commands/template.zig");
+const Template = @import("../Template.zig");
 
 fn expectContains(haystack: []const u8, needle: []const u8) !void {
     if (std.mem.find(u8, haystack, needle) == null) {
@@ -252,6 +253,54 @@ test "systems engineering under NPR 7123.1D: its requirements and its reviews" {
 }
 
 // req: templates.includes
+test "no two templates have a document of the same name, so templates used together write all of theirs" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var seen: std.StringHashMapUnmanaged([]const u8) = .empty;
+    for (try Template.names(a)) |name| for (try Template.filesOf(a, name, "documents/")) |f| {
+        const got = try seen.getOrPut(a, f.path);
+        if (got.found_existing) {
+            std.debug.print("{s} is in both {s} and {s}\n", .{ f.path, got.value_ptr.*, name });
+            return error.TestUnexpectedResult;
+        }
+        got.value_ptr.* = name;
+    };
+}
+
+// req: templates.init-options
+test "init takes the templates' options, and writes the documents of the templates they bring along" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    const wrong = [_][]const []const u8{ &.{"class"}, &.{"class=Z"}, &.{ "class=C", "colour=red" } };
+    const said = [_][]const u8{ "--option takes NAME=VALUE", "'Z' is not a value of the option 'class' of 'npr7150.2d'", "no template named has the option 'colour'" };
+    for (wrong, said) |options, text| {
+        const out = try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7150.2d"}, .options = options });
+        try testing.expectEqual(.misuse, out.status);
+        try expectContains(out.text, text);
+    }
+    try testing.expectError(error.FileNotFound, tmp.dir.access(testing.io, ".skein", .{}));
+
+    const started = try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7150.2d"}, .options = &.{ "class=C", "program=space-flight" } });
+    try testing.expectEqual(.ok, started.status);
+    try testing.expect(std.mem.find(u8, started.text, "needs the option") == null);
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    try expectContains(config, "\n\"class\" = \"C\"\n");
+    try expectContains(config, "\n\"program\" = \"space-flight\"\n");
+    // brought along: software assurance, with the safety-criticality determination, and the NPRs of a space flight project
+    for ([_][]const u8{ "docs/safety-criticality.md", "docs/pm-compliance.md", "docs/se-compliance.md" }) |p| {
+        _ = try tmp.dir.readFileAlloc(testing.io, p, a, .limited(1 << 16));
+    }
+    const checked = (try check_command.run(testing.io, a, .{ .root = root })).text;
+    try expectContains(checked, "no problems");
+    try testing.expect(std.mem.find(u8, checked, "brings along") == null);
+}
+
 test "NPR 7150.2D brings along the standards it defers to, by its options" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);
     defer arena.deinit();

@@ -31,6 +31,7 @@ skein coverage
 
 | Read | For |
 | --- | --- |
+| [`docs/quickstart.md`](docs/quickstart.md) | A quickstart: a project from a template, a requirement cited by a test, a site, in five minutes. |
 | [`docs/tutorial-existing-code.md`](docs/tutorial-existing-code.md) | A tutorial: Skein added to a program that exists, its requirements cited by its code and tests. |
 | [`docs/tutorial-planning.md`](docs/tutorial-planning.md) | A tutorial: a project planned before its code, from needs to a schedule. |
 | [`examples/`](examples/) | Two small projects to copy from: a specification as a document, and requirements as files. |

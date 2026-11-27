@@ -22,7 +22,7 @@ pub const usage =
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  link FROM TYPE TO Add a link of a type from one item to another
     \\  baseline [NAME]   Tag what is committed as a baseline; without NAME, list them
-    \\  init [--template NAME]...
+    \\  init [--template NAME]... [--option NAME=VALUE]...
     \\                    Start a project here, from templates' document skeletons
     \\  template list     The templates built into skein
     \\  template show NAME
@@ -97,6 +97,8 @@ pub const usage =
     \\  --from-pull-request N
     \\                    approve: the approvals merged pull request N had in review,
     \\                    of what it changed
+    \\  --option NAME=VALUE
+    \\                    init: a template's option; may be given more than once
     \\  --as ROLE         approve: the role the approval is given in, where the type
     \\                    names the roles that must each approve
     \\  --by NAME         approve, result, time: who (default: git's user.name)
@@ -203,6 +205,8 @@ pub const Init = struct {
     root: []const u8 = ".",
     /// the templates it uses; an overlay goes with the template it overlays
     templates: []const []const u8 = &.{},
+    /// the templates' options, as `NAME=VALUE`
+    options: []const []const u8 = &.{},
 };
 
 pub const Check = struct {
@@ -512,6 +516,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--evidence", .takes_value = true },
     .{ .name = "--as", .takes_value = true },
     .{ .name = "--template", .takes_value = true },
+    .{ .name = "--option", .takes_value = true },
     .{ .name = "--remove", .takes_value = false },
     .{ .name = "--dry-run", .takes_value = false },
     .{ .name = "--force", .takes_value = false },
@@ -573,9 +578,9 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .template = .{ .common = common, .what = what, .name = if (words.len == 2) words[1] else null } };
     }
     if (eql(name, "init")) {
-        if (try p.allow(&.{ "--root", "--template" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--template", "--option" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "init takes no items" };
-        return .{ .init = .{ .root = p.value("--root") orelse ".", .templates = try p.values("--template") } };
+        return .{ .init = .{ .root = p.value("--root") orelse ".", .templates = try p.values("--template"), .options = try p.values("--option") } };
     }
     if (eql(name, "examples")) {
         if (try p.allow(&.{ "--root", "--out" })) |problem| return .{ .misuse = problem };

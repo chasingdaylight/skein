@@ -21,7 +21,7 @@ $ skein template show langspec
 
 ## Starting from a template, and changing it
 
-`skein init --template langspec` starts a project in the current directory (or `--root DIR`): `.skein/config.toml` that uses the template, with its options at their defaults, and the template's document skeletons under `docs/`, ready for `skein check`. `--template` may be given more than once, for a template and the overlays that go with it. Without `--template`, `skein init` writes the configuration alone.
+`skein init --template langspec` starts a project in the current directory (or `--root DIR`): `.skein/config.toml` that uses the template, with its options at their defaults, and the template's document skeletons under `docs/`, ready for `skein check`. `--template` may be given more than once, for a template and the overlays that go with it. `--option NAME=VALUE`, also given more than once, gives a template's option in place of its default, so the configuration is complete from the start and the templates the options bring along have their documents written too: `skein init --template npr7150.2d --option class=C`. Without `--template`, `skein init` writes the configuration alone.
 
 A template that carries a standard (NPR 7150.2D, NASA-STD-8739.8B and the others below) gives its text as read-only items from Skein itself: it is written to `standards/NAME/` with a `.gitignore` there, so it is never committed, and written again when a newer Skein corrects it. The repository holds only what the project writes. A project started before this, with the standard copied in and named in a `[[sources]]` of its own, keeps its copy; `skein check` says when the copy is the template's text unchanged, so that the directory and its `[[sources]]` can go.
 
@@ -81,7 +81,7 @@ NPR 7150.2D defers to other standards, whose products a project under it deliver
 | `npr7120.7a` | `program = "it"` | P.4, SWE-126 |
 | `human-rating` | `crewed = true` | P.4: NPR 8705.2 |
 
-So a project of class A to E always has the safety-critical software determination (`docs/safety-criticality.md`, of NASA-STD-8739.8B's template), which says, when the software is not safety-critical, that it was found not to be and why. A template brought along by an option given after `skein init` has its documents written by `skein template documents`; `skein check` says when one has none yet.
+So a project of class A to E always has the safety-critical software determination (`docs/safety-criticality.md`, of NASA-STD-8739.8B's template), which says, when the software is not safety-critical, that it was found not to be and why. A template brought along by an option given to `skein init` (`--option class=C`) has its documents written with the others; one brought along by an option given later has them written by `skein template documents`; `skein check` says when one has none yet.
 
 `skein init --template npr7150.2d` writes, besides the configuration:
 

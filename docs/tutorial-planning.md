@@ -13,12 +13,14 @@ git init station && cd station
 skein init
 ```
 
-Replace the `.skein/config.toml` it writes with the project's name and where its documents are:
+The `.skein/config.toml` it writes gives the project's name, from its directory's, and where its documents are:
 
 ```toml
+# the project's name, for reports
 [project]
 name = "station"
 
+# where the items are: Markdown documents whose paragraphs can be items
 [[sources]]
 path = "docs"
 ```
