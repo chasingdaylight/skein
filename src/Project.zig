@@ -400,7 +400,14 @@ pub fn readToml(io: Io, arena: std.mem.Allocator, root: Io.Dir, path: []const u8
 /// The nearest directory at or above `start` (a path) that has a
 /// `.skein/`; null when none has
 pub fn findRoot(io: Io, arena: std.mem.Allocator, start: []const u8) !?[]const u8 {
-    var at: []const u8 = try Io.Dir.cwd().realPathFileAlloc(io, start, arena);
+    var at: []const u8 = Io.Dir.cwd().realPathFileAlloc(io, start, arena) catch |e| switch (e) {
+        // where there are no real paths (WebAssembly, in a page): the start itself, or none
+        error.OperationUnsupported => {
+            const candidate = try Io.Dir.path.join(arena, &.{ start, dir_name });
+            if (Io.Dir.cwd().access(io, candidate, .{})) |_| return start else |_| return null;
+        },
+        else => return e,
+    };
     while (true) {
         const candidate = try Io.Dir.path.join(arena, &.{ at, dir_name });
         if (Io.Dir.cwd().access(io, candidate, .{})) |_| return at else |_| {}

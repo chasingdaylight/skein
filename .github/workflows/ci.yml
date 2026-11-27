@@ -330,6 +330,8 @@ jobs:
             zig build -Dtarget="$target" -Doptimize=ReleaseSafe --prefix "out/$name"
             cp LICENSE readme.md "out/$name/"
           done
+          # skein for WebAssembly, for the static site's edit mode (render --edit)
+          zig build wasm --prefix out
           tar -C out -cf unsigned.tar .
           tar -tvf unsigned.tar
 
@@ -678,6 +680,7 @@ jobs:
             esac
           done
           if [ "$PKG" = success ]; then cp macos-pkg/*.pkg dist/; fi
+          cp out/web/skein.wasm "dist/skein-v$VERSION-wasm32-wasi.wasm"
           ls -l dist
 
       - name: The program for this runner runs
@@ -798,7 +801,7 @@ jobs:
       - name: Check the packages
         run: |
           ls -l dist
-          for f in x86_64-linux.tar.gz aarch64-linux.tar.gz x86_64-macos.tar.gz aarch64-macos.tar.gz x86_64-windows.zip aarch64-windows.zip; do
+          for f in x86_64-linux.tar.gz aarch64-linux.tar.gz x86_64-macos.tar.gz aarch64-macos.tar.gz x86_64-windows.zip aarch64-windows.zip wasm32-wasi.wasm; do
             if [ ! -f "dist/skein-v$VERSION-$f" ]; then
               echo "::error::no skein-v$VERSION-$f"
               exit 1

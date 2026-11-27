@@ -44,6 +44,7 @@ test {
     _ = @import("commands/export.zig");
     _ = @import("commands/render.zig");
     _ = @import("commands/serve.zig");
+    _ = @import("commands/api.zig");
     _ = @import("serve/stamp.zig");
     _ = @import("serve/answer.zig");
     _ = @import("serve/edit_api.zig");
@@ -91,6 +92,7 @@ test {
     _ = @import("commands/agents.zig");
     _ = @import("render/markdown.zig");
     _ = @import("render/site.zig");
+    _ = @import("render/edit_mode.zig");
     _ = @import("render/generated.zig");
     _ = @import("render/order.zig");
     _ = @import("render/_test/documents.zig");

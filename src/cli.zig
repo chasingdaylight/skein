@@ -78,6 +78,9 @@ pub const usage =
     \\                    Re-create the mirror on another forge (--url, --dry-run)
     \\  rewrite-refs      Write the new numbers into references to a former forge's issues (--dry-run)
     \\  load              Each person's work, week by week, beside the time they have
+    \\  api GET|POST PATH [QUERY]
+    \\                    One of skein serve's editing requests, its body on standard
+    \\                    input: how the static site's edit mode asks (render --edit)
     \\  lsp              Serve editors as a language server, on standard input and output
     \\  mcp               Serve AI agents skein's tools (Model Context Protocol), on
     \\                    standard input and output
@@ -157,6 +160,9 @@ pub const usage =
     \\                    GitHub Actions, or gitlab: a Code Quality report
     \\  --editions        render: each baseline too, under editions/NAME/, with
     \\                    a page that lists them
+    \\  --edit --wasm FILE
+    \\                    render --format html: pages that edit the files, with skein
+    \\                    built for WebAssembly (zig build wasm) running in them
     \\  --controlled      render --format document: only the controlled documents,
     \\                    named ID-REVISION.html, with documents.tsv listing them
     \\
@@ -186,6 +192,8 @@ pub const Command = union(enum) {
     exporting: Export,
     render: Render,
     serve: Serve,
+    /// one of `skein serve`'s editing requests (`skein api`), for the static site's edit mode
+    api: Api,
     move: Move,
     new: New,
     link: Link,
@@ -446,6 +454,8 @@ pub const Render = struct {
     controlled: bool = false,
     /// each baseline too, under editions/NAME/
     editions: bool = false,
+    /// --format html: the edit mode, with skein for WebAssembly from this file
+    wasm: ?[]const u8 = null,
 
     pub const Format = enum {
         /// Markdown for a site generator
@@ -494,6 +504,16 @@ pub const Serve = struct {
         /// an OpenID Connect provider (`--issuer`)
         oidc,
     };
+};
+
+pub const Api = struct {
+    common: Common = .{},
+    method: Method,
+    /// under `/_skein/`, without it: `page`, `source`, `save`
+    path: []const u8,
+    query: []const u8 = "",
+
+    pub const Method = @import("serve/guard.zig").Method;
 };
 
 pub const Import = struct {
@@ -589,6 +609,8 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--jama-type", .takes_value = true },
     .{ .name = "--editions", .takes_value = false },
     .{ .name = "--controlled", .takes_value = false },
+    .{ .name = "--edit", .takes_value = false },
+    .{ .name = "--wasm", .takes_value = true },
     .{ .name = "--write", .takes_value = false },
     .{ .name = "--from-pull-request", .takes_value = true },
     .{ .name = "--evidence", .takes_value = true },
@@ -796,12 +818,20 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .move = .{ .common = common, .old = words[0], .new = words[1], .alias = keep } };
     }
     if (eql(name, "render")) {
-        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--editions", "--controlled" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--editions", "--controlled", "--edit", "--wasm" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "render takes no items" };
         const format: Render.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Render.Format, f) orelse
             return .{ .misuse = "render: the formats are markdown, html and document" } else .markdown;
         const out = p.value("--out") orelse return .{ .misuse = "render: say where the files go, with --out DIR" };
-        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results(), .editions = p.flag("--editions"), .controlled = p.flag("--controlled") } };
+        if (p.flag("--edit") and (format != .html or p.value("--wasm") == null)) return .{ .misuse = "render --edit: with --format html, and --wasm FILE, skein built for WebAssembly (zig build wasm, or a release's skein-vVERSION-wasm32-wasi.wasm)" };
+        if (p.value("--wasm") != null and !p.flag("--edit")) return .{ .misuse = "render --wasm: with --edit" };
+        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results(), .editions = p.flag("--editions"), .controlled = p.flag("--controlled"), .wasm = p.value("--wasm") } };
+    }
+    if (eql(name, "api")) {
+        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (words.len < 2 or words.len > 3) return .{ .misuse = "api takes GET or POST, a request's path (page, source, save) and its query" };
+        const method: Api.Method = if (eql(words[0], "GET")) .get else if (eql(words[0], "POST")) .post else return .{ .misuse = "api: GET or POST" };
+        return .{ .api = .{ .common = common, .method = method, .path = words[1], .query = if (words.len == 3) words[2] else "" } };
     }
     if (eql(name, "serve")) {
         if (try p.allow(&.{ "--root", "--port", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--listen", "--url", "--sign-in", "--user-header", "--email-header", "--proxy", "--issuer" })) |problem| return .{ .misuse = problem };

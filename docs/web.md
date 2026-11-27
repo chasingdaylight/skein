@@ -55,6 +55,23 @@ A page remembers the file as it read it. If the file changed since (someone save
 
 An item whose type asks for approvals (`approval = [...]`, see [reviewing](reviewing.md#approvals)) has **Approve** in its form, with the roles to approve in where the type names them. It records an approval of the item as it is, as `skein approve` does, by the person signed in (on this computer alone, by git's user), and is saved as any edit is: in the open change, or as a commit. With people signed in, the record keeps how the approver was signed in: the electronic signature that an approval which must be signed counts by. With `[serve] approve_sign_in = "again"`, such an approval first sends the person to sign in again. See [reviewing](reviewing.md#approvals-given-in-skein-serve-or-on-the-forge).
 
+## On the static site
+
+The site `skein render --format html` writes can edit too, with no server at all: skein built for WebAssembly runs in the page.
+
+```text
+$ zig build wasm                     # or take skein-vVERSION-wasm32-wasi.wasm from a release
+$ skein render --format html --edit --wasm zig-out/web/skein.wasm --out site
+skein: 40 pages rendered to site
+skein: the pages edit 52 files, with skein for WebAssembly
+```
+
+The site then carries, under `_skein/`, the WebAssembly module, the project's text files that `check` reads, and the scripts that run skein over them in the page. Each page offers the same **Edit this file**, **edit** by each item, and **New item** as `skein serve`'s. The problems are checked as you type, by skein in the page.
+
+A save is kept in the browser, not on the server that serves the files. A box at the bottom left lists the changed files, each a link to download it, and **Discard them** forgets them. The pages are not rendered again, so a page shows the files as they were rendered. Where the project names its forge, the changes can also be saved there (#283).
+
+The module is about 9 MB (under 3 MB compressed, as web servers send it). The project's files are as large as they are.
+
 ## Who can reach it
 
 By default `skein serve` answers only on this computer (127.0.0.1, `--port N` for another port than 8080), and only for requests addressed to `127.0.0.1` or `localhost`. A change is written only for a request that carries skein's own header, which a page of another site cannot send. There is no sign-in: anyone who can use the computer can use it, as they can the files.

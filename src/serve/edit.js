@@ -1,14 +1,16 @@
 // skein serve's editing, added to each page it serves: a button to edit
 // the page's file, with the problems `skein check` finds as you type; a
 // form for each item on the page and for a new item, built from its type.
+// On the static site (static.js), skein in the page answers in its place.
 (function () {
   "use strict";
-  var page = decodeURIComponent(location.pathname.replace(/^\//, ""));
+  var page = window.skeinPage || decodeURIComponent(location.pathname.replace(/^\//, ""));
   if (page === "" || /\/$/.test(page)) page += "index.html";
   var file = page.replace(/\.html$/, ".md");
   window.skeinEditing = false;
 
   function api(path, body) {
+    if (window.skeinApi) return window.skeinApi(path, body);
     var init = { cache: "no-store", headers: { "x-skein": "1" } };
     if (body !== undefined) {
       init.method = "POST";
@@ -64,7 +66,8 @@
   }
   function saved() {
     close();
-    location.reload();
+    // a static page is not rendered again: what changed is listed (static.js)
+    if (!window.skeinStatic) location.reload();
   }
 
   // a save, with a change started first when the project's way of saving asks for one
@@ -104,7 +107,7 @@
   function savingBar(st) {
     var nodes = [];
     if (st.user) nodes.push(el("span", { "class": "skein-where", text: "signed in as " + st.user }));
-    if (!st.branch) return nodes.concat([el("span", { "class": "skein-where", text: "not in git: saves are written, not committed" })]);
+    if (!st.branch) return nodes.concat([el("span", { "class": "skein-where", text: window.skeinStatic ? "edits stay in this browser" : "not in git: saves are written, not committed" })]);
     if (st.mode === "commit") return nodes.concat([el("span", { "class": "skein-where", text: "saves are committed to " + (st.target || st.branch) })]);
     if (st.change) {
       nodes.push(el("span", { "class": "skein-where", text: "change " + st.change + " (into " + st.target + ")" }));

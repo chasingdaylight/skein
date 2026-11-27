@@ -264,6 +264,10 @@ graph TD
 ```
 ````
 
+### `--edit --wasm FILE`: pages that edit
+
+With `--format html --edit --wasm FILE`, the site's pages edit the files as `skein serve`'s do, with no server: `FILE` is skein built for WebAssembly (`zig build wasm` writes `zig-out/web/skein.wasm`; each release has `skein-vVERSION-wasm32-wasi.wasm`), which runs in the page over the project's files carried in the site. See [the web interface](web.md#on-the-static-site).
+
 ### `--format document`: one file per document
 
 `skein render --format document --out DIR` writes each document as one HTML file that stands alone, for delivery: no navigation, its images inside it, and a style sheet for printing (or saving as PDF from a browser).
