@@ -31,7 +31,7 @@ skein coverage
 
 | Read | For |
 | --- | --- |
-| [`docs/quickstart.md`](docs/quickstart.md) | A quickstart: a project from a template, a requirement cited by a test, a site, in five minutes. |
+| [`docs/quickstart.md`](docs/quickstart.md) | A quick-start: a project from a template, a requirement cited by a test, a site, in five minutes. |
 | [`docs/tutorial-npr7150.md`](docs/tutorial-npr7150.md) | A tutorial: a new project from the `npr7150.2d` template to its requirements review. |
 | [`docs/examples.md`](docs/examples.md) | The example projects, each rendered on the site. |
 | [`docs/tutorial-existing-code.md`](docs/tutorial-existing-code.md) | A tutorial: Skein added to a program that exists, its requirements cited by its code and tests. |

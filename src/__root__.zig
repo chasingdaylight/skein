@@ -43,6 +43,9 @@ test {
     _ = @import("commands/diff.zig");
     _ = @import("commands/export.zig");
     _ = @import("commands/render.zig");
+    _ = @import("commands/serve.zig");
+    _ = @import("serve/stamp.zig");
+    _ = @import("serve/answer.zig");
     _ = @import("commands/move.zig");
     _ = @import("edit/alias.zig");
     _ = @import("commands/examples.zig");

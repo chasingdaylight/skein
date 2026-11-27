@@ -272,6 +272,20 @@ graph TD
 
 With `--profile NAME`, in any format, only the items of that profile (`.skein/profiles/`) are rendered: for example one stage of a language, or one software class. An item outside it is left out with its parts, references to it become plain words, and generated pages list only the profile's items.
 
+## `skein serve [--port N]`
+
+Serves the site `skein render --format html` writes, on this computer, while you work on the files:
+
+```text
+$ skein serve
+skein: serving calc at http://127.0.0.1:8080/ until stopped (Ctrl+C)
+```
+
+- The pages are rendered from the files as they are, committed or not, and rendered again when a file of the project changes: in an editor, by `git pull`, by another skein command. An open page loads itself again when that happens.
+- It answers only on this computer (127.0.0.1): it has no sign-in. `--port N` picks another port.
+- A configuration or schema with problems is a page that says them, until they are fixed.
+- `--profile`, `--results` and the options for other repositories are those of `skein render`. It writes no file.
+
 ## `skein move OLD NEW`
 
 Gives an item another ID, everywhere the old one is used, in one step:

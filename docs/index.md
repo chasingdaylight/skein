@@ -2,7 +2,7 @@
 
 Skein keeps requirements, specifications and their traceability as plain text in git. An item is a paragraph of a Markdown document, or a file of its own, with a stable ID, a type and typed links to other items. Code and tests cite the items they implement and check. Skein reads all of it and answers the questions a project keeps asking: is everything consistent, what does this rest on, what is not tested yet, what changed, and what does the change reach.
 
-There is no database and no server. Everything Skein knows is in files you can read, review and merge like code.
+There is no database, and no server is needed; `skein serve` shows the site live on your own computer when you want it. Everything Skein knows is in files you can read, review and merge like code.
 
 ```markdown
 %rule[lex.comment syntax final] A line comment starts with `//` and ends with the line.
@@ -38,7 +38,7 @@ These pages are of the release their menu names, the latest by default; the menu
 | --- | --- |
 | [Writing items](writing-items.md) | Markers, parts, item files, references in text, citations in code and tests. |
 | [Project files](project-files.md) | The `.skein/` directory: configuration, item types, link types, profiles. |
-| [Commands](commands.md) | `check`, `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `baseline`, `pin`, `examples`, `result`, `template`, `move`, `new`, `link`, `import`, `review`, `approve`, `lsp`. |
+| [Commands](commands.md) | `check`, `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `baseline`, `pin`, `examples`, `result`, `template`, `move`, `new`, `link`, `import`, `review`, `approve`, `serve`, `lsp`. |
 | [Reviewing](reviewing.md) | Fingerprints, suspect links, reviews and approvals. |
 | [Other repositories](repositories.md) | Items of other repositories, `pin`, and the state of the network. |
 | [Test results](results.md) | Reading test results, and what they say of each item. |

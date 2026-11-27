@@ -134,7 +134,7 @@ $ skein render --format html --out site
 skein: 40 pages rendered to site
 ```
 
-`site/index.html` opens in a browser: every document as a page, references as links, and a page of all items with what links to each. For delivery, `skein render --format document --controlled --out delivered` writes each controlled document as one HTML file named by its ID and revision (`SW-SRS-Draft.html`), ready to print as PDF.
+`site/index.html` opens in a browser: every document as a page, references as links, and a page of all items with what links to each. While you write, `skein serve` shows the same site at `http://127.0.0.1:8080/` and loads each page again as its files change. For delivery, `skein render --format document --controlled --out delivered` writes each controlled document as one HTML file named by its ID and revision (`SW-SRS-Draft.html`), ready to print as PDF.
 
 Commit `.skein/`, `docs/`, `tests/`, `AGENTS.md` and `.github/`. On GitHub, the workflow `skein init` wrote checks the project on every push and pull request, and collects the documents as PDFs, with the coverage, in `engineering-docs.zip`, an artifact of each run.
 
