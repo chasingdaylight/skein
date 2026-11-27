@@ -10,6 +10,12 @@
 //! - `GET form?id=ID` or `?type=TYPE`: an item's form (edit/form.zig)
 //! - `POST preview` (a form's values): what `check` finds with them;
 //!   `POST save` (the values, and the hash): writes them (edit/item_form.zig)
+//! - `POST change` (`{action, name}`): starts, opens, merges, proposes or
+//!   abandons a change (serve/saving.zig)
+//!
+//! A save is refused where the project's way of saving says it cannot go
+//! ahead (`needsChange` when a change must be started first), and what it
+//! wrote is committed after (serve/saving.zig).
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -24,6 +30,7 @@ const check = @import("../commands/check.zig");
 const edit_form = @import("../edit/form.zig");
 const files = @import("../files.zig");
 const item_form = @import("../edit/item_form.zig");
+const saving = @import("saving.zig");
 
 pub const Method = guard.Method;
 
@@ -42,6 +49,10 @@ pub fn handle(arena: Allocator, s: *Site, method: Method, path: []const u8, quer
     if (method != .post) return refuse(arena, "skein serve: no such request");
     const value = json.parseFromSliceLeaky(json.Value, arena, body, .{}) catch return refuse(arena, "skein serve: the request is not JSON");
     if (eql(path, "source")) return writeSource(arena, s, ws, value);
+    if (eql(path, "change")) return switch (try saving.change(arena, s, ws, value)) {
+        .ok => |said| reply(arena, .{ .said = said }),
+        .failed => |why| refuse(arena, why),
+    };
     if (eql(path, "check")) {
         const file = string(value, "file");
         if (try writable(arena, s, ws, file)) |why| return refuse(arena, why);
@@ -54,7 +65,6 @@ pub fn handle(arena: Allocator, s: *Site, method: Method, path: []const u8, quer
 }
 
 fn pageInfo(arena: Allocator, s: *Site, ws: *Workspace, file: []const u8) !answer.Answer {
-    _ = s;
     const Info = struct { id: []const u8, inDocument: bool };
     var items: std.ArrayList(Info) = .empty;
     for (ws.graph.items) |*it| {
@@ -63,7 +73,7 @@ fn pageInfo(arena: Allocator, s: *Site, ws: *Workspace, file: []const u8) !answe
     var types: std.ArrayList([]const u8) = .empty;
     if (ws.items_read) for (ws.project.schema.types) |t| try types.append(arena, t.name);
     const editable = isSource(ws, file) and ws.project.readOnlySource(file) == null;
-    return reply(arena, .{ .editable = editable, .items = items.items, .types = types.items });
+    return reply(arena, .{ .editable = editable, .items = items.items, .types = types.items, .saving = try saving.state(arena, s, ws) });
 }
 
 fn source(arena: Allocator, s: *Site, ws: *Workspace, file: []const u8) !answer.Answer {
@@ -76,8 +86,11 @@ fn writeSource(arena: Allocator, s: *Site, ws: *Workspace, value: json.Value) !a
     const file = string(value, "file");
     if (try writable(arena, s, ws, file)) |why| return refuse(arena, why);
     if (try changed(arena, s, ws, file, string(value, "hash"))) |why| return refuse(arena, why);
+    const st = try saving.state(arena, s, ws);
+    if (try saving.before(arena, st)) |r| return reply(arena, .{ .@"error" = r.message, .needsChange = r.needs_change });
     ws.root.writeFile(s.io, .{ .sub_path = file, .data = string(value, "text") }) catch return refuse(arena, try arena.print("skein serve: {s} cannot be written", .{file}));
-    return reply(arena, .{ .file = file });
+    const failed = try saving.after(arena, s, ws, st, &.{file}, try arena.print("Edit {s}", .{file}));
+    return reply(arena, .{ .file = file, .warning = failed });
 }
 
 fn formOf(arena: Allocator, s: *Site, ws: *Workspace, id: ?[]const u8, type_name: ?[]const u8) !answer.Answer {
@@ -105,9 +118,11 @@ fn save(arena: Allocator, s: *Site, ws: *Workspace, p: edit_form.Save, hash: []c
         if (try writable(arena, s, ws, item.file)) |why| return refuse(arena, why);
         if (try changed(arena, s, ws, item.file, hash)) |why| return refuse(arena, why);
     }
+    const st = try saving.state(arena, s, ws);
+    if (try saving.before(arena, st)) |r| return reply(arena, .{ .@"error" = r.message, .needsChange = r.needs_change });
     return switch (try item_form.write(s.io, arena, ws, p)) {
         .refused => |why| refuse(arena, why),
-        .written => |w| reply(arena, .{ .id = w.id, .file = w.file }),
+        .written => |w| reply(arena, .{ .id = w.id, .file = w.file, .warning = try saving.after(arena, s, ws, st, &.{w.file}, try arena.print("{s} {s}", .{ if (p.new) "New" else "Edit", w.id })) }),
     };
 }
 

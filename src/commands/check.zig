@@ -11,6 +11,7 @@ const Workspace = @import("Workspace.zig");
 const forge_checks = @import("../forge/checks.zig");
 const maturity = @import("../graph/maturity.zig");
 const template_documents = @import("../template/documents.zig");
+const workflow_checks = @import("../serve/workflow_checks.zig");
 const network_checks = @import("../network/checks.zig");
 const planning_checks = @import("../planning/checks.zig");
 const load = @import("../planning/load.zig");
@@ -76,6 +77,7 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     try reviews.checkCitations(arena, &ws.project, &ws.graph, &ws.citations, &ws.report);
     try maturity.check(io, arena, ws.root, &ws.project, &ws.graph, &ws.report);
     try template_documents.check(io, arena, ws.root, &ws.project, &ws.report);
+    try workflow_checks.run(io, arena, ws.root, &ws.project, &ws.report);
     const resources = try Resources.of(io, arena, ws, &ws.report);
     const calendar: *const Calendar = if (resources) |*r| &r.calendar else &Calendar.every_day;
     try planning_checks.run(arena, &ws.project.schema, &ws.graph, calendar, &ws.report);

@@ -151,6 +151,12 @@ Each page of `skein serve` of a document or item file shall offer to edit the fi
 %req[serve.check]
 While a file or a form is edited in `skein serve`, the page shall show what `skein check` finds with the file as typed, or the item as the form would write it, without saving it: the problems of that file with their lines, and how many the other files have. (Issue #279.)
 
+%req[serve.save]
+A save from `skein serve` shall reach git as the project's `[serve] save` says (`pull-request` by default where the project names its forge, `branch` where it does not; emanspeaks, 2026-11-27). With `commit`, each save shall be a commit, of the files it wrote, on the branch changes go to (`[serve] branch`, or the branch checked out when it started). With `branch` or `pull-request`, a save shall go into a change, a branch `edit/NAME` started from that branch, and be committed there; the page shall offer to start a change when none is checked out, to open, leave and abandon one, and to merge it into the branch (`branch`) or to push it and open a pull request on the forge (`pull-request`). Without git, a save shall be written and not committed; a save that changes nothing shall commit nothing. (Issue #280.)
+
+%req[serve.save.warnings]
+None of the ways of saving can be enforced in a checkout, so `skein check` shall warn where one was not followed, from the commit that set `[serve] save`, and refuse nothing. With `commit` and `[serve] editors`, it warns of commits to the sources by anyone not listed. With `branch` or `pull-request`, it warns of commits straight on the branch changes go to that were not merged from a change; a squashed pull request, `(#N)` at the end of its subject, counts as merged. (Issue #280.)
+
 %req[serve.local]
 `skein serve` shall answer only requests addressed to `127.0.0.1` or `localhost` at its port, and change a file only for a request that carries its own header (`x-skein`), which a page of another site cannot send without the browser asking first, which it refuses. (Issues #278, #279.)
 
