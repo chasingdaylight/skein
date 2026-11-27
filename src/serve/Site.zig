@@ -28,6 +28,9 @@ rendered: bool = false,
 failed: ?[]const u8 = null,
 /// the project's name
 name: []const u8 = "",
+/// the branch checked out when it started: where changes go, unless
+/// `[serve] branch` says
+start_branch: ?[]const u8 = null,
 /// held while the site is read or rendered again
 mutex: Io.Mutex = .init,
 

@@ -48,6 +48,9 @@ test {
     _ = @import("serve/answer.zig");
     _ = @import("serve/edit_api.zig");
     _ = @import("serve/guard.zig");
+    _ = @import("serve/saving.zig");
+    _ = @import("serve/changes.zig");
+    _ = @import("serve/workflow_checks.zig");
     _ = @import("edit/form.zig");
     _ = @import("edit/item_form.zig");
     _ = @import("commands/move.zig");

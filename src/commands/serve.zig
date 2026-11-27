@@ -8,6 +8,7 @@ const Io = std.Io;
 const Project = @import("../Project.zig");
 const Site = @import("../serve/Site.zig");
 const answer = @import("../serve/answer.zig");
+const changes = @import("../serve/changes.zig");
 const edit_api = @import("../serve/edit_api.zig");
 const guard = @import("../serve/guard.zig");
 const cli = @import("../cli.zig");
@@ -30,6 +31,7 @@ pub fn serve(io: Io, gpa: std.mem.Allocator, options: cli.Serve) !u8 {
     defer root.close(io);
     var s: Site = .init(gpa, io, options, root);
     defer s.deinit();
+    s.start_branch = try changes.current(io, a, root);
     try s.refresh();
 
     const address = try Io.net.IpAddress.parse("127.0.0.1", options.port);

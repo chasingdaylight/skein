@@ -12,6 +12,7 @@ const Io = std.Io;
 
 const Report = @import("Report.zig");
 const Schema = @import("schema/Schema.zig");
+const Workflow = @import("serve/Workflow.zig");
 const toml = @import("toml.zig");
 
 const Project = @This();
@@ -45,6 +46,8 @@ planning_span: bool = false,
 /// `.skein/schedule.toml`
 schedule_also: []const []const u8 = &.{},
 schema: Schema = .{},
+/// `[serve]`: how a save from `skein serve` reaches git
+workflow: Workflow = .{},
 /// files whose text is given in place of what is on disk: what is typed
 /// in a page of `skein serve` and not saved yet
 unsaved: []const Unsaved = &.{},
@@ -189,7 +192,8 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template", "maturity", "schedule", "planning" });
+    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template", "maturity", "schedule", "planning", "serve" });
+    self.workflow = try Workflow.read(r);
     if (try r.child("planning")) |p| {
         try p.known(&.{ "repository", "span" });
         self.planning_repository = try p.string("repository");

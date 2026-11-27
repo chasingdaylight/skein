@@ -23,6 +23,30 @@ pub fn output(io: Io, arena: std.mem.Allocator, dir: Io.Dir, args: []const []con
     return result.stdout;
 }
 
+pub const Ran = union(enum) {
+    ok: []const u8,
+    /// what git said went wrong
+    failed: []const u8,
+};
+
+/// `git ARGS...` run in `dir`: what it prints, or what it says went wrong
+pub fn run(io: Io, arena: std.mem.Allocator, dir: Io.Dir, args: []const []const u8) std.mem.Allocator.Error!Ran {
+    var argv: std.ArrayList([]const u8) = .empty;
+    try argv.append(arena, "git");
+    try argv.appendSlice(arena, args);
+    const result = std.process.run(arena, io, .{
+        .argv = argv.items,
+        .cwd = .{ .dir = dir },
+        .stdout_limit = .limited(1 << 28),
+    }) catch |e| switch (e) {
+        error.OutOfMemory => return error.OutOfMemory,
+        else => return .{ .failed = try arena.print("git could not be run ({t})", .{e}) },
+    };
+    if (result.term.success()) return .{ .ok = result.stdout };
+    const why = std.mem.trim(u8, if (result.stderr.len > 0) result.stderr else result.stdout, " \r\n");
+    return .{ .failed = try arena.print("git {s}: {s}", .{ args[0], why }) };
+}
+
 /// As `output`, for a command that talks to another machine (`fetch`):
 /// stopped, and null, when it shows no progress for `idle_seconds`. It is
 /// given `--progress`, so that a slow answer is told from none.
