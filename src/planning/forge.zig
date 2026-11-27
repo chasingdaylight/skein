@@ -5,7 +5,8 @@
 //! holds: the item need not write it, and an item that writes assignees the
 //! forge says otherwise of is reported. A closed issue is finished work. The
 //! forge is asked unless offline; what it last said is kept, and used when
-//! it cannot be reached.
+//! it cannot be reached. A project read as a baseline takes what the forge
+//! said then, frozen in the baseline (frozen.zig), and does not ask.
 
 const std = @import("std");
 const Io = std.Io;
@@ -17,6 +18,7 @@ const Report = @import("../Report.zig");
 const Work = @import("Work.zig");
 const checks = @import("../forge/checks.zig");
 const day = @import("day.zig");
+const frozen = @import("frozen.zig");
 
 pub const Collected = struct {
     works: []Work,
@@ -34,7 +36,8 @@ pub fn collect(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const P
     var targets: std.ArrayList([]const u8) = .empty;
     for (works) |w| if (w.issue) |i| try targets.append(arena, i);
     if (targets.items.len == 0) return out;
-    const known = try checks.learnRefs(io, arena, root, project, targets.items, offline) orelse return out;
+    const known = (if (project.baseline) |name| try frozenAt(io, arena, root, project, name) else null) orelse
+        try checks.learnRefs(io, arena, root, project, targets.items, offline) orelse return out;
     out.why = known.why;
     var ignored: Report = .{ .arena = arena };
     const overlay = try Overlay.load(io, arena, root, &ignored);
@@ -85,6 +88,15 @@ pub fn collect(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const P
     }
     out.overlay_problems = problems.items;
     return out;
+}
+
+/// What the forge said at the baseline `name`, frozen then; null when the
+/// baseline froze nothing
+fn frozenAt(io: Io, arena: std.mem.Allocator, root: Io.Dir, project: *const Project, name: []const u8) !?checks.Known {
+    const values = try frozen.load(io, arena, root, name) orelse return null;
+    var known: checks.Known = .{ .forge = project.forge orelse return null, .why = "frozen at the baseline" };
+    for (values.keys(), values.values()) |k, issue| try known.answers.put(arena, k, .{ .found = issue });
+    return known;
 }
 
 fn splitLogins(arena: std.mem.Allocator, text: []const u8) ![]const []const u8 {

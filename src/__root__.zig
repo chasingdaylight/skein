@@ -58,6 +58,7 @@ test {
     _ = @import("serve/sign_in.zig");
     _ = @import("serve/query.zig");
     _ = @import("serve/People.zig");
+    _ = @import("planning/frozen.zig");
     _ = @import("serve/Server.zig");
     _ = @import("edit/form.zig");
     _ = @import("edit/item_form.zig");
