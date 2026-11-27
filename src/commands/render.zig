@@ -50,7 +50,7 @@ fn renderInto(io: Io, arena: std.mem.Allocator, ws: *Workspace, options: cli.Ren
     defer out.close(io);
 
     if (options.format == .document) {
-        const written = try site.documents(io, arena, ws, ctx, out);
+        const written = try site.documents(io, arena, ws, ctx, out, options.controlled);
         return .{ .text = try arena.print("skein: {d} document{s} rendered to {s}\n", .{ written, if (written == 1) "" else "s", out_path }) };
     }
     if (options.format == .html) {

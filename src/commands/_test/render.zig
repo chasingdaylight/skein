@@ -58,3 +58,23 @@ test "every source file is written under its own path" {
     // the sources are as they were
     try testing.expectEqualStrings("%rule[lex.comment] As %[R-001] asks.\n", try read(a, tmp.dir, "spec/lex/comments.md"));
 }
+
+// req: render.controlled
+test "the controlled documents alone, named by identifier and revision, with their index" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try write(tmp.dir, ".skein/config.toml", "[[sources]]\npath = \"docs\"\n");
+    try write(tmp.dir, ".skein/types/req.toml", "");
+    try write(tmp.dir, "docs/plan.md", "+++\ndocument = \"SW-SDP\"\nrevision = \"B\"\n+++\n\n# Development plan\n\n%req[r.a] A.\n");
+    try write(tmp.dir, "docs/notes.md", "# Notes, not controlled\n");
+    const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
+    const out_dir = try std.Io.Dir.path.join(a, &.{ root, "out" });
+    const done = try render.run(testing.io, a, .{ .common = .{ .root = root }, .out = out_dir, .format = .document, .controlled = true });
+    try testing.expectEqual(.ok, done.status);
+    _ = try tmp.dir.readFileAlloc(testing.io, "out/SW-SDP-B.html", a, .limited(1 << 20));
+    try testing.expectError(error.FileNotFound, tmp.dir.readFileAlloc(testing.io, "out/docs/notes.html", a, .limited(1 << 20)));
+    try testing.expectEqualStrings("file\tdocument\trevision\ttitle\tsource\nSW-SDP-B.html\tSW-SDP\tB\tDevelopment plan\tdocs/plan.md\n", try tmp.dir.readFileAlloc(testing.io, "out/documents.tsv", a, .limited(1 << 16)));
+}

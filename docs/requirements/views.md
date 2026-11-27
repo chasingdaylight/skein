@@ -121,6 +121,12 @@ Each reference, in the text of an item or in narrative text, shall be replaced b
 %req[render.markdown.item-files]
 A rendered item file shall start with YAML front matter that gives the ID as the title, in place of the TOML front matter, followed by the category and status when the item has them, and the text. A file in a source of item files that is not an item is written unchanged.
 
+%req[render.controlled]
+With `--controlled`, `skein render --format document` shall write only the controlled documents (their front matter gives `document` and `revision`), each named after its identifier and revision (`SE-PLAN-B.html`), and `documents.tsv` listing each file, identifier, revision, title and source. (Issue #266.)
+
+%req[ci.engineering-docs]
+Skein shall have a GitHub Action (`action.yml` at the root of its repository) that gets a release of Skein (or a program it is given), runs `skein check` (failing the run on problems unless told not to) and `skein coverage`, renders the controlled documents (`render.controlled`), prints each to PDF with the runner's Chrome, and keeps them, with `documents.tsv` and the coverage as Markdown and JSON, in one archive (`engineering-docs.zip`) as an artifact of the run. `skein init` shall write a workflow that uses it (`.github/workflows/skein.yml` at the top of the repository) when the repository's `origin` is on GitHub and there is none yet. (Issue #266.)
+
 %req[render.editions]
 With `--editions`, `skein render` shall also render each baseline, from the files of its commit, into `DIR/editions/NAME/` in the same format, without results, and write a page there (`index.md`, or `index.html` for the HTML formats) that lists the files as they are now and then the baselines, newest first, with their dates and links; a baseline that cannot be rendered is said so and left out. (Issue #103; design section 8.)
 

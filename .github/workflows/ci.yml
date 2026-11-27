@@ -234,6 +234,43 @@ jobs:
       - name: Markdown
         run: npx --yes markdownlint-cli2@0.24.2 "**/*.md"
 
+  # Skein's own action (action.yml, #266) on a project from a template: the
+  # controlled documents printed to PDF and zipped, with the skein just built
+  engineering-docs:
+    name: Engineering documents
+    needs: changes
+    if: needs.changes.outputs.ci == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: randyos-org/setup-zig@node24  # v2.2.1 on Node.js 24, until upstream releases it
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Build skein, and start a project from a template
+        run: |
+          zig build
+          mkdir -p "$RUNNER_TEMP/project"
+          zig-out/bin/skein init --root "$RUNNER_TEMP/project" --template npr7123.1d
+          cp -R "$RUNNER_TEMP/project" ./.engineering-docs-project
+
+      - id: docs
+        uses: ./
+        with:
+          root: .engineering-docs-project
+          skein: zig-out/bin/skein
+          name: engineering-docs-test
+
+      - name: The archive holds the documents as PDFs
+        env:
+          ARCHIVE: ${{ steps.docs.outputs.archive }}
+        run: |
+          unzip -l "$ARCHIVE"
+          n=$(unzip -l "$ARCHIVE" | grep -c '\.pdf$')
+          [ "$n" -ge 3 ] || { echo "::error::$n PDFs in the archive"; exit 1; }
+          unzip -p "$ARCHIVE" documents.tsv | grep -q 'SE-PLAN' || { echo "::error::documents.tsv lists no SE-PLAN"; exit 1; }
+
   # The VS Code extension's TypeScript: its types, its unit tests, and its
   # packages kept free of known vulnerabilities
   extension:
@@ -722,7 +759,7 @@ jobs:
     # the one check main's ruleset requires: passes when every job passed or
     # was skipped for a change that needs none
     if: always()
-    needs: [changes, version, test, lint, extension, compile, sign-windows, sign-macos, pkg-macos, package]
+    needs: [changes, version, test, lint, engineering-docs, extension, compile, sign-windows, sign-macos, pkg-macos, package]
     runs-on: ubuntu-24.04
     steps:
       - name: Check the jobs

@@ -15,6 +15,7 @@ const standards = @import("../template/standards.zig");
 const todo = @import("../agents/todo.zig");
 const Workspace = @import("Workspace.zig");
 const agents = @import("agents.zig");
+const init_workflow = @import("init_workflow.zig");
 const cli = @import("../cli.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outcome {
@@ -39,6 +40,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
         _ = try standards.writeFor(io, arena, root, name);
     }
     try root.createDirPath(io, "docs");
+    // on GitHub: the workflow that checks the documents and collects them as PDFs
+    const workflow = try init_workflow.write(io, arena, root, @import("build_options").version);
     // what coding agents should know of it, in the project's instructions for them
     var agents_file: []const u8 = "";
     // and what is still to do, which the agent that ran it is told too
@@ -57,13 +60,15 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
         try std.mem.join(arena, " and ", options.templates),
     });
     const told = if (agents_file.len == 0) "" else try arena.print("; {s} tells coding agents about Skein", .{agents_file});
+    const ci = if (workflow) |w| try arena.print("; {s} checks them and collects them as PDFs", .{w}) else "";
     var text: std.ArrayList(u8) = .empty;
-    try text.print(arena, "skein: a project in {s}{s}, with {d} document{s} to start from; 'skein check' checks it{s}\n", .{
+    try text.print(arena, "skein: a project in {s}{s}, with {d} document{s} to start from; 'skein check' checks it{s}{s}\n", .{
         options.root,
         from,
         written,
         if (written == 1) "" else "s",
         told,
+        ci,
     });
     if (still.len > 0) try text.appendSlice(arena, "Still to do:\n");
     for (still) |t| try text.print(arena, "- {s}\n", .{t});

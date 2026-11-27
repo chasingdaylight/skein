@@ -10,6 +10,7 @@ const Io = std.Io;
 const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Workspace = @import("../commands/Workspace.zig");
+const Control = @import("control.zig");
 const files = @import("../files.zig");
 const html = @import("../html/blocks.zig");
 const inline_html = @import("../html/inline.zig");
@@ -49,14 +50,34 @@ pub fn build(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Con
 
 /// Writes each document of `ws` as one HTML file of its own, its images
 /// in it, for delivery; the number of files
-pub fn documents(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Context, out: Io.Dir) !usize {
+pub fn documents(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Context, out: Io.Dir, controlled: bool) !usize {
     var written: usize = 0;
+    // with `controlled`: only the controlled documents (their front matter
+    // gives `document` and `revision`), named `ID-REVISION.html`, and an index
+    var listed: std.ArrayList(u8) = .empty;
     for (try renderAll(io, arena, ws, ctx, null)) |r| {
+        var path = r.page.path;
+        if (controlled) {
+            const text = ws.root.readFileAlloc(io, r.file, arena, .limited(1 << 26)) catch continue;
+            const doc = try Control.documentOf(arena, r.file, text) orelse continue;
+            path = try arena.print("{s}-{s}.html", .{ try safeName(arena, doc.id), try safeName(arena, doc.revision) });
+            try listed.print(arena, "{s}\t{s}\t{s}\t{s}\t{s}\n", .{ path, doc.id, doc.revision, r.page.title, r.file });
+        }
         const body = try embedImages(io, arena, ws.root, r.file, r.body);
-        try write(io, out, r.page.path, try layout.standalone(arena, r.page.title, body));
+        try write(io, out, path, try layout.standalone(arena, r.page.title, body));
         written += 1;
     }
+    if (controlled) try write(io, out, "documents.tsv", try arena.print("file\tdocument\trevision\ttitle\tsource\n{s}", .{listed.items}));
     return written;
+}
+
+/// A document's identifier or revision as part of a file's name
+fn safeName(arena: std.mem.Allocator, s: []const u8) ![]const u8 {
+    const out = try arena.dupe(u8, s);
+    for (out) |*c| if (!std.ascii.isAlphanumeric(c.*) and c.* != '-' and c.* != '_' and c.* != '.') {
+        c.* = '_';
+    };
+    return out;
 }
 
 /// Every document and item file of `ws` as HTML; the files of the

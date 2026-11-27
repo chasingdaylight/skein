@@ -530,4 +530,22 @@ skein:
       codequality: gl-code-quality-report.json
 ```
 
+### The documents as PDFs: engineering-docs.zip
+
+On GitHub, Skein's own action does it all: it gets Skein, checks the project, and keeps its controlled documents (those whose front matter gives `document` and `revision`) as PDFs, named after each document and its revision (`SE-PLAN-B.pdf`), with `documents.tsv` listing them and the coverage as Markdown and JSON, in `engineering-docs.zip`, an artifact of the run:
+
+```yaml
+# .github/workflows/skein.yml
+jobs:
+  skein:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: chasingdaylight/skein@v0.2.0
+        with:
+          root: .        # the project's directory
+```
+
+`skein init` writes this workflow when the repository's `origin` is on GitHub. The action prints with the Chrome GitHub's runners have; elsewhere, `skein render --format document --controlled --out DIR` writes the same documents as HTML, for any browser to print.
+
 To get Skein in the job, download the archive of a [release](https://github.com/chasingdaylight/skein/releases) for the runner's platform and check it against the release's `SHA256SUMS`; pin the version, so that a new Skein never changes a job by itself.
