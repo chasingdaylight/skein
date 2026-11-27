@@ -1,7 +1,7 @@
 //! `skein render --format html --edit --wasm FILE`, and `skein api`, which
 //! its pages ask, on a project on disk.
 
-// req: serve.static-edit
+// req: serve.static-edit, serve.static-forge
 const std = @import("std");
 const testing = std.testing;
 
@@ -64,4 +64,26 @@ test "the site's pages carry skein for WebAssembly and the project's files" {
     const info = try api.run(testing.io, testing.allocator, a, .{ .common = .{ .root = root }, .method = .get, .path = "page", .query = "file=spec/lex/comments.md" });
     try has(info.text, "{\"editable\":true,\"items\":[{\"id\":\"lex.comment\",\"inDocument\":true}]");
     try has((try cli.parse(a, &.{ "api", "PUT", "page" })).misuse, "api: GET or POST");
+}
+
+test "where the project names its forge, the site says where its changes are saved" {
+    const Repo = @import("../../commands/_test/Repo.zig");
+    var repo: Repo = undefined;
+    try repo.init();
+    defer repo.deinit();
+    const a = repo.arena.allocator();
+    // the project in a directory of the repository, saving by commit to dev
+    try repo.write("req/.skein/config.toml", "[project]\nname = \"Example\"\n[[sources]]\npath = \"spec\"\n[forge]\nkind = \"gitlab\"\nrepository = \"group/spec\"\nurl = \"https://gitlab.example.com\"\n[serve]\nsave = \"commit\"\nbranch = \"dev\"\n");
+    try repo.write("req/.skein/types/rule.toml", "");
+    try repo.write("req/spec/a.md", "%rule[a.b] A.\n");
+    try repo.write("skein.wasm", "\x00asm\x01\x00\x00\x00");
+    try repo.commit("a project below the top");
+    const root = try std.Io.Dir.path.join(a, &.{ repo.root, "req" });
+    const out = try render.run(testing.io, a, .{ .common = .{ .root = root }, .out = try std.Io.Dir.path.join(a, &.{ repo.root, "site" }), .format = .html, .wasm = try std.Io.Dir.path.join(a, &.{ repo.root, "skein.wasm" }) });
+    try testing.expectEqual(.ok, out.status);
+    try testing.expectEqualStrings(
+        "{\"kind\":\"gitlab\",\"repository\":\"group/spec\",\"url\":\"https://gitlab.example.com\",\"api\":\"https://gitlab.example.com/api/v4\",\"branch\":\"dev\",\"prefix\":\"req/\",\"save\":\"commit\"}",
+        try read(a, repo.tmp.dir, "site/_skein/forge.json"),
+    );
+    try has(try read(a, repo.tmp.dir, "site/spec/a.html"), "<script src=\"../_skein/forge.js\"></script>");
 }
