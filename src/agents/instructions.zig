@@ -70,6 +70,7 @@ pub fn body(a: Allocator, project: *const Project, todo: []const []const u8) All
         }
     }
     try out.appendSlice(a, "\nAfter editing documents, item files or `.skein/`, run `skein check` and mend what it reports. `skein trace ID` shows an item with everything above and below it, and `skein coverage` what is not yet linked or cited. `skein mcp` offers all of this as tools to agents that speak the Model Context Protocol.\n");
+    try out.appendSlice(a, "\nApprovals and reviews are people's, never an agent's: do not run `skein approve`, `skein review` or `skein clear`, and do not edit `.skein/approvals/`, `.skein/reviews/`, `.skein/signers.toml` or `.skein/baselines/`. Say which items need approving or which links reviewing, and leave it to the people who do it.\n");
     if (todo.len > 0) {
         try out.appendSlice(a, "\nStill to do in setting up this project (`skein agents` writes this list again):\n\n");
         for (todo) |t| try out.print(a, "- {s}\n", .{t});

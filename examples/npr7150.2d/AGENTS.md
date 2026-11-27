@@ -55,6 +55,8 @@ Code and tests cite items in comments:
 
 After editing documents, item files or `.skein/`, run `skein check` and mend what it reports. `skein trace ID` shows an item with everything above and below it, and `skein coverage` what is not yet linked or cited. `skein mcp` offers all of this as tools to agents that speak the Model Context Protocol.
 
+Approvals and reviews are people's, never an agent's: do not run `skein approve`, `skein review` or `skein clear`, and do not edit `.skein/approvals/`, `.skein/reviews/`, `.skein/signers.toml` or `.skein/baselines/`. Say which items need approving or which links reviewing, and leave it to the people who do it.
+
 Still to do in setting up this project (`skein agents` writes this list again):
 
 - Fill in the documents that are still the template's skeletons (17: docs/data-dictionary.md, docs/index.md, docs/maintenance-plan.md, docs/metrics.md, docs/peer-reviews.md, docs/problem-reports.md, ...), or remove those the project's tailoring leaves out.
