@@ -1,7 +1,7 @@
 //! The full mirror of a forge, written and read; used offline; and
 //! published to another forge: with a forge that the test stands in for.
 
-// req: forge.mirror, forge.sync, forge.publish
+// req: forge.mirror, forge.sync, forge.publish, principle.forge-neutral
 // cspell:ignore Fnew
 const std = @import("std");
 const testing = std.testing;
@@ -128,6 +128,7 @@ var created: u64 = 0;
 fn fakeSend(_: std.Io, arena: std.mem.Allocator, _: *const Forge, method: []const u8, path: []const u8, json: []const u8, _: []const u8) anyerror!github.Reply {
     try sent.append(testing.allocator, try std.fmt.allocPrint(testing.allocator, "{s} {s} {s}", .{ method, path, json }));
     if (std.mem.endsWith(u8, path, "/milestones")) return .{ .body = "{\"id\": 7, \"iid\": 1, \"number\": 1}" };
+    if (std.mem.endsWith(u8, path, "/labels")) return .{ .body = "{\"id\": 11}" };
     if (std.mem.endsWith(u8, path, "/issues")) {
         created += 1;
         return .{ .body = try arena.print("{{\"iid\": {d}, \"number\": {d}}}", .{ created, created }) };
@@ -189,6 +190,16 @@ test "publishing the mirror to another forge: what is created, and the map of re
     try expectContains(sent.items[first + 2], "\"labels\":[\"bug\"],\"milestone\":1}");
     try expectContains(sent.items[first + 3], "POST repos/example/moved/issues/3/comments");
     try expectContains(sent.items[first + 5], "PATCH repos/example/moved/issues/4 {\"state\":\"closed\"}");
+
+    // to Forgejo: GitHub's paths, its labels and milestone by the ids it gave them
+    const third = sent.items.len;
+    const jo = (try publish_command.run(testing.io, a, .{ .common = .{ .root = root }, .to = "forgejo:example/moved", .url = "https://codeberg.org" })).text;
+    try expectContains(jo, "created 1 label, 1 milestone, 2 issues and 1 comment on forgejo:example/moved");
+    try expectContains(sent.items[third], "POST repos/example/moved/labels {\"name\":\"bug\",\"color\":\"#d73a4a\"");
+    try expectContains(sent.items[third + 1], "\"due_on\":\"2027-03-12T12:00:00Z\"}");
+    try expectContains(sent.items[third + 2], "\"labels\":[11],\"milestone\":7}");
+    try expectContains(sent.items[third + 3], "POST repos/example/moved/issues/5/comments");
+    try expectContains(sent.items[third + 5], "PATCH repos/example/moved/issues/6 {\"state\":\"closed\"}");
 
     // a forge that cannot be named, and no mirror
     try testing.expectEqual(.misuse, (try publish_command.run(testing.io, a, .{ .common = .{ .root = root }, .to = "nowhere" })).status);

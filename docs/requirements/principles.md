@@ -8,8 +8,8 @@ Everything Skein stores about a project shall be in plain text files in the repo
 %req[principle.git-only]
 Every command that reads the current project shall work with nothing but the files. Skein shall need the `git` program only for what only git has or does: the name of the user; the content of the files at an earlier commit, their history and who last changed them; tags (`baseline.tag`); the other repositories it fetches (`network.fetched`); the commits, branches, worktrees, merges, pushes and pulls of `skein serve` and `approve --sign` (`serve.save`, `serve.team`); signatures (`approval.signed`); and the address of `origin` (`ci.engineering-docs`).
 
-%req[principle.forge-neutral planned]
-Skein shall reach a forge (GitHub, GitLab, Forgejo) only through an adapter, and no feature of Skein shall depend on something that one of the three lacks. Built: the adapters of all three (`forge.gitlab`, `forge.forgejo`). Still to do: publishing a mirror to Forgejo (`forge.publish`; issue #299). GitLab's requirements (`forge.gitlab-requirements`) and Jama Connect (`forge.jama`) are tools of their own that Skein keeps to the items, not features that need them.
+%req[principle.forge-neutral]
+Skein shall reach a forge (GitHub, GitLab, Forgejo) only through an adapter, and no feature of Skein shall depend on something that one of the three lacks. The adapters of all three are built (`forge.gitlab`, `forge.forgejo`), each reading issues, pull requests and their reviews, writing the planning fields back, and taking a published mirror (`forge.publish`; issue #299). GitLab's requirements (`forge.gitlab-requirements`) and Jama Connect (`forge.jama`) are tools of their own that Skein keeps to the items, not features that need them.
 
 %req[principle.schema-driven]
 Skein shall have no built-in item type, link type, attribute, category or status. A project declares them, and Skein checks the items of the project against those declarations.

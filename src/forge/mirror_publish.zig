@@ -3,6 +3,8 @@
 //! references to the new. Pull and merge requests are not re-created: a
 //! forge cannot make one without its branches. People are not assigned, as
 //! the other forge may not know them; an issue says who opened it and when.
+//! Forgejo takes GitHub's paths and fields, but names an issue's labels and
+//! milestone by the ids it gave them (#299).
 
 const std = @import("std");
 const Io = std.Io;
@@ -38,18 +40,22 @@ pub fn publish(io: Io, arena: std.mem.Allocator, data: Mirror.Data, target: *con
     var out: Published = .{};
     var map: std.ArrayList(Mapped) = .empty;
     const lab = target.kind == .gitlab;
+    const jo = target.kind == .forgejo;
     const base = if (lab) try arena.print("projects/{s}", .{try std.mem.replaceOwned(u8, arena, target.repository, "/", "%2F")}) else try arena.print("repos/{s}", .{target.repository});
 
+    // Forgejo's ids of the labels, by name
+    var label_ids: std.array_hash_map.String(u64) = .empty;
     for (data.labels) |l| {
         out.labels += 1;
         if (dry_run) continue;
-        const body = if (lab)
+        const body = if (lab or jo)
             try arena.print("{{\"name\":{f},\"color\":{f},\"description\":{f}}}", .{ js(l.name), js(try arena.print("#{s}", .{if (l.color.len > 0) l.color else "cccccc"})), js(l.description) })
         else
             try arena.print("{{\"name\":{f},\"color\":{f},\"description\":{f}}}", .{ js(l.name), js(if (l.color.len > 0) l.color else "cccccc"), js(l.description) });
         // a label the forge has already is no failure
         switch (try write(io, arena, target, "POST", try arena.print("{s}/labels", .{base}), body, body_path)) {
-            .body, .missing => {},
+            .body => |t| if (jo) if (idOf(arena, t, "id")) |n| try label_ids.put(arena, l.name, n),
+            .missing => {},
             .unreachable_ => |why| if (!exists(why)) return stop(&out, map.items, why),
         }
     }
@@ -64,7 +70,7 @@ pub fn publish(io: Io, arena: std.mem.Allocator, data: Mirror.Data, target: *con
         else
             try arena.print("{{\"title\":{f},\"description\":{f},\"state\":\"{s}\"{s}}}", .{ js(m.title), js(m.description), if (m.open) "open" else "closed", try dueField(arena, m.due, false) });
         switch (try write(io, arena, target, "POST", try arena.print("{s}/milestones", .{base}), body, body_path)) {
-            .body => |t| if (idOf(arena, t, if (lab) "id" else "number")) |n| try numbers.put(arena, m.title, n),
+            .body => |t| if (idOf(arena, t, if (lab or jo) "id" else "number")) |n| try numbers.put(arena, m.title, n),
             .missing => {},
             .unreachable_ => |why| return stop(&out, map.items, why),
         }
@@ -86,6 +92,15 @@ pub fn publish(io: Io, arena: std.mem.Allocator, data: Mirror.Data, target: *con
         if (lab) {
             try body.print(arena, ",\"labels\":{f}", .{js(try std.mem.join(arena, ",", i.labels))});
             if (i.milestone) |m| if (numbers.get(m)) |n| try body.print(arena, ",\"milestone_id\":{d}", .{n});
+        } else if (jo) {
+            try body.appendSlice(arena, ",\"labels\":[");
+            var k: usize = 0;
+            for (i.labels) |l| if (label_ids.get(l)) |id| {
+                try body.print(arena, "{s}{d}", .{ if (k > 0) "," else "", id });
+                k += 1;
+            };
+            try body.append(arena, ']');
+            if (i.milestone) |m| if (numbers.get(m)) |n| try body.print(arena, ",\"milestone\":{d}", .{n});
         } else {
             try body.appendSlice(arena, ",\"labels\":[");
             for (i.labels, 0..) |l, k| try body.print(arena, "{s}{f}", .{ if (k > 0) "," else "", js(l) });
