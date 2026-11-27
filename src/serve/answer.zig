@@ -17,12 +17,15 @@ pub const Answer = struct {
 
 /// Where a page asks whether the files changed
 pub const stamp_path = "/_skein/stamp";
+/// The script that edits, which every page loads (edit.js)
+pub const script_path = "/_skein/edit.js";
 
 /// The answer to a GET of `target`; the caller holds the site's mutex.
 /// The body is in `arena`.
 pub fn get(arena: std.mem.Allocator, s: *Site, target: []const u8) !Answer {
     const path_part = target[0 .. std.mem.findAny(u8, target, "?#") orelse target.len];
     if (std.mem.eql(u8, path_part, stamp_path)) return .{ .content_type = "text/plain", .body = try arena.dupe(u8, &(try s.current())) };
+    if (std.mem.eql(u8, path_part, script_path)) return .{ .content_type = "text/javascript; charset=utf-8", .body = @embedFile("edit.js") };
     try s.refresh();
     if (s.failed) |why| return .{ .status = .service_unavailable, .body = try problems(arena, s, why) };
 
@@ -41,9 +44,10 @@ pub fn get(arena: std.mem.Allocator, s: *Site, target: []const u8) !Answer {
 /// `page` with the script that loads it again once the files differ from `stamp`
 fn withReload(arena: std.mem.Allocator, page: []const u8, stamp: []const u8) ![]const u8 {
     const script = try arena.print(
-        \\<script>(function(){{var s="{s}";setInterval(function(){{fetch("{s}",{{cache:"no-store"}}).then(function(r){{return r.text()}}).then(function(t){{if(t!==s)location.reload()}}).catch(function(){{}})}},1000)}})();</script>
+        \\<script>(function(){{var s="{s}";setInterval(function(){{fetch("{s}",{{cache:"no-store"}}).then(function(r){{return r.text()}}).then(function(t){{if(t!==s&&!window.skeinEditing)location.reload()}}).catch(function(){{}})}},1000)}})();</script>
+        \\<script src="{s}"></script>
         \\
-    , .{ stamp, stamp_path });
+    , .{ stamp, stamp_path, script_path });
     const at = std.mem.findLast(u8, page, "</body>") orelse page.len;
     return std.mem.concat(arena, u8, &.{ page[0..at], script, page[at..] });
 }

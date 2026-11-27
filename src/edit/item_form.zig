@@ -1,15 +1,15 @@
-//! Writing an item form (form.zig) into the project's files: a new item
+//! Writing an item form (edit/form.zig) into the project's files: a new item
 //! started as `skein new` starts it, then each value that differs from the
 //! item's written into its marker or its front matter, or taken out.
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
 const Item = @import("../graph/Item.zig");
 const Schema = @import("../schema/Schema.zig");
-const Server = @import("Server.zig");
 const Workspace = @import("../commands/Workspace.zig");
-const attribute = @import("../edit/attribute.zig");
+const attribute = @import("attribute.zig");
 const form = @import("form.zig");
 const new_command = @import("../commands/new.zig");
 
@@ -19,42 +19,72 @@ pub const Outcome = union(enum) {
     refused: []const u8,
 };
 
-pub fn write(s: *Server, a: Allocator, ws: *Workspace, p: form.Save) Allocator.Error!Outcome {
+const Edited = union(enum) { text: []const u8, refused: []const u8 };
+
+pub const Preview = union(enum) {
+    /// the item's file as the form would write it
+    text: struct { file: []const u8, text: []const u8 },
+    /// a new item, which nothing refuses before it is started
+    new,
+    refused: []const u8,
+};
+
+/// What `write` would write, without writing it
+pub fn preview(io: Io, a: Allocator, ws: *Workspace, p: form.Save) Allocator.Error!Preview {
+    const schema = &ws.project.schema;
+    const t = schema.itemType(p.type) orelse return .{ .refused = try a.print("skein: there is no item type '{s}'", .{p.type}) };
+    if (try invalid(a, schema, t, ws, p)) |why| return .{ .refused = why };
+    if (p.new) return .new;
+    const item = ws.graph.find(p.id) orelse return .{ .refused = try a.print("skein: there is no item '{s}'", .{p.id}) };
+    return switch (try edited(io, a, ws, t, item, p)) {
+        .text => |x| .{ .text = .{ .file = item.file, .text = x } },
+        .refused => |why| .{ .refused = why },
+    };
+}
+
+pub fn write(io: Io, a: Allocator, ws: *Workspace, p: form.Save) Allocator.Error!Outcome {
     const schema = &ws.project.schema;
     const t = schema.itemType(p.type) orelse return refuse(a, "there is no item type '{s}'", .{p.type});
     if (try invalid(a, schema, t, ws, p)) |why| return .{ .refused = why };
     if (!p.new) {
         const item = ws.graph.find(p.id) orelse return refuse(a, "there is no item '{s}'", .{p.id});
         if (ws.project.readOnlySource(item.file)) |src| return refuse(a, "{s} is in the read-only source '{s}'", .{ item.id, src.path });
-        return apply(s, a, ws, t, item, p);
+        return apply(io, a, ws, t, item, p);
     }
 
     // a new item: its file, or its marker at the end of a document
-    const started = new_command.run(s.io, a, .{ .common = .{ .root = ws.root_path }, .type_name = t.name, .id = if (p.id.len > 0) p.id else null }) catch return refuse(a, "the item could not be started", .{});
+    const started = new_command.run(io, a, .{ .common = .{ .root = ws.root_path }, .type_name = t.name, .id = if (p.id.len > 0) p.id else null }) catch return refuse(a, "the item could not be started", .{});
     if (started.status != .ok) return .{ .refused = std.mem.trimEnd(u8, started.text, "\n") };
     const said = std.mem.trimEnd(u8, started.text, "\n");
     var new_id: []const u8 = "";
     if (std.mem.startsWith(u8, said, "%")) {
         if (p.document.len == 0) return refuse(a, "a '{s}' is written in a document: choose one", .{t.name});
         if (ws.project.readOnlySource(p.document) != null) return refuse(a, "{s} is in a read-only source", .{p.document});
-        const old = ws.root.readFileAlloc(s.io, p.document, a, .limited(1 << 26)) catch return refuse(a, "{s} cannot be read", .{p.document});
+        const old = ws.root.readFileAlloc(io, p.document, a, .limited(1 << 26)) catch return refuse(a, "{s} cannot be read", .{p.document});
         const sep = if (old.len == 0 or std.mem.endsWith(u8, old, "\n\n")) "" else if (std.mem.endsWith(u8, old, "\n")) "\n" else "\n\n";
         const text = if (p.text.len > 0) p.text else "(text to come)";
-        ws.root.writeFile(s.io, .{ .sub_path = p.document, .data = try std.mem.concat(a, u8, &.{ old, sep, said, " ", text, "\n" }) }) catch return refuse(a, "{s} cannot be written", .{p.document});
+        ws.root.writeFile(io, .{ .sub_path = p.document, .data = try std.mem.concat(a, u8, &.{ old, sep, said, " ", text, "\n" }) }) catch return refuse(a, "{s} cannot be written", .{p.document});
         new_id = said[std.mem.findScalar(u8, said, '[').? + 1 .. said.len - 1];
     } else {
         // an item file: its text after its front matter
         if (p.text.len > 0) {
-            const old = ws.root.readFileAlloc(s.io, said, a, .limited(1 << 26)) catch "";
-            ws.root.writeFile(s.io, .{ .sub_path = said, .data = try std.mem.concat(a, u8, &.{ old, p.text, "\n" }) }) catch {};
+            const old = ws.root.readFileAlloc(io, said, a, .limited(1 << 26)) catch "";
+            ws.root.writeFile(io, .{ .sub_path = said, .data = try std.mem.concat(a, u8, &.{ old, p.text, "\n" }) }) catch {};
         }
         new_id = if (p.id.len > 0) p.id else std.Io.Dir.path.stem(said);
     }
     // the project again, with the new item in it
-    var again = s.open(a) orelse return refuse(a, "the project cannot be read again", .{});
+    const reopened = Workspace.open(io, a, .{ .root = ws.root_path }) catch |e| switch (e) {
+        error.OutOfMemory => return error.OutOfMemory,
+        else => return refuse(a, "the project cannot be read again", .{}),
+    };
+    var again = switch (reopened) {
+        .ok => |w| w,
+        .failed => return refuse(a, "the project cannot be read again", .{}),
+    };
     defer again.close();
     const item = again.graph.find(new_id) orelse return refuse(a, "the new item '{s}' cannot be found", .{new_id});
-    return apply(s, a, &again, again.project.schema.itemType(t.name).?, item, p);
+    return apply(io, a, &again, again.project.schema.itemType(t.name).?, item, p);
 }
 
 fn refuse(a: Allocator, comptime fmt: []const u8, args: anytype) Allocator.Error!Outcome {
@@ -76,13 +106,13 @@ fn invalid(a: Allocator, schema: *const Schema, t: *const Schema.ItemType, ws: *
     return null;
 }
 
-/// Writes each value of the form that differs from the item's
-fn apply(s: *Server, a: Allocator, ws: *const Workspace, t: *const Schema.ItemType, item: *const Item, p: form.Save) Allocator.Error!Outcome {
-    var text: []const u8 = ws.root.readFileAlloc(s.io, item.file, a, .limited(1 << 26)) catch return refuse(a, "{s} cannot be read", .{item.file});
+/// The item's file with each value of the form that differs from the item's
+fn edited(io: Io, a: Allocator, ws: *const Workspace, t: *const Schema.ItemType, item: *const Item, p: form.Save) Allocator.Error!Edited {
+    var text: []const u8 = ws.root.readFileAlloc(io, item.file, a, .limited(1 << 26)) catch return .{ .refused = try a.print("skein: {s} cannot be read", .{item.file}) };
     const edit: Edit = .{ .a = a, .item = item };
-    text = try edit.word(text, "category", item.category, p.category) orelse return manual(a, item, "category");
-    text = try edit.word(text, "status", item.status, p.status) orelse return manual(a, item, "status");
-    text = try edit.value(text, "verification", item.verification orelse "", p.verification, .string) orelse return manual(a, item, "verification");
+    text = try edit.word(text, "category", item.category, p.category) orelse return .{ .refused = try manual(a, item, "category") };
+    text = try edit.word(text, "status", item.status, p.status) orelse return .{ .refused = try manual(a, item, "status") };
+    text = try edit.value(text, "verification", item.verification orelse "", p.verification, .string) orelse return .{ .refused = try manual(a, item, "verification") };
     for (t.attributes) |attr| {
         const want = p.attributes.map.get(attr.name) orelse "";
         const have = if (item.attribute(attr.name)) |_| try joined(a, item, attr.name) else "";
@@ -91,7 +121,7 @@ fn apply(s: *Server, a: Allocator, ws: *const Workspace, t: *const Schema.ItemTy
             .string => .string,
             .integer, .boolean, .date => .raw,
         };
-        text = try edit.value(text, attr.name, have, want, kind) orelse return manual(a, item, attr.name);
+        text = try edit.value(text, attr.name, have, want, kind) orelse return .{ .refused = try manual(a, item, attr.name) };
     }
     for (p.links.map.keys(), p.links.map.values()) |name, targets| {
         var have: std.ArrayList([]const u8) = .empty;
@@ -99,14 +129,23 @@ fn apply(s: *Server, a: Allocator, ws: *const Workspace, t: *const Schema.ItemTy
         const old = try std.mem.join(a, ",", have.items);
         const new = try std.mem.join(a, ",", targets);
         if (std.mem.eql(u8, old, new)) continue;
-        text = try edit.value(text, name, old, new, .list) orelse return manual(a, item, name);
+        text = try edit.value(text, name, old, new, .list) orelse return .{ .refused = try manual(a, item, name) };
     }
-    ws.root.writeFile(s.io, .{ .sub_path = item.file, .data = text }) catch return refuse(a, "{s} cannot be written", .{item.file});
+    return .{ .text = text };
+}
+
+/// Writes each value of the form that differs from the item's
+fn apply(io: Io, a: Allocator, ws: *const Workspace, t: *const Schema.ItemType, item: *const Item, p: form.Save) Allocator.Error!Outcome {
+    const text = switch (try edited(io, a, ws, t, item, p)) {
+        .text => |x| x,
+        .refused => |why| return .{ .refused = why },
+    };
+    ws.root.writeFile(io, .{ .sub_path = item.file, .data = text }) catch return refuse(a, "{s} cannot be written", .{item.file});
     return .{ .written = .{ .id = item.id, .file = item.file, .line = if (item.line > 0) item.line - 1 else 0 } };
 }
 
-fn manual(a: Allocator, item: *const Item, what: []const u8) Allocator.Error!Outcome {
-    return refuse(a, "{s}: the {s} is written in a way skein does not change; change it by hand", .{ item.file, what });
+fn manual(a: Allocator, item: *const Item, what: []const u8) Allocator.Error![]const u8 {
+    return a.print("skein: {s}: the {s} is written in a way skein does not change; change it by hand", .{ item.file, what });
 }
 
 /// The values of an attribute, joined by commas as a form shows them

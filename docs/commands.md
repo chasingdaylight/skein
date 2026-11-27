@@ -284,7 +284,7 @@ skein: serving calc at http://127.0.0.1:8080/ until stopped (Ctrl+C)
 - The pages are rendered from the files as they are, committed or not, and rendered again when a file of the project changes: in an editor, by `git pull`, by another skein command. An open page loads itself again when that happens.
 - It answers only on this computer (127.0.0.1): it has no sign-in. `--port N` picks another port.
 - A configuration or schema with problems is a page that says them, until they are fixed.
-- `--profile`, `--results` and the options for other repositories are those of `skein render`. It writes no file.
+- `--profile`, `--results` and the options for other repositories are those of `skein render`. It writes only what is saved from a page ([the web interface](web.md)).
 
 ## `skein move OLD NEW`
 

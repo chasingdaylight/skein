@@ -46,6 +46,10 @@ test {
     _ = @import("commands/serve.zig");
     _ = @import("serve/stamp.zig");
     _ = @import("serve/answer.zig");
+    _ = @import("serve/edit_api.zig");
+    _ = @import("serve/guard.zig");
+    _ = @import("edit/form.zig");
+    _ = @import("edit/item_form.zig");
     _ = @import("commands/move.zig");
     _ = @import("edit/alias.zig");
     _ = @import("commands/examples.zig");

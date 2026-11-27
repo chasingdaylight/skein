@@ -40,6 +40,7 @@ These pages are of the release their menu names, the latest by default; the menu
 | [Project files](project-files.md) | The `.skein/` directory: configuration, item types, link types, profiles. |
 | [Commands](commands.md) | `check`, `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `baseline`, `pin`, `examples`, `result`, `template`, `move`, `new`, `link`, `import`, `review`, `approve`, `serve`, `lsp`. |
 | [Reviewing](reviewing.md) | Fingerprints, suspect links, reviews and approvals. |
+| [The web interface](web.md) | `skein serve`: the site in a browser, with its files and items edited from there. |
 | [Other repositories](repositories.md) | Items of other repositories, `pin`, and the state of the network. |
 | [Test results](results.md) | Reading test results, and what they say of each item. |
 | [The forge](forge.md) | Issues and pull requests, checked against GitHub. |

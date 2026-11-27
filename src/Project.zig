@@ -45,6 +45,17 @@ planning_span: bool = false,
 /// `.skein/schedule.toml`
 schedule_also: []const []const u8 = &.{},
 schema: Schema = .{},
+/// files whose text is given in place of what is on disk: what is typed
+/// in a page of `skein serve` and not saved yet
+unsaved: []const Unsaved = &.{},
+
+pub const Unsaved = struct { file: []const u8, text: []const u8 };
+
+/// The text of `file` that is given, when it is
+pub fn unsavedText(self: *const Project, file: []const u8) ?[]const u8 {
+    for (self.unsaved) |u| if (std.mem.eql(u8, u.file, file)) return u.text;
+    return null;
+}
 
 /// `[maturity]`: the maturities a document may be at, lowest first
 /// (`order = ["D", "P", "B", "U", "F"]`), and the milestone the project is
