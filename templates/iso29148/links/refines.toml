@@ -1,5 +1,0 @@
-description = "A stakeholder requirement refines a business requirement"
-from = ["stakeholder"]
-to = ["business"]
-# every business requirement is refined into stakeholder requirements
-expected = true

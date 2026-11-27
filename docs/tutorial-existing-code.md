@@ -235,6 +235,6 @@ In VS Code, the extension `chasingdaylight.skein` shows what `skein check` repor
 ## Where next
 
 - **Tests as items, design, links between levels:** a project can have more item types (tests, design elements, needs) and typed links between them (`verifies`, `refines`), with links that must be there and links that are expected. See [project files](project-files.md) and [writing items](writing-items.md).
-- **A standard to follow:** if the project works to a standard (ISO/IEC/IEEE 29148, NASA's NPRs), start from a [template](templates.md) instead of writing the types: `skein init --template iso29148`.
+- **A standard to follow:** if the project works to a standard (NASA's NPRs and standards, for one), start from a [template](templates.md) instead of writing the types: `skein init --template npr7150.2d`.
 - **Requirements kept elsewhere:** [importing](importing.md) brings in Doorstop documents and spreadsheets.
 - **Planning the work:** [the other tutorial](tutorial-planning.md) starts from a project with no code, and plans it.

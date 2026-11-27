@@ -1,4 +1,0 @@
-description = "A verification: the test, analysis, inspection or demonstration that shows requirements are met, with its criteria"
-id = "numbered"
-prefix = "VER"
-categories = ["inspection", "analysis", "demonstration", "test"]

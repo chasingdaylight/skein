@@ -374,24 +374,6 @@ test "program and project management under NPR 7120.5F, with NPR 7123.1D" {
     try expectContains(coverage, "complies-se links to se items: 0 of 62");
 }
 
-// req: templates.iso29148
-test "a project with requirements as ISO/IEC/IEEE 29148 describes them" {
-    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
-    defer arena.deinit();
-    const a = arena.allocator();
-    var tmp = testing.tmpDir(.{});
-    defer tmp.cleanup();
-    const root = try rootOf(a, tmp);
-
-    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"iso29148"} })).status);
-    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems (5 items of 5 types, 4 link types");
-    const coverage = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text;
-    // the examples trace from business needs down to a verification
-    try expectContains(coverage, "refines links to business items: 1 of 1");
-    try expectContains(coverage, "derives links to stakeholder items: 1 of 1");
-    try expectContains(coverage, "verifies links to software items: 1 of 1");
-}
-
 test "eject writes the template's files into .skein/ and keeps the project's own" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);
     defer arena.deinit();

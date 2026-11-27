@@ -49,8 +49,5 @@ Skein shall carry a template for IT program and project management under NASA's 
 %req[templates.npr7120.5f]
 Skein shall carry a template for space flight program and project management under NASA's NPR 7120.5F, `npr7120.5f`: its 51 requirements as its compliance matrix (Table C-1) lists them, with their owners and who approves their tailoring, as a read-only source written into the project, the rows of the compliance matrix, the project's key decision points with their phases and dates, and skeletons of the matrix, the life cycle and the project plan.
 
-%req[templates.iso29148]
-Skein shall carry a template for requirements as ISO/IEC/IEEE 29148:2018 describes them, `iso29148`: business, stakeholder, system and software requirements with the attributes the standard describes and its four verification methods, verifications, the links between the levels, and skeletons of its four specifications, a verification and traceability page, and a checklist of the characteristics of good requirements. The standard is under copyright: the template gives its structure in Skein's own words, with its clause numbers, and quotes none of it.
-
 %req[templates.eject]
 `skein template eject NAME` shall write the types, links and profiles of a template the project uses into its `.skein/`, as the project's options make them, so that the project changes them freely; a file the project has already is left as it is. A template the project does not use is reported.
