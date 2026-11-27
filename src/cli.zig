@@ -110,6 +110,8 @@ pub const usage =
     \\                    init: a template's option; may be given more than once
     \\  --as ROLE         approve: the role the approval is given in, where the type
     \\                    names the roles that must each approve
+    \\  --sign            approve: commit the approval, signed with your key (git's
+    \\                    user.signingkey: OpenPGP, SSH, or an X.509 certificate)
     \\  --by NAME         approve, result, time: who (default: git's user.name)
     \\  --on DATE         approve, result, time: when, as 2027-03-01 (default: today)
     \\  --note TEXT       result, time: what to keep with it
@@ -530,6 +532,8 @@ pub const Approve = struct {
     from_pull_request: ?u64 = null,
     /// the role the approval is given in, where the type names roles
     as: ?[]const u8 = null,
+    /// commit the records, signed with the approver's key
+    sign: bool = false,
 };
 
 pub const Result = struct {
@@ -581,6 +585,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--from-pull-request", .takes_value = true },
     .{ .name = "--evidence", .takes_value = true },
     .{ .name = "--as", .takes_value = true },
+    .{ .name = "--sign", .takes_value = false },
     .{ .name = "--template", .takes_value = true },
     .{ .name = "--option", .takes_value = true },
     .{ .name = "--remove", .takes_value = false },
@@ -867,14 +872,14 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .result = .{ .common = common, .id = words[0], .outcome = outcome, .by = p.value("--by"), .on = p.value("--on"), .note = p.value("--note"), .implementation = p.value("--implementation"), .evidence = try p.values("--evidence") } };
     }
     if (eql(name, "approve")) {
-        if (try p.allow(&.{ "--root", "--by", "--on", "--from-pull-request", "--as" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--by", "--on", "--from-pull-request", "--as", "--sign" })) |problem| return .{ .misuse = problem };
         if (p.value("--from-pull-request")) |n| {
             if (words.len > 0 or p.flag("--by") or p.flag("--on")) return .{ .misuse = "approve --from-pull-request takes the pull request's number alone" };
             const number = std.fmt.parseInt(u64, std.mem.trimStart(u8, n, "#"), 10) catch return .{ .misuse = "approve --from-pull-request: the number of a pull request" };
             return .{ .approve = .{ .common = common, .ids = &.{}, .from_pull_request = number } };
         }
         if (words.len == 0) return .{ .misuse = "name the items to approve" };
-        return .{ .approve = .{ .common = common, .ids = words, .by = p.value("--by"), .on = p.value("--on"), .as = p.value("--as") } };
+        return .{ .approve = .{ .common = common, .ids = words, .by = p.value("--by"), .on = p.value("--on"), .as = p.value("--as"), .sign = p.flag("--sign") } };
     }
     return .{ .unknown = name };
 }

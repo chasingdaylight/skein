@@ -122,6 +122,35 @@ pub fn missingRoles(self: *const Approvals, arena: std.mem.Allocator, graph: *co
     return out.items;
 }
 
+/// With roles that approve in order: the first current approval given
+/// before a role before it approved what the item says now; null when none was
+pub fn outOfOrder(self: *const Approvals, arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema, item_type: *const Schema.ItemType, item: *const Item) std.mem.Allocator.Error!?[]const u8 {
+    const approvals = try self.of(arena, item.id);
+    var earliest: std.ArrayList(?toml.Date) = .empty;
+    for (item_type.approval_roles) |role| {
+        var first: ?toml.Date = null;
+        for (approvals) |a| {
+            if (a.as == null or !std.mem.eql(u8, a.as.?, role) or !counts(item_type, a) or !try isCurrent(arena, graph, schema, a, item)) continue;
+            if (first == null or before(a.on, first.?)) first = a.on;
+        }
+        try earliest.append(arena, first);
+    }
+    for (item_type.approval_roles, earliest.items, 0..) |role, on, i| {
+        const this = on orelse continue;
+        for (item_type.approval_roles[0..i], earliest.items[0..i]) |prior, prior_on| {
+            if (prior_on == null) return try arena.print("approved as {s} before it was as {s}, whose approval comes first", .{ role, prior });
+            if (before(this, prior_on.?)) return try arena.print("approved as {s} on {d:0>4}-{d:0>2}-{d:0>2}, before it was as {s}, whose approval comes first", .{ role, this.year, this.month, this.day, prior });
+        }
+    }
+    return null;
+}
+
+fn before(a: toml.Date, b: toml.Date) bool {
+    if (a.year != b.year) return a.year < b.year;
+    if (a.month != b.month) return a.month < b.month;
+    return a.day < b.day;
+}
+
 pub fn fileOf(arena: std.mem.Allocator, item: *const Item) ![]const u8 {
     return record_files.fileOf(arena, dir, item);
 }
@@ -164,6 +193,10 @@ pub fn check(self: *const Approvals, arena: std.mem.Allocator, schema: *const Sc
         if (!Schema.names.contains(item_type.approval, status)) continue;
         // every role the type names must have approved it as it is
         if (item_type.approval_roles.len > 0) {
+            if (item_type.approval_in_order) if (try self.outOfOrder(arena, graph, schema, item_type, item)) |why| {
+                try report.add(item.file, item.line, 1, "{s}: {s}", .{ item.id, why });
+                continue;
+            };
             const missing = try self.missingRoles(arena, graph, schema, item_type, item);
             if (missing.len > 0) try report.add(item.file, item.line, 1, "{s}: the status '{s}' needs an approval of what the item says now as {s} ('skein approve {s} --as ROLE')", .{ item.id, status, try std.mem.join(arena, ", ", missing), item.id });
             continue;
@@ -186,6 +219,14 @@ pub fn check(self: *const Approvals, arena: std.mem.Allocator, schema: *const Sc
     }
 }
 
+/// The line that records `a`, of the item `id`, as the files hold it
+pub fn recordLine(arena: std.mem.Allocator, id: []const u8, a: Approval) std.mem.Allocator.Error![]const u8 {
+    const as = if (a.as) |r| try arena.print(", as = \"{s}\"", .{try record_files.escape(arena, r)}) else "";
+    return arena.print("\"{s}\".\"{s}\" = {{ on = {d:0>4}-{d:0>2}-{d:0>2}, fingerprint = \"{s}\"{s} }}", .{
+        id, try record_files.escape(arena, a.by), a.on.year, a.on.month, a.on.day, a.fingerprint, as,
+    });
+}
+
 /// Writes the approval files named in `files` again, from the approvals
 /// held: those of items that still exist.
 pub fn write(self: *const Approvals, io: Io, arena: std.mem.Allocator, root: Io.Dir, graph: *const Graph, files: []const []const u8) !void {
@@ -195,10 +236,7 @@ pub fn write(self: *const Approvals, io: Io, arena: std.mem.Allocator, root: Io.
         for (self.all.items) |a| {
             const item = graph.find(a.item) orelse continue;
             if (!std.mem.eql(u8, try fileOf(arena, item), file)) continue;
-            const as = if (a.as) |r| try arena.print(", as = \"{s}\"", .{try record_files.escape(arena, r)}) else "";
-            try lines.append(arena, try arena.print("\"{s}\".\"{s}\" = {{ on = {d:0>4}-{d:0>2}-{d:0>2}, fingerprint = \"{s}\"{s} }}\n", .{
-                item.id, try record_files.escape(arena, a.by), a.on.year, a.on.month, a.on.day, a.fingerprint, as,
-            }));
+            try lines.append(arena, try arena.print("{s}\n", .{try recordLine(arena, item.id, a)}));
         }
         try record_files.write(io, arena, root, file, header, lines.items);
     }
@@ -208,4 +246,6 @@ test {
     _ = @import("_test/approvals.zig");
     _ = @import("_test/roles.zig");
     _ = @import("_test/approvers.zig");
+    _ = @import("_test/signatures.zig");
+    _ = @import("signatures.zig");
 }

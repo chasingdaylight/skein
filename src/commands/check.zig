@@ -12,6 +12,7 @@ const forge_checks = @import("../forge/checks.zig");
 const maturity = @import("../graph/maturity.zig");
 const template_documents = @import("../template/documents.zig");
 const workflow_checks = @import("../serve/workflow_checks.zig");
+const signatures = @import("../graph/signatures.zig");
 const network_checks = @import("../network/checks.zig");
 const planning_checks = @import("../planning/checks.zig");
 const load = @import("../planning/load.zig");
@@ -73,6 +74,7 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
     const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
     try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
+    try signatures.check(io, arena, ws.root, &ws.project.schema, &ws.graph, &approvals, &ws.report);
     try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     try reviews.checkCitations(arena, &ws.project, &ws.graph, &ws.citations, &ws.report);
     try maturity.check(io, arena, ws.root, &ws.project, &ws.graph, &ws.report);
