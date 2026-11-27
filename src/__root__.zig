@@ -54,6 +54,9 @@ test {
     _ = @import("commands/level.zig");
     _ = @import("forge/gitlab_requirements.zig");
     _ = @import("forge/gitlab_publish.zig");
+    _ = @import("forge/jama.zig");
+    _ = @import("forge/jama_text.zig");
+    _ = @import("forge/jama_config.zig");
     _ = @import("output/reqif.zig");
     _ = @import("template/Template.zig");
     _ = @import("template/_test/use.zig");

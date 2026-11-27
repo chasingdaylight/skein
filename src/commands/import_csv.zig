@@ -44,6 +44,24 @@ fn csvRows(arena: std.mem.Allocator, text: []const u8, file: []const u8) std.mem
 /// The import of the rows `reader` reads from the file of `options`, as
 /// for CSV; `format` names the import in messages
 pub fn importRows(io: Io, arena: std.mem.Allocator, options: cli.Import, format: []const u8, reader: Reader) !Workspace.Outcome {
+    return importFrom(io, arena, options, format, .{ .file = reader });
+}
+
+/// Where the rows come from: a file `options` names, read by a reader, or
+/// rows already read (from an API), with the name messages give them
+pub const Source = union(enum) {
+    file: Reader,
+    given: struct { name: []const u8, rows: Rows },
+};
+
+/// What `importFrom` needs of `options` before rows are fetched; why not, or null
+pub fn needs(arena: std.mem.Allocator, options: cli.Import, format: []const u8) !?Workspace.Outcome {
+    if (options.item_type == null) return try fail(arena, "import {s}: name the item type with --type", .{format});
+    if (options.to == null) return try fail(arena, "import {s}: name the directory for the items with --to", .{format});
+    return null;
+}
+
+pub fn importFrom(io: Io, arena: std.mem.Allocator, options: cli.Import, format: []const u8, from: Source) !Workspace.Outcome {
     const type_name = options.item_type orelse return fail(arena, "import {s}: name the item type with --type", .{format});
     const to = std.mem.trimEnd(u8, options.to orelse return fail(arena, "import {s}: name the directory for the items with --to", .{format}), "/");
     if (!Schema.names.valid(type_name)) return fail(arena, "'{s}' cannot be an item type: {s}", .{ type_name, Schema.names.rule });
@@ -56,9 +74,15 @@ pub fn importRows(io: Io, arena: std.mem.Allocator, options: cli.Import, format:
     var report: Report = .{ .arena = arena };
     const project = try Project.load(io, arena, root, &report);
 
-    const file = options.paths[0];
-    const text = root.readFileAlloc(io, file, arena, .limited(1 << 28)) catch return fail(arena, "cannot read '{s}'", .{file});
-    const rows = switch (try reader(arena, text, file)) {
+    const file, const read = switch (from) {
+        .file => |reader| blk: {
+            const path = options.paths[0];
+            const text = root.readFileAlloc(io, path, arena, .limited(1 << 28)) catch return fail(arena, "cannot read '{s}'", .{path});
+            break :blk .{ path, try reader(arena, text, path) };
+        },
+        .given => |g| .{ g.name, g.rows },
+    };
+    const rows = switch (read) {
         .rows => |r| r,
         .failed => |why| return fail(arena, "{s}", .{why}),
     };
@@ -173,7 +197,9 @@ fn columnOf(keys: []const []const u8, key: []const u8) ?usize {
 }
 
 /// The lines of an item type that say how `ids` are spelled: numbered
-/// (one prefix and separator, then digits) or hierarchical
+/// (one prefix and separator, then digits) or hierarchical. A prefix is
+/// letters, or capitals with `-` between them, as Jama Connect's document
+/// keys have (`RVR-REQ-12`)
 fn schemeOf(arena: std.mem.Allocator, ids: []const []const u8) ![]const u8 {
     var prefix: []const u8 = "";
     var separator: []const u8 = "";
@@ -181,6 +207,12 @@ fn schemeOf(arena: std.mem.Allocator, ids: []const []const u8) ![]const u8 {
     const numbered = for (ids, 0..) |id, i| {
         var letters: usize = 0;
         while (letters < id.len and std.ascii.isAlphabetic(id[letters])) letters += 1;
+        // more capitals after a '-': one prefix (`RVR-REQ`)
+        while (letters + 1 < id.len and id[letters] == '-' and std.ascii.isUpper(id[letters + 1]) and std.ascii.isUpper(id[0])) {
+            var end = letters + 1;
+            while (end < id.len and std.ascii.isUpper(id[end])) end += 1;
+            letters = end;
+        }
         var number = letters;
         if (number < id.len and (id[number] == '-' or id[number] == '_')) number += 1;
         const rest = id[number..];

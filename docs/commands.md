@@ -323,6 +323,14 @@ Makes an item file in `DIR` of each row of a CSV file; see [importing](importing
 
 Makes an item file in `DIR` of each spec object of a ReqIF file, as DOORS and other requirements tools write them; see [importing](importing.md#from-a-reqif-file).
 
+## `skein import jama PROJECT --jama-type KEY --type TYPE --to DIR`
+
+Makes an item file in `DIR` of each item of one item type of a Jama Connect project, read through Jama's REST API, with its relationships as links; see [importing](importing.md#through-jamas-rest-api).
+
+## `skein jama [--profile NAME] [--dry-run]`
+
+Keeps a Jama Connect project to the items, as `.skein/jama.toml` says, through Jama's REST API: creates the missing Jama items and relationships, brings back those that say otherwise, reports the rest, and keeps `.skein/jama-map.toml`; `--dry-run` says what it would do. See [the forge](forge.md#jama-connect).
+
 ## `skein gitlab-requirements [--profile NAME] [--dry-run]`
 
 Keeps the GitLab requirements of the project (its forge is GitLab) to its items through GitLab's API: creates the missing ones, updates those that say otherwise, archives those of removed items, and keeps `.skein/gitlab-requirements.toml`; `--dry-run` says what it would do. See [forges](forge.md#gitlabs-requirements).
