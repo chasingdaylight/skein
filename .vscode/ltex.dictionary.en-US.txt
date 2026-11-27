@@ -106,3 +106,4 @@ baselined
 SwRR
 burndown
 jamasoftware
+Wyhash

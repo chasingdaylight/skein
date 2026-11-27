@@ -17,6 +17,7 @@ const markdown = @import("../render/markdown.zig");
 const order = @import("../render/order.zig");
 const site = @import("../render/site.zig");
 const xml = @import("../xml.zig");
+const Results = @import("../results/Results.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options.common)) {
@@ -31,17 +32,10 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Render) !Workspace.Out
 
 /// The project of `ws`, rendered to `out_path`
 fn renderInto(io: Io, arena: std.mem.Allocator, ws: *Workspace, options: cli.Render, out_path: []const u8) !Workspace.Outcome {
-    // what is wrong with the items is for `check`; the schema must be sound
-    if (!ws.items_read) return ws.problems();
-
-    const profile = if (options.profile) |name| ws.project.schema.profile(name) orelse return .{
-        .text = try arena.print("skein: there is no profile '{s}'\n", .{name}),
-        .status = .misuse,
-    } else null;
-    // results that cannot be read are the command's to report
-    const before = ws.report.problems.items.len;
-    const ctx = try context.build(io, arena, ws, .{ .profile = profile, .results = options.results, .offline = options.common.offline });
-    if (ws.report.problems.items.len > before) return ws.problems();
+    const ctx = switch (try prepare(io, arena, ws, options.profile, options.results)) {
+        .ok => |c| c,
+        .failed => |outcome| return outcome,
+    };
 
     var out = Io.Dir.cwd().createDirPathOpen(io, out_path, .{}) catch |e| return .{
         .text = try arena.print("skein: cannot make the directory '{s}' ({s})\n", .{ out_path, @errorName(e) }),
@@ -54,7 +48,7 @@ fn renderInto(io: Io, arena: std.mem.Allocator, ws: *Workspace, options: cli.Ren
         return .{ .text = try arena.print("skein: {d} document{s} rendered to {s}\n", .{ written, if (written == 1) "" else "s", out_path }) };
     }
     if (options.format == .html) {
-        const pages = try site.build(io, arena, ws, ctx, out);
+        const pages = try site.build(io, arena, ws, ctx, .{ .dir = out });
         return .{ .text = try arena.print("skein: {d} page{s} rendered to {s}\n", .{ pages, if (pages == 1) "" else "s", out_path }) };
     }
 
@@ -78,6 +72,22 @@ fn renderInto(io: Io, arena: std.mem.Allocator, ws: *Workspace, options: cli.Ren
     return .{
         .text = try arena.print("skein: {d} file{s} rendered to {s}\n", .{ count, if (count == 1) "" else "s", out_path }),
     };
+}
+
+/// What the pages of `ws` are rendered with: the profile named, the
+/// results; or why they cannot be
+pub fn prepare(io: Io, arena: std.mem.Allocator, ws: *Workspace, profile_name: ?[]const u8, results: Results.Given) !union(enum) { ok: markdown.Context, failed: Workspace.Outcome } {
+    // what is wrong with the items is for `check`; the schema must be sound
+    if (!ws.items_read) return .{ .failed = try ws.problems() };
+    const profile = if (profile_name) |name| ws.project.schema.profile(name) orelse return .{ .failed = .{
+        .text = try arena.print("skein: there is no profile '{s}'\n", .{name}),
+        .status = .misuse,
+    } } else null;
+    // results that cannot be read are the command's to report
+    const before = ws.report.problems.items.len;
+    const ctx = try context.build(io, arena, ws, .{ .profile = profile, .results = results, .offline = ws.common.offline });
+    if (ws.report.problems.items.len > before) return .{ .failed = try ws.problems() };
+    return .{ .ok = ctx };
 }
 
 /// Each baseline, rendered from its snapshot under `editions/NAME/`, and

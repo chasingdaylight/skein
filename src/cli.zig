@@ -18,7 +18,9 @@ pub const usage =
     \\                    gitlab-requirements: a CSV for GitLab's requirements import,
     \\                    or reqif: ReqIF 1.2, for DOORS and other requirements tools
     \\  render --out DIR  Write the documents as Markdown for a site generator
-    \\  move OLD NEW      Give an item another ID, everywhere the old one is used
+    \\  serve [--port N]  Serve the site on this computer (localhost), rendered as the
+    \\                    files change (default port 8080)
+    \\  move OLD NEW     Give an item another ID, everywhere the old one is used
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  link FROM TYPE TO Add a link of a type from one item to another
     \\  baseline [NAME]   Tag what is committed as a baseline; without NAME, list them
@@ -131,6 +133,7 @@ pub const usage =
     \\  --status-from NAME, --verification-from NAME
     \\                    import doorstop: the attribute that gives the status,
     \\                    or the verification method
+    \\  --port N          serve: the port on localhost (default 8080)
     \\  --out DIR         render, examples: where the files go
     \\  --format NAME     render: markdown for a site generator (the default),
     \\                    html: the site itself, or document: one file per document;
@@ -166,6 +169,7 @@ pub const Command = union(enum) {
     /// `export`
     exporting: Export,
     render: Render,
+    serve: Serve,
     move: Move,
     new: New,
     link: Link,
@@ -435,6 +439,17 @@ pub const Render = struct {
     };
 };
 
+pub const Serve = struct {
+    common: Common = .{},
+    port: u16 = default_port,
+    /// only the items of this profile
+    profile: ?[]const u8 = null,
+    /// results files besides the project's own, and what produced them
+    results: Results.Given = .{},
+
+    pub const default_port = 8080;
+};
+
 pub const Import = struct {
     common: Common = .{},
     format: Format = .doorstop,
@@ -536,6 +551,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--skill", .takes_value = false },
     .{ .name = "--file", .takes_value = true },
     .{ .name = "--url", .takes_value = true },
+    .{ .name = "--port", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -729,6 +745,12 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
             return .{ .misuse = "render: the formats are markdown, html and document" } else .markdown;
         const out = p.value("--out") orelse return .{ .misuse = "render: say where the files go, with --out DIR" };
         return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results(), .editions = p.flag("--editions"), .controlled = p.flag("--controlled") } };
+    }
+    if (eql(name, "serve")) {
+        if (try p.allow(&.{ "--root", "--port", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "serve takes no items" };
+        const port = if (p.value("--port")) |n| std.fmt.parseInt(u16, n, 10) catch return .{ .misuse = "serve --port: a port's number, as 8080" } else Serve.default_port;
+        return .{ .serve = .{ .common = common, .port = port, .profile = p.value("--profile"), .results = try p.results() } };
     }
     if (eql(name, "import")) {
         const forms = "import: doorstop DIR..., csv FILE, reqif FILE or jama PROJECT with --type TYPE --to DIR, or gitlab-requirements FILE";

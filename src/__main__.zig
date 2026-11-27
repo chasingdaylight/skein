@@ -35,6 +35,7 @@ const template = @import("commands/template.zig");
 const init_command = @import("commands/init.zig");
 const pin = @import("commands/pin.zig");
 const render = @import("commands/render.zig");
+const serve = @import("commands/serve.zig");
 const result = @import("commands/result.zig");
 const review = @import("commands/review.zig");
 const trace = @import("commands/trace.zig");
@@ -61,6 +62,7 @@ pub fn main(init: std.process.Init) !void {
         .diff => |options| try diff.run(io, arena, options),
         .exporting => |options| try exporter.run(io, arena, options),
         .render => |options| try render.run(io, arena, options),
+        .serve => |options| std.process.exit(try serve.serve(io, init.gpa, options)),
         .move => |options| try move.run(io, arena, options),
         .new => |options| try new.run(io, arena, options),
         .link => |options| try link.run(io, arena, options),

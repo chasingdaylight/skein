@@ -142,6 +142,9 @@ The site shall have a front page that lists its pages with their titles and file
 %req[render.site.relative]
 Every link and every reference to a file in the site shall be relative, and nothing shall be loaded from another address: the styles are in each page. So the site can be served under any address, or opened from disk.
 
+%req[serve.site]
+`skein serve [--port N]` shall serve the site `render.site.pages` writes, rendered in memory from the project's files, on this computer only (127.0.0.1, port 8080 by default), until it is stopped. Before it answers for a page, it shall render the site again when the project's files have changed since it last did (their paths, sizes and times of change, without git's own files), and each page shall ask every second whether they have and load itself again when they have. A configuration or schema with problems shall be a page that says them, served until they are fixed. It shall write no file. (Issue #278; #105.)
+
 %req[render.generated]
 A fenced code block of the language `skein` in a document shall be a request for a page that Skein generates from the graph: `skein render` puts the page in its place, as Markdown and as HTML alike, and its links lead to the items from the page they are on. A request Skein cannot read is replaced by a note that says what is wrong. Removed items are never listed.
 
