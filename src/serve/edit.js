@@ -70,6 +70,10 @@
   // a save, with a change started first when the project's way of saving asks for one
   function store(path, body, problems) {
     api(path, body).then(function (r) {
+      if (r.signIn) {
+        if (confirm(r.error + ". Sign in now? What you typed here is not kept.")) location.href = "/_skein/sign-in?back=" + encodeURIComponent(location.pathname);
+        return showProblems(problems, r);
+      }
       if (r.needsChange) {
         var name = prompt(r.error + "\n\nName the change (lowercase letters, digits and dashes):", "");
         if (!name) return showProblems(problems, r);
@@ -95,8 +99,9 @@
   // where saves go: the branch, or the change checked out, and what can be done with it
   function savingBar(st) {
     var nodes = [];
-    if (!st.branch) return [el("span", { "class": "skein-where", text: "not in git: saves are written, not committed" })];
-    if (st.mode === "commit") return [el("span", { "class": "skein-where", text: "saves are committed to " + (st.target || st.branch) })];
+    if (st.user) nodes.push(el("span", { "class": "skein-where", text: "signed in as " + st.user }));
+    if (!st.branch) return nodes.concat([el("span", { "class": "skein-where", text: "not in git: saves are written, not committed" })]);
+    if (st.mode === "commit") return nodes.concat([el("span", { "class": "skein-where", text: "saves are committed to " + (st.target || st.branch) })]);
     if (st.change) {
       nodes.push(el("span", { "class": "skein-where", text: "change " + st.change + " (into " + st.target + ")" }));
       if (st.mode === "branch") nodes.push(el("button", { text: "Merge into " + st.target, onclick: function () { if (confirm("Merge the change " + st.change + " into " + st.target + "?")) act("merge", st.change); } }));
@@ -237,7 +242,17 @@
         s.hash = r.hash;
         store("save", s, problems);
       } });
-      open(id ? "Edit " + id : "New " + t.name, nodes.concat([problems, el("div", { "class": "actions" }, [save, el("button", { text: "Cancel", onclick: close })])]));
+      var actions = [save];
+      // an approval of the item as it is, by whoever is signed in
+      if (id && t.approval && t.approval.length) {
+        var role = t.roles && t.roles.length ? choice(t.roles, "", false) : null;
+        if (role) actions.push(role);
+        actions.push(el("button", { text: "Approve", onclick: function () {
+          store("approve", { id: id, as: role ? role.value : "" }, problems);
+        } }));
+      }
+      actions.push(el("button", { text: "Cancel", onclick: close }));
+      open(id ? "Edit " + id : "New " + t.name, nodes.concat([problems, el("div", { "class": "actions" }, actions)]));
       check();
     });
   }
@@ -247,6 +262,7 @@
     var bar = el("div", { "class": "skein-bar" });
     if (info.editable) bar.appendChild(el("button", { text: "Edit this file", onclick: editFile }));
     if (info.types && info.types.length) bar.appendChild(el("button", { text: "New item", onclick: function () { editItem(null, info.types[0]); } }));
+    if (info.signIn) bar.appendChild(el("a", { "class": "skein-where", href: info.signIn + "?back=" + encodeURIComponent(location.pathname), text: "Sign in to edit" }));
     var first = bar.firstChild;
     if (info.saving) savingBar(info.saving).forEach(function (n) { bar.insertBefore(n, first); });
     document.body.appendChild(bar);

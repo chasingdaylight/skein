@@ -26,6 +26,10 @@ pub const Type = struct {
     links: []const LinkType,
     verification: []const []const u8,
     numbered: bool,
+    /// the statuses that need an approval; none when the type asks for none
+    approval: []const []const u8,
+    /// the roles an approval is given in, when the type names them
+    roles: []const []const u8,
 };
 
 pub const Form = struct {
@@ -81,7 +85,7 @@ pub fn build(io: Io, a: Allocator, ws: *Workspace, want_id: ?[]const u8, want_ty
     return .{ .ok = .{
         .item = if (item) |it| try current(a, it) else null,
         .types = types.items,
-        .type = .{ .name = t.name, .description = t.description, .categories = t.categories, .statuses = t.statuses, .attributes = attributes.items, .links = links.items, .verification = t.verification, .numbered = t.id == .numbered },
+        .type = .{ .name = t.name, .description = t.description, .categories = t.categories, .statuses = t.statuses, .attributes = attributes.items, .links = links.items, .verification = t.verification, .numbered = t.id == .numbered, .approval = t.approval, .roles = t.approval_roles },
         .itemFiles = item_files,
         .documents = documents.items,
     } };

@@ -12,6 +12,8 @@
 //!   `POST save` (the values, and the hash): writes them (edit/item_form.zig)
 //! - `POST change` (`{action, name}`): starts, opens, merges, proposes or
 //!   abandons a change (serve/saving.zig)
+//! - `POST approve` (`{id, as}`): approves an item as it is, as `skein
+//!   approve` does, by the person signed in
 //!
 //! A save is refused where the project's way of saving says it cannot go
 //! ahead (`needsChange` when a change must be started first), and what it
@@ -22,7 +24,9 @@ const Allocator = std.mem.Allocator;
 const json = std.json;
 
 const Project = @import("../Project.zig");
+const Context = @import("Context.zig");
 const Site = @import("Site.zig");
+const approve = @import("../commands/approve.zig");
 const Workspace = @import("../commands/Workspace.zig");
 const answer = @import("answer.zig");
 const guard = @import("guard.zig");
@@ -31,28 +35,29 @@ const edit_form = @import("../edit/form.zig");
 const files = @import("../files.zig");
 const item_form = @import("../edit/item_form.zig");
 const saving = @import("saving.zig");
+const query = @import("query.zig");
 
 pub const Method = guard.Method;
 
 /// The answer to `method` of `path` (under the prefix, without it) with
-/// `query` and `body`; the caller holds the site's mutex
-pub fn handle(arena: Allocator, s: *Site, method: Method, path: []const u8, query: []const u8, body: []const u8) !answer.Answer {
+/// `q`, its query, and `body`; the caller holds the server's lock
+pub fn handle(arena: Allocator, c: *Context, method: Method, path: []const u8, q: []const u8, body: []const u8) !answer.Answer {
+    // a change is started, merged or taken away from the checkout that serves
+    if (method == .post and eql(path, "change")) return changeRequest(arena, c, body);
+    const s = c.site;
     var opened = switch (try Workspace.open(s.io, arena, s.options.common)) {
         .ok => |w| w,
         .failed => |o| return refuse(arena, o.text),
     };
     defer opened.close();
     const ws = &opened;
-    if (method == .get and eql(path, "page")) return pageInfo(arena, s, ws, try param(arena, query, "file") orelse "");
-    if (method == .get and eql(path, "source")) return source(arena, s, ws, try param(arena, query, "file") orelse "");
-    if (method == .get and eql(path, "form")) return formOf(arena, s, ws, try param(arena, query, "id"), try param(arena, query, "type"));
+    if (method == .get and eql(path, "page")) return pageInfo(arena, c, ws, try query.param(arena, q, "file") orelse "");
+    if (method == .get and eql(path, "source")) return source(arena, s, ws, try query.param(arena, q, "file") orelse "");
+    if (method == .get and eql(path, "form")) return formOf(arena, s, ws, try query.param(arena, q, "id"), try query.param(arena, q, "type"));
     if (method != .post) return refuse(arena, "skein serve: no such request");
     const value = json.parseFromSliceLeaky(json.Value, arena, body, .{}) catch return refuse(arena, "skein serve: the request is not JSON");
-    if (eql(path, "source")) return writeSource(arena, s, ws, value);
-    if (eql(path, "change")) return switch (try saving.change(arena, s, ws, value)) {
-        .ok => |said| reply(arena, .{ .said = said }),
-        .failed => |why| refuse(arena, why),
-    };
+    if (eql(path, "source")) return writeSource(arena, c, ws, value);
+    if (eql(path, "approve")) return approveItem(arena, c, ws, value);
     if (eql(path, "check")) {
         const file = string(value, "file");
         if (try writable(arena, s, ws, file)) |why| return refuse(arena, why);
@@ -60,11 +65,11 @@ pub fn handle(arena: Allocator, s: *Site, method: Method, path: []const u8, quer
     }
     const p = json.parseFromValueLeaky(edit_form.Save, arena, value, .{ .ignore_unknown_fields = true }) catch return refuse(arena, "skein serve: a form's values, with its type");
     if (eql(path, "preview")) return preview(arena, s, ws, p);
-    if (eql(path, "save")) return save(arena, s, ws, p, string(value, "hash"));
+    if (eql(path, "save")) return save(arena, c, ws, p, string(value, "hash"));
     return refuse(arena, "skein serve: no such request");
 }
 
-fn pageInfo(arena: Allocator, s: *Site, ws: *Workspace, file: []const u8) !answer.Answer {
+fn pageInfo(arena: Allocator, c: *Context, ws: *Workspace, file: []const u8) !answer.Answer {
     const Info = struct { id: []const u8, inDocument: bool };
     var items: std.ArrayList(Info) = .empty;
     for (ws.graph.items) |*it| {
@@ -73,7 +78,7 @@ fn pageInfo(arena: Allocator, s: *Site, ws: *Workspace, file: []const u8) !answe
     var types: std.ArrayList([]const u8) = .empty;
     if (ws.items_read) for (ws.project.schema.types) |t| try types.append(arena, t.name);
     const editable = isSource(ws, file) and ws.project.readOnlySource(file) == null;
-    return reply(arena, .{ .editable = editable, .items = items.items, .types = types.items, .saving = try saving.state(arena, s, ws) });
+    return reply(arena, .{ .editable = editable, .items = items.items, .types = types.items, .saving = try saving.state(arena, c, ws), .signIn = c.sign_in });
 }
 
 fn source(arena: Allocator, s: *Site, ws: *Workspace, file: []const u8) !answer.Answer {
@@ -82,14 +87,15 @@ fn source(arena: Allocator, s: *Site, ws: *Workspace, file: []const u8) !answer.
     return reply(arena, .{ .text = text, .hash = &hashOf(text) });
 }
 
-fn writeSource(arena: Allocator, s: *Site, ws: *Workspace, value: json.Value) !answer.Answer {
+fn writeSource(arena: Allocator, c: *Context, ws: *Workspace, value: json.Value) !answer.Answer {
+    const s = c.site;
     const file = string(value, "file");
     if (try writable(arena, s, ws, file)) |why| return refuse(arena, why);
     if (try changed(arena, s, ws, file, string(value, "hash"))) |why| return refuse(arena, why);
-    const st = try saving.state(arena, s, ws);
+    const st = try saving.state(arena, c, ws);
     if (try saving.before(arena, st)) |r| return reply(arena, .{ .@"error" = r.message, .needsChange = r.needs_change });
     ws.root.writeFile(s.io, .{ .sub_path = file, .data = string(value, "text") }) catch return refuse(arena, try arena.print("skein serve: {s} cannot be written", .{file}));
-    const failed = try saving.after(arena, s, ws, st, &.{file}, try arena.print("Edit {s}", .{file}));
+    const failed = try saving.after(arena, c, st, &.{file}, try arena.print("Edit {s}", .{file}));
     return reply(arena, .{ .file = file, .warning = failed });
 }
 
@@ -112,18 +118,52 @@ fn preview(arena: Allocator, s: *Site, ws: *Workspace, p: edit_form.Save) !answe
     };
 }
 
-fn save(arena: Allocator, s: *Site, ws: *Workspace, p: edit_form.Save, hash: []const u8) !answer.Answer {
+fn save(arena: Allocator, c: *Context, ws: *Workspace, p: edit_form.Save, hash: []const u8) !answer.Answer {
+    const s = c.site;
     if (!p.new) {
         const item = ws.graph.find(p.id) orelse return refuse(arena, try arena.print("skein: there is no item '{s}'", .{p.id}));
         if (try writable(arena, s, ws, item.file)) |why| return refuse(arena, why);
         if (try changed(arena, s, ws, item.file, hash)) |why| return refuse(arena, why);
     }
-    const st = try saving.state(arena, s, ws);
+    const st = try saving.state(arena, c, ws);
     if (try saving.before(arena, st)) |r| return reply(arena, .{ .@"error" = r.message, .needsChange = r.needs_change });
     return switch (try item_form.write(s.io, arena, ws, p)) {
         .refused => |why| refuse(arena, why),
-        .written => |w| reply(arena, .{ .id = w.id, .file = w.file, .warning = try saving.after(arena, s, ws, st, &.{w.file}, try arena.print("{s} {s}", .{ if (p.new) "New" else "Edit", w.id })) }),
+        .written => |w| reply(arena, .{ .id = w.id, .file = w.file, .warning = try saving.after(arena, c, st, &.{w.file}, try arena.print("{s} {s}", .{ if (p.new) "New" else "Edit", w.id })) }),
     };
+}
+
+fn changeRequest(arena: Allocator, c: *Context, body: []const u8) !answer.Answer {
+    const value = json.parseFromSliceLeaky(json.Value, arena, body, .{}) catch return refuse(arena, "skein serve: the request is not JSON");
+    var opened = switch (try Workspace.open(c.main.io, arena, c.main.options.common)) {
+        .ok => |w| w,
+        .failed => |o| return refuse(arena, o.text),
+    };
+    defer opened.close();
+    return switch (try saving.change(arena, c, &opened, value)) {
+        .ok => |said| reply(arena, .{ .said = said }),
+        .failed => |why| refuse(arena, why),
+    };
+}
+
+/// `POST approve` (`{id, as}`): an approval of the item as it is, by the
+/// person signed in (git's user on this computer alone), in the role `as`
+/// where its type names roles, saved as an edit is
+fn approveItem(arena: Allocator, c: *Context, ws: *Workspace, value: json.Value) !answer.Answer {
+    const id = string(value, "id");
+    if (ws.graph.find(id) == null) return refuse(arena, try arena.print("skein: there is no item '{s}'", .{id}));
+    const st = try saving.state(arena, c, ws);
+    if (try saving.before(arena, st)) |r| return reply(arena, .{ .@"error" = r.message, .needsChange = r.needs_change });
+    const role = string(value, "as");
+    const out = try approve.run(c.site.io, arena, .{
+        .common = .{ .root = c.site.options.common.root },
+        .ids = &.{id},
+        .by = if (c.user) |u| u.login else null,
+        .as = if (role.len > 0) role else null,
+    });
+    if (out.status != .ok) return refuse(arena, out.text);
+    const warning = try saving.after(arena, c, st, &.{".skein/approvals"}, try arena.print("Approve {s}", .{id}));
+    return reply(arena, .{ .said = std.mem.trimEnd(u8, out.text, "\n"), .warning = warning });
 }
 
 const Shown = struct { severity: []const u8, line: u32 = 0, column: u32 = 0, message: []const u8 };
@@ -196,19 +236,6 @@ fn string(v: json.Value, key: []const u8) []const u8 {
     if (v != .object) return "";
     const x = v.object.get(key) orelse return "";
     return if (x == .string) x.string else "";
-}
-
-/// The value of `key` in a query (`a=1&b=2`), decoded
-fn param(arena: Allocator, query: []const u8, key: []const u8) !?[]const u8 {
-    var it = std.mem.splitScalar(u8, query, '&');
-    while (it.next()) |pair| {
-        const at = std.mem.findScalar(u8, pair, '=') orelse continue;
-        if (!eql(pair[0..at], key)) continue;
-        const raw = try arena.dupe(u8, pair[at + 1 ..]);
-        std.mem.replaceScalar(u8, raw, '+', ' ');
-        return std.Uri.percentDecodeInPlace(raw);
-    }
-    return null;
 }
 
 fn eql(a: []const u8, b: []const u8) bool {

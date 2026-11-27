@@ -38,7 +38,7 @@ editors = ["A. Person"]   # with "commit": who commits
 | `branch` | goes into a change, committed there. **Merge into** the branch merges it, with a merge commit, and deletes the branch. | In the interface, before it is merged. | Without a `[forge]`. |
 | `commit` | is a commit on `branch`. | After: a changed item loses its approval, and its approvers approve it again ([reviewing](reviewing.md#approvals)). | Never. |
 
-With a change, the bar at the bottom of each page says which change is checked out, and offers to merge, propose, leave or abandon it. With none, it lists the changes there are, and **Start a change** names a new one, in lowercase letters, digits and dashes (`fix-lexing`); a save when no change is checked out asks for its name. Each commit is the user's as git knows them (`git config user.name`). Without git, a save is written and not committed.
+Each change is worked on in a git worktree of its own, under the repository's git directory (`.git/skein/changes/NAME`), so the checkout that serves stays on `branch`, and several changes are edited at once. While a change is open, the pages show it: its files, rendered as they are in the change. The bar at the bottom of each page says which change is open, and offers to merge, propose, leave or abandon it. With none open, it lists the changes there are, and **Start a change** names a new one, in lowercase letters, digits and dashes (`fix-lexing`); a save when no change is open asks for its name. Each commit is by the person signed in or, on this computer alone, by git's user (`git config user.name`). When `branch` has an upstream, it is pulled before a change starts from it and pushed after a merge, or after each commit with `commit`. Without git, a save is written and not committed.
 
 ### What `check` warns of
 
@@ -51,6 +51,27 @@ A checkout cannot stop anyone from committing as they like, so Skein says when t
 
 A page remembers the file as it read it. If the file changed since (someone saved it in an editor, or a pull brought a change), **Save** writes nothing and says so: copy your change, close the box, and the page loads the file as it is now. While a box is open, the page does not load itself again, so nothing you typed is lost.
 
+## Approving an item
+
+An item whose type asks for approvals (`approval = [...]`, see [reviewing](reviewing.md#approvals)) has **Approve** in its form, with the roles to approve in where the type names them. It records an approval of the item as it is, as `skein approve` does, by the person signed in (on this computer alone, by git's user), and is saved as any edit is: in the open change, or as a commit.
+
 ## Who can reach it
 
-`skein serve` answers only on this computer (127.0.0.1, `--port N` for another port than 8080), and only for requests addressed to `127.0.0.1` or `localhost`. A change is written only for a request that carries skein's own header, which a page of another site cannot send. There is no sign-in: anyone who can use the computer can use it, as they can the files.
+By default `skein serve` answers only on this computer (127.0.0.1, `--port N` for another port than 8080), and only for requests addressed to `127.0.0.1` or `localhost`. A change is written only for a request that carries skein's own header, which a page of another site cannot send. There is no sign-in: anyone who can use the computer can use it, as they can the files.
+
+## For a team
+
+On a shared server, people sign in, and no forge is needed:
+
+```text
+skein serve --listen 0.0.0.0 --url https://reqs.example.com --sign-in proxy --proxy 10.0.0.2
+```
+
+| Option | What it does |
+| --- | --- |
+| `--listen ADDR` | The address it listens on; one other than this computer's own needs `--sign-in` and `--url`. |
+| `--url URL` | The address people reach it at, behind the proxy: requests for that host are answered, and the forge sends people back to it. |
+| `--sign-in proxy` | A reverse proxy in front (one that signs people in to the organization's single sign-on, such as oauth2-proxy) names the person in a header, `X-Forwarded-User` (`--user-header`), with their email in `X-Forwarded-Email` (`--email-header`). The header is believed only from the proxy's addresses, `--proxy IP`, by default this computer's. The proxy also gives HTTPS, which `skein serve` does not. |
+| `--sign-in forge` | People sign in with the project's forge (`[forge]`): GitHub, GitLab or Forgejo, through an OAuth app made there, whose callback is `URL/_skein/oauth`. Its id and secret are in `SKEIN_OAUTH_CLIENT_ID` and `SKEIN_OAUTH_CLIENT_SECRET`. A session lasts while the server runs. |
+
+Anyone who reaches the server reads the pages; changing or approving anything needs someone signed in (emanspeaks, 2026-11-27), and the pages offer to sign in when nobody is. Each person has their own open change, in its own worktree, and their commits and approvals carry their name: the forge's login, or the proxy's header. Whose approval counts is the type's `approvers`, by those names. The checkout the server serves from is its own: clone the repository for it, and let the server's pushes and pulls keep it and its upstream together.
