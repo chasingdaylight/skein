@@ -817,17 +817,13 @@ jobs:
             fi
           done
 
-      - name: Tag the tested commit
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$VERSION" -m "skein v$VERSION" "$SHA"
-          git push origin "v$VERSION"
-          (cd dist && sha256sum -- * > SHA256SUMS)
+      - name: The sums of the release files
+        run: (cd dist && sha256sum -- * > SHA256SUMS)
 
       # A detached GPG signature of SHA256SUMS (the public key is
       # SIGNING-KEY.asc) and build attestations of the files: each skipped
-      # while its repository variable is not true (#292)
+      # while its repository variable is not true (#292). Before the tag, so
+      # that a failure here leaves nothing to undo and the job can run again.
       - name: Sign and attest the release files
         uses: ./.github/actions/release-integrity
         with:
@@ -835,6 +831,13 @@ jobs:
           attest: ${{ vars.RELEASE_ATTESTATIONS }}
           gpg-key: ${{ secrets.RELEASE_GPG_KEY }}
           gpg-passphrase: ${{ secrets.RELEASE_GPG_PASSPHRASE }}
+
+      - name: Tag the tested commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "skein v$VERSION" "$SHA"
+          git push origin "v$VERSION"
 
       - name: Publish the release
         uses: softprops/action-gh-release@v3
