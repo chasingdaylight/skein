@@ -22,10 +22,13 @@ Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as
 
 The [quickstart](quickstart.md) starts a project from a template, writes a requirement, cites it from a test and publishes the documents, in about five minutes.
 
-Then two tutorials, each a small project from nothing to a working setup, every command run as shown:
+Then three tutorials, each a small project from nothing to a working setup, every command run as shown:
 
+- [A new project under NPR 7150.2D](tutorial-npr7150.md): from the `npr7150.2d` template to the software requirements review: classification, the safety-criticality determination, requirements traced up and down, results, the mapping matrix, maturity, and the documents delivered.
 - [Skein in a project that has code](tutorial-existing-code.md): requirements written down for a program that exists, cited by its code and tests; what is tested, what a change reaches, a site of it.
 - [Planning a project before the code](tutorial-planning.md): needs, requirements and the work that meets them, with people, a calendar, a schedule, a Gantt chart and a board.
+
+The [examples](examples.md) are small projects to read and copy from, each rendered as a site.
 
 ## The documentation
 
