@@ -91,6 +91,9 @@ Inline Markdown shall be rendered: emphasis and strong with `*` and `_` (not `_`
 %req[baseline.refusals]
 `skein baseline` shall refuse, and make no tag, when the project is not in a git repository, when the name cannot be a tag, when a tag of that name exists, when the project has changes that are not committed, and when `skein check` reports problems: a baseline is of a committed state without problems.
 
+%req[baselines]
+When the plan takes values from the forge (its work items' issues: assignees, a milestone and the day it is due, whether closed; `planning.forge-fields`), `skein baseline NAME` shall first write what the forge says of each to `.skein/baselines/NAME.toml`, commit that file alone, and tag that commit; with `--offline`, what the forge last said, and the file says so. It says how many issues it froze, and how many the forge said nothing of, which are not frozen. A project read as a baseline (an edition of it, `render --editions`) takes those values, not the forge's now; a baseline that froze nothing, or was made before, is read as before. (Design, section 6; issue #298.)
+
 %req[baseline.list]
 `skein baseline` without a name shall list the baselines, oldest first, with their dates: the tags whose message starts as a baseline's does. Other tags are not listed.
 

@@ -326,6 +326,7 @@ $ skein diff v1.0
 
 - The tag is annotated, and its message says what the project held: its number of items and its coverage.
 - It is refused while there are uncommitted changes, or while `skein check` reports problems: a baseline is a state others can build on.
+- Where the plan takes values from the forge (work items tied to issues: their assignees, milestone and its due day, whether closed), they are first written to `.skein/baselines/NAME.toml` and committed, and the baseline tags that commit, so it freezes the plan as the forge had it then. An edition of the baseline (`render --editions`) reads them from there. `--offline` freezes what the forge last said.
 - `skein diff` and `skein impact` compare against a baseline like any commit: what changed since v1.0, and what it reaches.
 - Without a name, `skein baseline` lists the baselines, oldest first. Ordinary tags are not listed.
 

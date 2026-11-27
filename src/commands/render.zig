@@ -114,7 +114,7 @@ fn editions(io: Io, arena: std.mem.Allocator, ws: *Workspace, options: cli.Rende
             },
         };
         defer snap.deinit();
-        var old = switch (try Workspace.open(io, arena, .{ .root = snap.path, .offline = true })) {
+        var old = switch (try Workspace.open(io, arena, .{ .root = snap.path, .offline = true, .baseline = b.name })) {
             .ok => |w| w,
             .failed => |outcome| {
                 try text.print(arena, "skein: edition {s} cannot be rendered:\n{s}", .{ b.name, outcome.text });

@@ -100,7 +100,8 @@ pub const usage =
     \\                    one pinned
     \\  --working         the same, with their files as they are, committed or not
     \\  --offline         the same commands, and pin: fetch nothing; a repository
-    \\                    by url is read from what its cache holds
+    \\                    by url is read from what its cache holds; schedule, load,
+    \\                    baseline: what the forge last said
     \\  --results FILE    trace, coverage, render, serve: test results besides the project's own
     \\                    (TOML, JSON, YAML, JUnit XML or TAP); may be given more
     \\                    than once
@@ -230,6 +231,9 @@ pub const Common = struct {
     offline: bool = false,
     /// files read as given here, not as they are on disk (`skein serve`)
     unsaved: []const Project.Unsaved = &.{},
+    /// the baseline the project is read as (an edition of it): its plan takes
+    /// the forge's values frozen then, not the forge's now
+    baseline: ?[]const u8 = null,
 };
 
 pub const TemplateCommand = struct {
@@ -797,7 +801,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
     }
     if (eql(name, "baseline")) {
-        if (try p.allow(&.{ "--root", "--message" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--message", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 1) return .{ .misuse = "baseline takes one name" };
         if (words.len == 0 and p.value("--message") != null) return .{ .misuse = "baseline: a message goes with a name" };
         return .{ .baseline = .{ .common = common, .name = if (words.len == 1) words[0] else null, .message = p.value("--message") } };

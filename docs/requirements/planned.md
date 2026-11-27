@@ -6,9 +6,6 @@ What `docs/design.md` commits Skein to and the code does not do yet, in the orde
 
 %req[render.site removed]
 
-%req[baselines planned]
-When a plan uses values the forge holds (dates, milestones), `skein baseline` shall first write them to a file under `.skein/baselines/`, commit it, and tag that commit. The tag itself is built. (Design, section 6; issue #298.)
-
 ## Editing
 
 %req[edit.commands removed]

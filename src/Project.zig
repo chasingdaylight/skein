@@ -51,6 +51,9 @@ workflow: Workflow = .{},
 /// files whose text is given in place of what is on disk: what is typed
 /// in a page of `skein serve` and not saved yet
 unsaved: []const Unsaved = &.{},
+/// the baseline the project is read as, whose frozen forge values its plan
+/// takes (planning/frozen.zig); null for the files as they are
+baseline: ?[]const u8 = null,
 
 pub const Unsaved = struct { file: []const u8, text: []const u8 };
 
