@@ -1,0 +1,10 @@
+# The template's rule type, with one attribute of this project's: a file of the
+# project's own replaces the template's of the same name.
+description = "A rule of the language"
+categories = ["syntax", "legality", "static", "dynamic"]
+
+# which stage of the language the rule belongs to
+[attributes.stage]
+values = ["core", "full"]
+required = true
+normative = true

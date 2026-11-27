@@ -6,23 +6,6 @@ What `docs/design.md` commits Skein to and the code does not do yet, in the orde
 
 %req[render.site removed]
 
-%req[standards.external]
-A standard the project must comply with shall be an item set of its own, read-only, which the project's items link to, with applicability by profile and with waivers and deviations as item types. (Design, section 4.7.) Built: `standards.read-only`, `standards.waivers`, profiles, and generated matrices.
-
-%req[baselines planned]
-When a plan uses values the forge holds (dates, milestones), `skein baseline` shall first write them to a file under `.skein/baselines/`, commit it, and tag that commit. The tag itself is built. (Design, section 6.)
-
-%req[forge.adapter planned]
-An adapter per forge shall resolve references to issues and pull requests, report `check` and `coverage` in the forge's CI, and record the approvals of a merged change. (Design, section 7.) GitHub's and GitLab's are built (`docs/requirements/forge.md`); Forgejo's is to come.
-
-%req[links.repositories]
-Items, code and tests of another repository shall be citable by a qualified reference, checked against a recorded commit of that repository. (Design, section 10.5.)
-
-## Planning
-
-%req[planning.forge planned]
-What a forge holds about an issue shall stay there and be read through the adapter; `.skein/` holds only what the forge lacks. A what-if plan is a branch whose deviations from the forge are kept as an overlay, and a full mirror is an option. (Design, section 10.4.) Built: GitHub's planning fields of issues (`planning.forge-fields`) and overlays and `skein apply` (`planning.overlay`, `planning.apply`); the full mirror is to come.
-
 ## Editing
 
 %req[edit.commands removed]

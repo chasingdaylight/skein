@@ -193,13 +193,49 @@ test "results given on the command line, of another implementation, in JSON and 
     try write(f.tmp.dir, "run2.json", "[{\"file\": \"tests/one.zig\", \"result\": \"pass\", \"implementation\": \"cesium1\"}]");
     try write(f.tmp.dir, "run3.yaml", "result:\n  - items:\n      - lex.b\n      - lex.d\n    result: pass\n    implementation: cesium1\n");
     const files = [_][]const u8{ try std.Io.Dir.path.join(a, &.{ f.root, "run2.json" }), try std.Io.Dir.path.join(a, &.{ f.root, "run3.yaml" }) };
-    const out = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .results = &files })).text;
+    const out = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .results = .{ .files = &files } })).text;
     try expectContains(out, "results (cesium0 0.3.1): 2 of 5 passed");
     try expectContains(out, "results (cesium1): 3 of 5 passed, 0 failed, 2 untested\n  untested:\n    lex.c\n    tp.inspect\n");
 
     try write(f.tmp.dir, "bad.toml", "[[result]]\ntest = \"x\"\nresult = \"maybe\"\n");
     const bad = [_][]const u8{try std.Io.Dir.path.join(a, &.{ f.root, "bad.toml" })};
-    const refused = try coverage_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .results = &bad });
+    const refused = try coverage_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .results = .{ .files = &bad } });
     try testing.expectEqual(.problems, refused.status);
     try expectContains(refused.text, "result 1: 'maybe' is not pass, fail or skip");
+}
+
+// req: results.junit-tap
+test "JUnit XML and TAP given on the command line, with the implementation that produced them" {
+    var f: Fixture = undefined;
+    try f.init();
+    defer f.deinit();
+    const a = f.arena.allocator();
+    try write(f.tmp.dir, "run.xml",
+        \\<testsuites>
+        \\  <testsuite name="lex" file=".\tests\one.zig">
+        \\    <testcase name="a"/>
+        \\  </testsuite>
+        \\  <testsuite name="more">
+        \\    <testcase name="b" file="tests/two.zig"><failure message="expected 2"/></testcase>
+        \\  </testsuite>
+        \\</testsuites>
+        \\
+    );
+    try write(f.tmp.dir, "run.tap",
+        \\TAP version 14
+        \\1..2
+        \\ok 1 - c by hand
+        \\  ---
+        \\  item: tp.inspect
+        \\  ...
+        \\ok 2 - d # SKIP not yet
+        \\  ---
+        \\  items: [lex.d]
+        \\  ...
+        \\
+    );
+    const files = [_][]const u8{ try std.Io.Dir.path.join(a, &.{ f.root, "run.xml" }), try std.Io.Dir.path.join(a, &.{ f.root, "run.tap" }) };
+    const given: @import("../Results.zig").Given = .{ .files = &files, .implementation = "cesium2", .version = "0.1.0" };
+    const out = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = f.root }, .results = given })).text;
+    try expectContains(out, "results (cesium2 0.1.0): 2 of 5 passed, 2 failed, 1 untested\n");
 }

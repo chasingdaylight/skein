@@ -34,6 +34,30 @@ pub const Approval = struct {
     fingerprint: []const u8,
     /// the role it was given in, where the type names roles
     as: ?[]const u8 = null,
+    /// what shows who gave it, besides git's record (#288)
+    evidence: Evidence = .{},
+};
+
+/// The electronic signature of an approval given in `skein serve` or on
+/// the forge: how its approver was signed in, or the forge's own record
+pub const Evidence = struct {
+    /// in `skein serve`: how the approver was signed in
+    signed_in: ?SignedIn = null,
+    /// on the forge: the address of the pull request it was given in
+    pull: ?[]const u8 = null,
+    /// on the forge: whether it asked the reviewer to sign in again to approve
+    reauth: bool = false,
+};
+
+pub const SignedIn = struct {
+    /// `oidc:ISSUER`, `forge:KIND`, `proxy`
+    provider: []const u8,
+    /// who the provider says they are
+    subject: []const u8,
+    /// when they signed in, as RFC 3339
+    at: []const u8,
+    /// whether they signed in again to give this approval
+    again: bool = false,
 };
 
 /// The approvals of `id`, in the order of their approvers
@@ -57,16 +81,17 @@ pub fn isCurrent(arena: std.mem.Allocator, graph: *const Graph, schema: *const S
 
 /// Records that `by` approved `item` as it is now, on `on`, in place of
 /// an earlier approval by the same person
-pub fn put(self: *Approvals, arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema, item: *const Item, by: []const u8, on: toml.Date, as: ?[]const u8) std.mem.Allocator.Error!void {
+pub fn put(self: *Approvals, arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema, item: *const Item, by: []const u8, on: toml.Date, as: ?[]const u8, evidence: Evidence) std.mem.Allocator.Error!void {
     const fp = try arena.dupe(u8, &try fingerprint.of(arena, graph, schema, item));
     for (self.all.items) |*a| {
         if (!std.mem.eql(u8, a.item, item.id) or !std.mem.eql(u8, a.by, by)) continue;
         a.on = on;
         a.fingerprint = fp;
         a.as = as;
+        a.evidence = evidence;
         return;
     }
-    try self.all.append(arena, .{ .item = item.id, .by = by, .on = on, .fingerprint = fp, .as = as });
+    try self.all.append(arena, .{ .item = item.id, .by = by, .on = on, .fingerprint = fp, .as = as, .evidence = evidence });
 }
 
 /// Who may approve items of `item_type` in `role` (null for the plain
@@ -122,6 +147,35 @@ pub fn missingRoles(self: *const Approvals, arena: std.mem.Allocator, graph: *co
     return out.items;
 }
 
+/// With roles that approve in order: the first current approval given
+/// before a role before it approved what the item says now; null when none was
+pub fn outOfOrder(self: *const Approvals, arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema, item_type: *const Schema.ItemType, item: *const Item) std.mem.Allocator.Error!?[]const u8 {
+    const approvals = try self.of(arena, item.id);
+    var earliest: std.ArrayList(?toml.Date) = .empty;
+    for (item_type.approval_roles) |role| {
+        var first: ?toml.Date = null;
+        for (approvals) |a| {
+            if (a.as == null or !std.mem.eql(u8, a.as.?, role) or !counts(item_type, a) or !try isCurrent(arena, graph, schema, a, item)) continue;
+            if (first == null or before(a.on, first.?)) first = a.on;
+        }
+        try earliest.append(arena, first);
+    }
+    for (item_type.approval_roles, earliest.items, 0..) |role, on, i| {
+        const this = on orelse continue;
+        for (item_type.approval_roles[0..i], earliest.items[0..i]) |prior, prior_on| {
+            if (prior_on == null) return try arena.print("approved as {s} before it was as {s}, whose approval comes first", .{ role, prior });
+            if (before(this, prior_on.?)) return try arena.print("approved as {s} on {d:0>4}-{d:0>2}-{d:0>2}, before it was as {s}, whose approval comes first", .{ role, this.year, this.month, this.day, prior });
+        }
+    }
+    return null;
+}
+
+fn before(a: toml.Date, b: toml.Date) bool {
+    if (a.year != b.year) return a.year < b.year;
+    if (a.month != b.month) return a.month < b.month;
+    return a.day < b.day;
+}
+
 pub fn fileOf(arena: std.mem.Allocator, item: *const Item) ![]const u8 {
     return record_files.fileOf(arena, dir, item);
 }
@@ -150,7 +204,7 @@ fn read(self: *Approvals, arena: std.mem.Allocator, table: *const toml.Table) !v
             const fp = record.table.get("fingerprint") orelse return error.NotRecords;
             if (on != .datetime or on.datetime.date == null or fp != .string) return error.NotRecords;
             const as: ?[]const u8 = if (record.table.get("as")) |v| (if (v == .string) v.string else return error.NotRecords) else null;
-            try self.all.append(arena, .{ .item = item, .by = by, .on = on.datetime.date.?, .fingerprint = fp.string, .as = as });
+            try self.all.append(arena, .{ .item = item, .by = by, .on = on.datetime.date.?, .fingerprint = fp.string, .as = as, .evidence = try evidenceOf(record.table) });
         }
     }
 }
@@ -164,6 +218,10 @@ pub fn check(self: *const Approvals, arena: std.mem.Allocator, schema: *const Sc
         if (!Schema.names.contains(item_type.approval, status)) continue;
         // every role the type names must have approved it as it is
         if (item_type.approval_roles.len > 0) {
+            if (item_type.approval_in_order) if (try self.outOfOrder(arena, graph, schema, item_type, item)) |why| {
+                try report.add(item.file, item.line, 1, "{s}: {s}", .{ item.id, why });
+                continue;
+            };
             const missing = try self.missingRoles(arena, graph, schema, item_type, item);
             if (missing.len > 0) try report.add(item.file, item.line, 1, "{s}: the status '{s}' needs an approval of what the item says now as {s} ('skein approve {s} --as ROLE')", .{ item.id, status, try std.mem.join(arena, ", ", missing), item.id });
             continue;
@@ -186,6 +244,36 @@ pub fn check(self: *const Approvals, arena: std.mem.Allocator, schema: *const Sc
     }
 }
 
+/// The line that records `a`, of the item `id`, as the files hold it
+pub fn recordLine(arena: std.mem.Allocator, id: []const u8, a: Approval) std.mem.Allocator.Error![]const u8 {
+    const e = record_files.escape;
+    var extra: std.ArrayList(u8) = .empty;
+    if (a.as) |r| try extra.print(arena, ", as = \"{s}\"", .{try e(arena, r)});
+    if (a.evidence.signed_in) |si| try extra.print(arena, ", signed_in = {{ provider = \"{s}\", subject = \"{s}\", at = \"{s}\", again = {} }}", .{ try e(arena, si.provider), try e(arena, si.subject), try e(arena, si.at), si.again });
+    if (a.evidence.pull) |url| try extra.print(arena, ", pull = \"{s}\", reauth = {}", .{ try e(arena, url), a.evidence.reauth });
+    return arena.print("\"{s}\".\"{s}\" = {{ on = {d:0>4}-{d:0>2}-{d:0>2}, fingerprint = \"{s}\"{s} }}", .{
+        id, try e(arena, a.by), a.on.year, a.on.month, a.on.day, a.fingerprint, extra.items,
+    });
+}
+
+/// The evidence a record keeps, when it keeps any
+fn evidenceOf(record: *const toml.Table) !Evidence {
+    var out: Evidence = .{};
+    if (record.get("signed_in")) |v| {
+        if (v != .table) return error.NotRecords;
+        const t = v.table;
+        const provider = t.get("provider") orelse return error.NotRecords;
+        const subject = t.get("subject") orelse return error.NotRecords;
+        const at = t.get("at") orelse return error.NotRecords;
+        if (provider != .string or subject != .string or at != .string) return error.NotRecords;
+        const again = if (t.get("again")) |g| (if (g == .boolean) g.boolean else return error.NotRecords) else false;
+        out.signed_in = .{ .provider = provider.string, .subject = subject.string, .at = at.string, .again = again };
+    }
+    if (record.get("pull")) |v| out.pull = if (v == .string) v.string else return error.NotRecords;
+    if (record.get("reauth")) |v| out.reauth = if (v == .boolean) v.boolean else return error.NotRecords;
+    return out;
+}
+
 /// Writes the approval files named in `files` again, from the approvals
 /// held: those of items that still exist.
 pub fn write(self: *const Approvals, io: Io, arena: std.mem.Allocator, root: Io.Dir, graph: *const Graph, files: []const []const u8) !void {
@@ -195,10 +283,7 @@ pub fn write(self: *const Approvals, io: Io, arena: std.mem.Allocator, root: Io.
         for (self.all.items) |a| {
             const item = graph.find(a.item) orelse continue;
             if (!std.mem.eql(u8, try fileOf(arena, item), file)) continue;
-            const as = if (a.as) |r| try arena.print(", as = \"{s}\"", .{try record_files.escape(arena, r)}) else "";
-            try lines.append(arena, try arena.print("\"{s}\".\"{s}\" = {{ on = {d:0>4}-{d:0>2}-{d:0>2}, fingerprint = \"{s}\"{s} }}\n", .{
-                item.id, try record_files.escape(arena, a.by), a.on.year, a.on.month, a.on.day, a.fingerprint, as,
-            }));
+            try lines.append(arena, try arena.print("{s}\n", .{try recordLine(arena, item.id, a)}));
         }
         try record_files.write(io, arena, root, file, header, lines.items);
     }
@@ -208,4 +293,6 @@ test {
     _ = @import("_test/approvals.zig");
     _ = @import("_test/roles.zig");
     _ = @import("_test/approvers.zig");
+    _ = @import("_test/signatures.zig");
+    _ = @import("signatures.zig");
 }

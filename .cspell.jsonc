@@ -14,6 +14,8 @@
     "editors/vscode/package-lock.json",
     // the standards' own text, as the templates carry it, and what it was taken from
     "templates/*/project/standards/**",
+    // the same text, written by skein into the examples that use the templates
+    "examples/*/standards/**",
     // code of other projects, as they published it
     "vendor/mermaid/**",
     "tools/npr7150/*.csv"

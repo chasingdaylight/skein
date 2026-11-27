@@ -1,0 +1,118 @@
+# Skein's GitHub Action (#266): checks a project's Skein documents and
+# collects its delivered documents as PDFs, with the coverage, in one archive,
+# engineering-docs.zip, kept as an artifact of the run.
+#
+#   - uses: chasingdaylight/skein@v0.2.0
+#     with:
+#       root: .          # the project, from the repository's root
+#
+# It gets Skein (the release named by `version`, else the action's own tag,
+# else the latest), runs `skein check`, renders each controlled document (its
+# front matter gives `document` and `revision`) as one HTML file
+# (`skein render --format document --controlled`), prints each to PDF with
+# the Chrome the runner has, adds `skein coverage` as Markdown and JSON, and
+# zips them. `skein init` writes a workflow that uses it.
+name: Skein engineering documents
+description: Check a project's Skein documents and collect them as PDFs in engineering-docs.zip
+branding:
+  icon: book
+  color: orange
+
+inputs:
+  root:
+    description: The project's directory, from the repository's root
+    default: "."
+  version:
+    description: The Skein release to use (0.2.0); the action's own tag when empty, else the latest
+    default: ""
+  skein:
+    description: A skein program to use in place of a release (a path), as Skein's own CI does
+    default: ""
+  name:
+    description: The archive's name, without .zip
+    default: engineering-docs
+  check:
+    description: Whether problems that skein check reports fail the run
+    default: "true"
+
+outputs:
+  archive:
+    description: The path of the archive
+    value: ${{ steps.zip.outputs.archive }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get Skein
+      id: get
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        ACTION_REF: ${{ github.action_ref }}
+        GIVEN: ${{ inputs.skein }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if [ -n "$GIVEN" ]; then
+          echo "skein=$(cd "$(dirname "$GIVEN")" && pwd)/$(basename "$GIVEN")" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        v=${VERSION#v}
+        if [ -z "$v" ] && [[ "$ACTION_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then v=${ACTION_REF#v}; fi
+        if [ -z "$v" ]; then v=$(gh release view --repo chasingdaylight/skein --json tagName --jq .tagName); v=${v#v}; fi
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64) target=x86_64-linux ;;
+          Linux-ARM64) target=aarch64-linux ;;
+          macOS-X64) target=x86_64-macos ;;
+          macOS-ARM64) target=aarch64-macos ;;
+          *) echo "::error::no Skein package for $RUNNER_OS on $RUNNER_ARCH"; exit 1 ;;
+        esac
+        dir="$RUNNER_TEMP/skein"
+        mkdir -p "$dir"
+        gh release download "v$v" --repo chasingdaylight/skein --pattern "skein-v$v-$target.tar.gz" --dir "$dir"
+        tar -xzf "$dir/skein-v$v-$target.tar.gz" -C "$dir"
+        echo "skein=$dir/skein-v$v-$target/bin/skein" >> "$GITHUB_OUTPUT"
+
+    - name: Check the documents
+      shell: bash
+      working-directory: ${{ inputs.root }}
+      env:
+        SKEIN: ${{ steps.get.outputs.skein }}
+        FAIL: ${{ inputs.check }}
+      run: |
+        if ! "$SKEIN" check --format github; then
+          [ "$FAIL" = true ] && exit 1
+        fi
+        "$SKEIN" coverage --markdown >> "$GITHUB_STEP_SUMMARY"
+
+    - name: The documents as PDFs, in one archive
+      id: zip
+      shell: bash
+      working-directory: ${{ inputs.root }}
+      env:
+        SKEIN: ${{ steps.get.outputs.skein }}
+        NAME: ${{ inputs.name }}
+      run: |
+        out="$RUNNER_TEMP/$NAME"
+        html="$RUNNER_TEMP/$NAME-html"
+        rm -rf "$out" "$html"
+        mkdir -p "$out"
+        "$SKEIN" render --format document --controlled --out "$html"
+        chrome=$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)
+        if [ -z "$chrome" ]; then echo "::error::no Chrome or Chromium on the runner to print the documents"; exit 1; fi
+        count=0
+        for f in "$html"/*.html; do
+          [ -e "$f" ] || continue
+          "$chrome" --headless --disable-gpu --no-sandbox --no-pdf-header-footer --print-to-pdf="$out/$(basename "${f%.html}").pdf" "file://$f" 2> /dev/null
+          count=$((count + 1))
+        done
+        cp "$html/documents.tsv" "$out/"
+        "$SKEIN" coverage --markdown > "$out/coverage.md"
+        "$SKEIN" coverage --json > "$out/coverage.json"
+        (cd "$out" && zip -q -r "$RUNNER_TEMP/$NAME.zip" .)
+        echo "archive=$RUNNER_TEMP/$NAME.zip" >> "$GITHUB_OUTPUT"
+        echo "$count documents in $NAME.zip" | tee -a "$GITHUB_STEP_SUMMARY"
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ steps.zip.outputs.archive }}

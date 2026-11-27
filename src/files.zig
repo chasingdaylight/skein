@@ -71,3 +71,12 @@ test "files are listed in order, without caches and hidden directories" {
     try testing.expectEqualStrings("other/o.zig", everywhere[0]);
     try testing.expectEqualStrings("top.c", everywhere[3]);
 }
+
+/// Writes `data` to `path` (from `root`) when there is no file there; false
+/// when there is one, which is left as it is
+pub fn writeNew(io: Io, root: Io.Dir, path: []const u8, data: []const u8) !bool {
+    if (root.access(io, path, .{})) |_| return false else |_| {}
+    if (Io.Dir.path.dirnamePosix(path)) |d| try root.createDirPath(io, d);
+    try root.writeFile(io, .{ .sub_path = path, .data = data });
+    return true;
+}

@@ -5,10 +5,13 @@ The user documentation is in `docs/commands.md`.
 ## The command line
 
 %req[cli.commands]
-Skein shall be one program that takes a command as its first argument. Without a command, and for `help`, it prints the commands and options. An unknown command is reported by name.
+Skein shall be one program that takes a command as its first argument. Without a command, and for `help`, `--help` or `-h`, it prints the commands and options; `version` and `--version` print Skein's version. An unknown command is reported by name.
 
 %req[cli.options]
 An unknown option, an option that does not belong to the command, and an option that is missing its value shall each be reported by name, and the command shall do nothing.
+
+%req[cli.exclusive]
+Options that cannot go together, and an option that would be ignored without another, shall be refused, and the command shall do nothing: `--current` with `--working`; `--json` with `--markdown`; `--alias` with `--no-alias`; `review` and `clear` with both IDs and `--all`, or neither; `baseline --message` without a name; `impact` with more than one commit; `render --controlled` without `--format document`; `render --edit` without `--format html` and `--wasm`, and `--wasm` without `--edit`; `approve --from-pull-request` with items, `--by`, `--on`, `--as` or `--sign` (the number may be written `#12`); `lsp` with anything but `--stdio`, which editors pass; `serve --sign-in forge` without `--url`, `--sign-in oidc` without `--issuer` and `--url`, and a `--listen` or `--port` that is not an address or a port. (`principle.no-silent-mistakes`.)
 
 ## Trace
 
@@ -37,6 +40,9 @@ With `--profile`, only the items of that profile shall be counted.
 
 %req[coverage.reports]
 Coverage shall report and not fail: the exit status is 0 whatever the numbers are.
+
+%req[coverage.json]
+With `--json`, `skein coverage` shall give its counts and lists as JSON, the same numbers its text gives: for each expectation, what is covered and what is not, for tools and agents (the MCP server's `coverage` tool gives it so).
 
 %req[coverage.markdown]
 With `--markdown`, `skein coverage` shall give the same counts as one Markdown table, followed for each expectation by the list of the items that are not covered, in a section that is folded until opened. It is meant for the summary of a CI job or a comment on a pull request.
@@ -85,13 +91,16 @@ Inline Markdown shall be rendered: emphasis and strong with `*` and `_` (not `_`
 %req[baseline.refusals]
 `skein baseline` shall refuse, and make no tag, when the project is not in a git repository, when the name cannot be a tag, when a tag of that name exists, when the project has changes that are not committed, and when `skein check` reports problems: a baseline is of a committed state without problems.
 
+%req[baselines]
+When the plan takes values from the forge (its work items' issues: assignees, a milestone and the day it is due, whether closed; `planning.forge-fields`), `skein baseline NAME` shall first write what the forge says of each to `.skein/baselines/NAME.toml`, commit that file alone, and tag that commit; with `--offline`, what the forge last said, and the file says so. It says how many issues it froze, and how many the forge said nothing of, which are not frozen. A project read as a baseline (an edition of it, `render --editions`) takes those values, not the forge's now; a baseline that froze nothing, or was made before, is read as before. (Design, section 6; issue #298.)
+
 %req[baseline.list]
 `skein baseline` without a name shall list the baselines, oldest first, with their dates: the tags whose message starts as a baseline's does. Other tags are not listed.
 
 ## Examples
 
 %req[examples.command]
-`skein examples --out DIR` shall write the code of each example that is not removed to a file of its own in `DIR`, named after its ID with the extension the example type gives for its language (else the language itself), and `examples.json`: for each, its ID, file, language, whether it must be accepted or rejected, the items it shows (its links of the type's link type, or all its links when the type gives none), and its source file and line. Skein runs none of them.
+`skein examples --out DIR` shall write the code of each example that is not removed to a file of its own in `DIR`, named after its ID with the extension the example type gives for its language (else the language itself), and `examples.json`: for each, its ID, file, language, whether it must be accepted or rejected, the items it shows (its links of the type's link type, or all its links when the type gives none), its source file and line, and the messages it must give (`examples.messages`; none when the type names no `message`). Skein runs none of them.
 
 ## Export
 
@@ -103,6 +112,9 @@ Inline Markdown shall be rendered: emphasis and strong with `*` and `_` (not `_`
 
 %req[export.profile]
 With `--profile`, an export shall hold only the items of that profile, with their links and citations.
+
+%req[export.reqif]
+`skein export reqif` shall give the items as ReqIF 1.2 (OMG), for DOORS and other requirements tools: a spec object type per item type, with string attributes for the ID, the category, status and verification method where the type has them, and each declared attribute, and an XHTML attribute `ReqIF.Text` for the text (a paragraph to each block; the name DOORS and Jama Connect take for an object's text); a spec object per item; a spec relation type per link type and a spec relation per link between exported items; and a specification per document (an item file's directory, for items of their own), its items in order with their parts under them. Identifiers come from the IDs, so that the export of a later commit updates the same objects; `LAST-CHANGE` is the time of the last commit of the item's file, or of the last commit, or a fixed time outside a repository, so that the same files give the same bytes. (Issue #102.)
 
 ## Render
 
@@ -118,8 +130,17 @@ Each reference, in the text of an item or in narrative text, shall be replaced b
 %req[render.markdown.item-files]
 A rendered item file shall start with YAML front matter that gives the ID as the title, in place of the TOML front matter, followed by the category and status when the item has them, and the text. A file in a source of item files that is not an item is written unchanged.
 
+%req[render.controlled]
+With `--controlled`, `skein render --format document` shall write only the controlled documents (their front matter gives `document` and `revision`), each named after its identifier and revision (`SE-PLAN-B.html`), and `documents.tsv` listing each file, identifier, revision, title and source. (Issue #266.)
+
+%req[ci.engineering-docs]
+Skein shall have a GitHub Action (`action.yml` at the root of its repository) that gets a release of Skein (or a program it is given), runs `skein check` (failing the run on problems unless told not to) and `skein coverage`, renders the controlled documents (`render.controlled`), prints each to PDF with the runner's Chrome, and keeps them, with `documents.tsv` and the coverage as Markdown and JSON, in one archive (`engineering-docs.zip`) as an artifact of the run. `skein init` shall write a workflow that uses it (`.github/workflows/skein.yml` at the top of the repository) when the repository's `origin` is on GitHub and there is none yet. (Issue #266.)
+
+%req[render.editions]
+With `--editions`, `skein render` shall also render each baseline, from the files of its commit, into `DIR/editions/NAME/` in the same format, without results, and write a page there (`index.md`, or `index.html` for the HTML formats) that lists the files as they are now and then the baselines, newest first, with their dates and links; a baseline that cannot be rendered is said so and left out. (Issue #103; design section 8.)
+
 %req[render.markdown.output]
-`skein render` shall create `DIR` when it does not exist, shall not change any file of the project, and shall say how many files or pages it wrote. Without `--out` it is refused. The formats are `markdown` (the default) and `html`.
+`skein render` shall create `DIR` when it does not exist, shall not change any file of the project, and shall say how many files or pages it wrote. Without `--out` it is refused. The formats are `markdown` (the default), `html` (`render.site.pages`) and `document` (`render.documents`).
 
 %req[render.site.pages]
 `skein render --format html --out DIR` shall write each document and item file of every source as an HTML page under its own path, with `.html` for `.md`: its markers and references rendered as `render.markdown` gives them, then as HTML, links to `.md` files made links to the pages, the first heading of level 1 (or the ID of an item file) as its title, and a navigation of all the pages. The images and other files of the sources (`.png`, `.svg`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.pdf`, `.css`) are copied beside them.
@@ -128,7 +149,43 @@ A rendered item file shall start with YAML front matter that gives the ID as the
 The site shall have a front page that lists its pages with their titles and files, and a page of all the items with, for each, its type, category and status, a link to where it is, the items that link to it with the link type, the items whose text refers to it, and how often narrative text mentions it.
 
 %req[render.site.relative]
-Every link and every reference to a file in the site shall be relative, and nothing shall be loaded from another address: the styles are in each page. So the site can be served under any address, or opened from disk.
+Every link and every reference to a file in the site shall be relative, and nothing shall be loaded from another address: the styles are in each page, and follow the reader's light or dark setting. So the site can be served under any address, or opened from disk. The one exception is the edit mode's saving on the forge (`serve.static-forge`), which asks the forge's API when the person saves, and only then.
+
+%req[serve.site]
+`skein serve [--port N]` shall serve the site `render.site.pages` writes, rendered in memory from the project's files, on this computer by default (127.0.0.1, port 8080 by default), or for a team on another address (`serve.sign-in`), until it is stopped. It takes `render`'s `--profile`, `--results`, `--implementation`, `--implementation-version`, and the options for other repositories (`--current`, `--working`, `--offline`). Before it answers for a page, it shall render the site again when the project's files have changed since it last did (their paths, sizes and times of change, without git's own files), and each page shall ask every second whether they have and load itself again when they have. A configuration or schema with problems shall be a page that says them, served until they are fixed. It shall write no file but what is saved from a page (`serve.edit`). (Issue #278; #105.)
+
+%req[serve.edit]
+Each page of `skein serve` of a document or item file shall offer to edit the file's Markdown, and each item on a page, and a new item, in a form built from its type as the language server's forms are: its category, status, verification method, attributes and links, and for a new item its type, ID, text, and the document it goes at the end of. A save shall write the file, or the values into the item's marker or front matter, as an editor's form does, or start the new item as `skein new` does. A file of a read-only source, or that is not a file of a source, shall not be written; nor shall a file that changed since the page read it, which the page says, nothing being saved. While a form or file is open, the page shall not load itself again. (Issue #279; #105.)
+
+%req[serve.check]
+While a file or a form is edited in `skein serve`, the page shall show what `skein check` finds with the file as typed, or the item as the form would write it, without saving it: the problems of that file with their lines, and how many the other files have. (Issue #279.)
+
+%req[serve.save]
+A save from `skein serve` shall reach git as the project's `[serve] save` says (`pull-request` by default where the project names its forge, `branch` where it does not; emanspeaks, 2026-11-27). With `commit`, each save shall be a commit, of the files it wrote, on the branch changes go to (`[serve] branch`, or the branch checked out when it started). With `branch` or `pull-request`, a save shall go into a change, a branch `edit/NAME` started from that branch, and be committed there; the page shall offer to start a change when none is checked out, to open, leave and abandon one, and to merge it into the branch (`branch`) or to push it and open a pull request on the forge (`pull-request`). A change is named in lowercase letters, digits and dashes, and a save when none is open asks for its name; merging a change makes a merge commit (`--no-ff`, "Merge change NAME") and deletes its branch. Without git, or in a directory git ignores (another's repository), a save shall be written and not committed; a save that changes nothing shall commit nothing. (Issue #280.)
+
+%req[serve.save.warnings]
+None of the ways of saving can be enforced in a checkout, so `skein check` shall warn where one was not followed, from the commit that set `[serve] save`, and refuse nothing. With `commit` and `[serve] editors`, it warns of commits to the sources by anyone not listed. With `branch` or `pull-request`, it warns of commits straight on the branch changes go to that were not merged from a change; a squashed pull request, `(#N)` at the end of its subject, counts as merged. (Issue #280.)
+
+%req[serve.team]
+`skein serve` shall keep each change in a git worktree of its own, under the repository's git directory (`skein/changes/NAME`), so that the checkout that serves stays on the branch changes go to and several people's changes are edited at once, each person with their own open change, whose site the pages show. Commits and approvals made from its pages shall carry the name of the person signed in, or git's user on this computer alone. An item whose type asks for approvals shall be approved from its form, as `skein approve` approves it, and saved as an edit is. When the branch changes go to has an upstream, it shall be pulled before a change starts from it and pushed after a merge or a commit to it. (Issue #281.)
+
+%req[serve.sign-in]
+`skein serve --listen ADDR` on an address other than this computer's own shall be refused without `--sign-in` and `--url`. With `--sign-in proxy`, the person is the one a header names (`X-Forwarded-User` and `X-Forwarded-Email`, or the headers `--user-header` and `--email-header` name), believed only from the proxy's addresses (`--proxy`, this computer's by default). With `--sign-in forge`, people sign in with the project's forge (GitHub, GitLab, Forgejo) through OAuth's authorization code flow, coming back to `URL/_skein/oauth`, the app's id and secret taken from `SKEIN_OAUTH_CLIENT_ID` and `SKEIN_OAUTH_CLIENT_SECRET`, a `state` that only a sign-in begun there is accepted with, and a session kept in an HTTP-only cookie for as long as the server runs. Anyone shall read the pages; a request that changes or approves anything shall be refused unless someone is signed in, and the pages offer to sign in when nobody is (emanspeaks, 2026-11-27, #288). (Issue #281.)
+
+%req[serve.approve-sign-in]
+`skein serve --sign-in oidc --issuer URL` shall sign people in with an OpenID Connect provider found by its discovery document, reading who they are and when they signed in from the ID token the token endpoint gives. With `[serve] approve_sign_in = "again"`, approving an item whose approval must be signed shall send the person to sign in again (`prompt=login`, `max_age=0`) unless they did in the last five minutes for no other approval; a sign-in the provider says is older is refused. `skein serve` shall refuse to start with that setting and a sign-in that cannot be asked for again. (Issue #288.)
+
+%req[serve.static-edit]
+`skein render --format html --edit --wasm FILE` shall make pages that edit the project's files with no server: skein built for WebAssembly (`zig build wasm`; a release's `skein-vVERSION-wasm32-wasi.wasm`), the project's text files that `check` reads (its configuration and schema, sources, places that cite, results), and the scripts that run skein in the page over those files go into the site under `_skein/`, and every page loads them. The pages shall edit files and items as `skein serve`'s do (`serve.edit`, `serve.check`), each request answered by `skein api` in the page; what is saved shall be kept in the browser, listed with a link to download each changed file, and forgotten when it is discarded or once it is saved on the forge (`serve.static-forge`). The pages are not rendered again after a save: they show the files as they were rendered. A file that is not a WebAssembly module is refused. (Issue #282; #105.)
+
+%req[serve.static-forge]
+Where the project names its forge, the static site's edit mode shall offer to save the changes kept in the browser on the forge, through its API, with a token the person gives that is kept for the browser's session only: in a change, a branch `edit/NAME` from the branch changes go to, proposed in a pull request (GitHub, Forgejo) or a merge request (GitLab), with `[serve] save` `pull-request` or `branch`; in a commit on that branch with `commit`. Files are created, updated and removed at the project's place in the repository, one commit for all of them. The branch is `[serve] branch`, else the one checked out when the site was rendered, else the repository's default; `skein render --edit` writes these settings to `_skein/forge.json`. Once saved, the changes are forgotten in the browser, and the page offers to open the pull request or the commit. (Issue #283.)
+
+%req[serve.api]
+`skein api GET|POST PATH [QUERY]` shall answer one of `skein serve`'s editing requests (`page`, `source`, `check`, `form`, `preview`, `save`, `approve`, `change`) on the project, as `skein serve` answers it for someone on this computer alone, its body read from standard input and its answer, JSON, written to standard output. It is how the static site's edit mode asks skein built for WebAssembly in the page (`serve.static-edit`); a method other than `GET` or `POST`, and fewer than two or more than three arguments, are refused. (Issue #282.)
+
+%req[serve.local]
+`skein serve` shall answer only requests addressed to `127.0.0.1` or `localhost` at its port, or to the host of its `--url`, and change a file only for a request that carries its own header (`x-skein`), which a page of another site cannot send without the browser asking first, which it refuses. (Issues #278, #279.)
 
 %req[render.generated]
 A fenced code block of the language `skein` in a document shall be a request for a page that Skein generates from the graph: `skein render` puts the page in its place, as Markdown and as HTML alike, and its links lead to the items from the page they are on. A request Skein cannot read is replaced by a note that says what is wrong. Removed items are never listed.
@@ -141,6 +198,9 @@ A fenced code block of the language `skein` in a document shall be a request for
 
 %req[render.generated.matrix-columns]
 `matrix LINKTYPE [conditions] columns=C,... from.columns=C,...` shall give, after the item, the columns `columns` of the item pointed to and, after the items that link to it, the columns `from.columns` of each, one row per item that links to it when those are asked for. A column is `id`, `type`, `category`, `status`, `text` (the first paragraph) or an attribute; each value that is the ID of an item is a link to it, and the values of an attribute with several are joined by commas.
+
+%req[render.generated.history]
+`history [type=TYPE]` shall give, at each baseline (oldest first) and now, the number of items of each type, removed ones left out, or with `type=` of each status of that type, and the coverage of each expectation in percent, as Mermaid charts and a table of the numbers; a baseline's numbers come from the files of its commit, the cited files included. (Issue #104; design sections 6 and 12.)
 
 %req[render.generated.coverage]
 `coverage [profile=P]` shall give what `skein coverage` counts, as a table, with links to the items that are not covered.
@@ -159,6 +219,9 @@ A fenced code block of the language `skein` in a document shall be a request for
 
 %req[control.maturity]
 A controlled document's front matter may name the item it is (`item`) and the maturity it is at (`maturity`). With `[maturity]` in the configuration, giving the maturities lowest first (`order`) and the milestone the project is at (`milestone`), `skein check` shall warn of a document below the value its item has for the attribute the milestone names, of a document that gives no maturity or one outside the order, and of one that names no item there is; a value outside the order (complete, per schedule) expects nothing.
+
+%req[control.gates]
+With a gate for the milestone the project is at (`[maturity.gates.NAME]`), `skein check` shall warn when more of the items than `tbd` percent are undecided (their status is one of `[maturity] tbd`, default `tbd` and `tbr`), and when `volatility` percent or more of them were added, changed (in content) or removed since the last baseline; the items counted are those of the types that have one of those statuses, removed ones left out. `skein coverage` shall give the numbers against the gate. A share is 0 to 100. (Issue #188; the NASA Software Engineering Handbook's review checklists, topic 7.09.)
 
 %req[render.control]
 A document that gives `document` (its identifier) and `revision` in TOML front matter shall be rendered with, under its first heading of level 1, a table of its identifier, its revision and its last change (the date, the author and the commit, linked on the forge when the project names one), and at its end a change record: each baseline in which its items changed, oldest first, with its date, the message given to `skein baseline`, and how many of its items were added, changed and removed since the baseline before. A rendered item file gives the date, author and commit of its last change in its front matter. A generated `documents` page lists the controlled documents with their identifier, title, revision and last change. All of it is read from git; outside a git repository there is none.

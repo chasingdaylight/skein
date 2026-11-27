@@ -28,6 +28,11 @@ approval_roles: []const []const u8 = &.{},
 approvers: []const []const u8 = &.{},
 /// who may approve it in a role; a role with no entry is open to those of `approvers`, or anyone
 role_approvers: []const RoleApprovers = &.{},
+/// whose approvals must be signed (graph/signatures.zig): none, every one,
+/// or those given in these roles
+approval_signed: Signed = .none,
+/// whether the roles approve in their order, each after those before it
+approval_in_order: bool = false,
 attributes: []const Attribute = &.{},
 /// when the type's items are tested examples: how
 example: ?Example = null,
@@ -35,6 +40,8 @@ example: ?Example = null,
 planning: ?Planning = null,
 
 pub const RoleApprovers = struct { role: []const u8, people: []const []const u8 };
+
+pub const Signed = union(enum) { none, all, roles: []const []const u8 };
 
 pub const Example = @import("Example.zig");
 pub const Planning = @import("Planning.zig");
@@ -81,9 +88,23 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
     // `approval = [statuses]`, or `[approval]` with `statuses` and the `roles` that approve
     if (r.table.get("approval")) |v| if (v == .table) {
         const t = (try r.child("approval")).?;
-        try t.known(&.{ "statuses", "roles", "approvers" });
+        try t.known(&.{ "statuses", "roles", "approvers", "signed", "in_order" });
         out.approval = try t.strings("statuses");
         out.approval_roles = try t.strings("roles");
+        // `signed = true`, or the roles whose approvals must be signed
+        if (t.table.get("signed")) |sv| switch (sv) {
+            .boolean => |b| out.approval_signed = if (b) .all else .none,
+            .array => {
+                const roles = try t.strings("signed");
+                for (roles) |role| {
+                    if (!names.contains(out.approval_roles, role)) try t.complain("signed", "'{s}' is not one of the roles", .{role});
+                }
+                out.approval_signed = .{ .roles = roles };
+            },
+            else => try t.complain("signed", "expected true, or a list of the roles whose approvals are signed", .{}),
+        };
+        out.approval_in_order = try t.boolean("in_order", false);
+        if (out.approval_in_order and out.approval_roles.len < 2) try t.complain("in_order", "the roles approve in order: name two or more", .{});
         // `approvers = [people]`, or `[approval.approvers]` with the people of each role
         if (t.table.get("approvers")) |a| switch (a) {
             .array => out.approvers = try t.strings("approvers"),
@@ -146,6 +167,10 @@ pub fn read(r: Reader, name: []const u8) Reader.Error!ItemType {
     if (try r.child("example")) |e| {
         out.example = try Example.read(e);
         if (out.categories.len > 0 and !names.contains(out.categories, out.example.?.rejects)) try e.complain("rejects", "'{s}' is not one of the categories", .{out.example.?.rejects});
+        if (out.example.?.message) |m| {
+            const declared = out.attribute(m);
+            if (declared == null or declared.?.kind != .string) try e.complain("message", "'{s}' is not a string attribute of the type", .{m});
+        }
     }
     if (try r.child("planning")) |p| {
         out.planning = try Planning.read(p, out.attributes);

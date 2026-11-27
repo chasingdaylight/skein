@@ -1,0 +1,36 @@
+# Skein
+
+> Skein keeps a project's requirements, specifications, design and their traceability as plain Markdown in git: an item is a paragraph or list entry of a document (or a file of its own) with a marker, `%TYPE[ID words key=value]`; links between items, citations in code and tests, coverage, reviews, test results and documents for delivery are checked and rendered by one program, `skein`. It carries templates for NASA's NPR 7150.2D and the standards it defers to, and others.
+
+## Starting a project (for an agent doing it)
+
+1. Get Skein: a release of https://github.com/chasingdaylight/skein (one program for Linux, macOS and Windows), or the VS Code extension, which carries it.
+2. In the repository: `skein init --template NAME` (`skein template list` names them; `skein template show NAME` gives a template's options and what it brings along). Give the options you know with `--option NAME=VALUE`. For software under NASA's NPR 7150.2D: `skein init --template npr7150.2d --option class=C` (and `--option program=space-flight` and so on).
+3. Answer the template's options not given yet in `.skein/config.toml` under `[template."NAME"]`; ask the project's owner what you cannot know. For `npr7150.2d`: `class` (A to F, NPR 7150.2D Appendix D; required), `safety-critical` (SWE-205, determined with the safety and mission assurance organization), `program` (`space-flight`, `it` or `none`), `models-and-simulations`, `crewed`. These bring along NASA-STD-8739.8B (classes A to E), NASA-STD-7009B, NPR 7120.5F with NPR 7123.1D, NPR 7120.7A and the human-rating standards as they apply.
+4. Run `skein template documents` after giving options in the file, for the documents of the templates they bring along, and `skein agents`, which writes what agents should know of the project into `AGENTS.md`, with a list of what is still to do. Do that list.
+5. Do not copy the standards into the repository: Skein provides them (`standards/NAME/`, kept out of git by a `.gitignore` there). Commit `.skein/config.toml`, the documents under `docs/` and `AGENTS.md`.
+6. Say where the tests and the code are (`[[citations]]` in `.skein/config.toml`): tests cite the requirements they verify in a comment (`// verifies: SRS-001`).
+7. Set `[maturity] milestone` to the review the project is at next.
+8. Fill in the documents, and remove those the project's tailoring leaves out; record the tailoring as items of the template's types (compliance rows, tailoring), never by editing the standard.
+9. Add a CI job: get Skein, run `skein check` and `skein coverage` (see Commands, "In continuous integration").
+10. After every change: `skein check`, and mend what it reports.
+
+## Documentation
+
+- [Overview](index.md): what Skein is, getting it, where to start
+- [Quickstart](quickstart.md): a project from a template, a requirement, a test that cites it, a site, in five minutes
+- [Writing items](writing-items.md): markers, parts, item files, references, citations
+- [The web interface](web.md): skein serve, the site in a browser, editing files and items there
+- [Project files](project-files.md): `.skein/config.toml`, item types, link types, profiles
+- [Commands](commands.md): every command, and the CI job
+- [Templates](templates.md): the built-in templates, their options, what they bring along
+- [Test results](results.md), [Reviewing](reviewing.md), [The forge](forge.md), [Importing](importing.md)
+- [Tutorial: NPR 7150.2D](tutorial-npr7150.md): a new project from the template to its requirements review, step by step
+- [Examples](examples.md): projects from the `npr7150.2d` and `langspec` templates, and requirements as files, each rendered
+- [Tutorial: existing code](tutorial-existing-code.md), [Tutorial: planning](tutorial-planning.md)
+- [Requirements](requirements/): Skein's own requirements, kept with Skein
+
+## Tools for agents
+
+- `skein mcp`: the Model Context Protocol on standard input and output (check, trace, coverage, items).
+- `skein trace ID`, `skein coverage --json`, `skein export`: what an item links to and what links to it, what is covered, the whole graph.

@@ -10,6 +10,8 @@ const Workspace = @import("Workspace.zig");
 const coverage = @import("../graph/coverage.zig");
 const Results = @import("../results/Results.zig");
 const summary = @import("../results/summary.zig");
+const gitlab_requirements = @import("../forge/gitlab_requirements.zig");
+const maturity = @import("../graph/maturity.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options.common)) {
@@ -31,6 +33,14 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
     const idx = try results.index(arena, &ws.graph, &ws.citations);
     const summaries = try summary.compute(arena, &results, &idx, &ws.project, &ws.graph, profile);
     const methods = try summary.byMethod(arena, &results, &idx, &ws.project, &ws.graph, profile);
+    // the gate of the milestone the project is at, when it has one
+    const measured = try maturity.measure(io, arena, ws.root, &ws.project, &ws.graph);
+    if (options.gitlab_requirements) |path| {
+        const map = try gitlab_requirements.loadMap(io, arena, ws.root);
+        if (map.len == 0) return .{ .text = try arena.print("skein: {s} maps no item to a GitLab requirement: run skein import gitlab-requirements first\n", .{gitlab_requirements.map_file}), .status = .misuse };
+        Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = try gitlab_requirements.report(arena, map, &results, &idx, &ws.graph) }) catch |e|
+            return .{ .text = try arena.print("skein: cannot write '{s}' ({s})\n", .{ path, @errorName(e) }), .status = .misuse };
+    }
 
     if (options.json) {
         var j: Json = .{ .arena = arena };
@@ -107,6 +117,23 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
             try j.endObject();
         }
         try j.endArray();
+        try j.key("gate");
+        if (measured) |g| {
+            try j.beginObject();
+            try j.key("milestone");
+            try j.string(g.gate.milestone);
+            try j.key("items");
+            try j.integer(@intCast(g.items));
+            try j.key("undecided");
+            try j.integer(@intCast(g.tbd));
+            try j.key("baseline");
+            try j.optional(g.baseline);
+            try j.key("changed");
+            try j.integer(@intCast(g.changed));
+            try j.key("baseline_items");
+            try j.integer(@intCast(g.baseline_items));
+            try j.endObject();
+        } else try j.optional(null);
         try j.endObject();
         return .{ .text = try j.finish() };
     }
@@ -124,6 +151,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
             for (s.failed) |id| try md.print(arena, "- `{s}`\n", .{id});
             try md.appendSlice(arena, "\n</details>\n");
         }
+        if (measured) |g| try md.print(arena, "\n{s}", .{try gateText(arena, g, &ws.project)});
         return .{ .text = md.items };
     }
 
@@ -174,7 +202,23 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Coverage) !Workspace.O
         const r = results.all[i];
         try out.print(arena, "  {s}  ({s}, result {d})\n", .{ r.label(), r.source, r.index });
     }
+    if (measured) |g| try out.print(arena, "\n{s}", .{try gateText(arena, g, &ws.project)});
     return .{ .text = out.items };
+}
+
+/// The numbers of the milestone's gate, a line each
+fn gateText(arena: std.mem.Allocator, g: maturity.Measured, project: *const @import("../Project.zig")) ![]const u8 {
+    var out: std.ArrayList(u8) = .empty;
+    try out.print(arena, "gate at {s}:\n", .{g.gate.milestone});
+    try out.print(arena, "  undecided ({s}): {d} of {d} ({d}%)", .{ try std.mem.join(arena, ", ", project.maturity.tbd), g.tbd, g.items, maturity.percent(g.tbd, g.items) });
+    if (g.gate.tbd) |most| try out.print(arena, ", at most {d}%", .{most});
+    try out.append(arena, '\n');
+    if (g.gate.volatility) |under| {
+        if (g.baseline) |b| {
+            try out.print(arena, "  changed since baseline {s}: {d} of {d} ({d}%), under {d}%\n", .{ b, g.changed, g.baseline_items, maturity.percent(g.changed, g.baseline_items), under });
+        } else try out.appendSlice(arena, "  changed since the last baseline: there is no baseline yet\n");
+    }
+    return out.items;
 }
 
 /// The coverage as Markdown, for a job summary or a pull request: one

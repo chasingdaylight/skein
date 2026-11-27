@@ -1,7 +1,7 @@
 //! `skein approve --from-pull-request`, on a repository made for the test
 //! and a forge the test stands in for.
 
-// req: forge.approvals
+// req: forge.approvals, forge.adapter
 const std = @import("std");
 const testing = std.testing;
 

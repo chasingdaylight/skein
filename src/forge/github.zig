@@ -170,7 +170,9 @@ pub fn parse(arena: std.mem.Allocator, json: []const u8) ?Issue {
     const title = v.object.get("title") orelse return null;
     const state = v.object.get("state") orelse return null;
     if (title != .string or state != .string) return null;
-    var out: Issue = .{ .title = title.string, .open = std.mem.eql(u8, state.string, "open"), .pull = v.object.get("pull_request") != null };
+    // Forgejo gives `"pull_request": null` for an issue
+    const pull_request = v.object.get("pull_request");
+    var out: Issue = .{ .title = title.string, .open = std.mem.eql(u8, state.string, "open"), .pull = pull_request != null and pull_request.? != .null };
     if (v.object.get("assignees")) |list| if (list == .array) {
         var logins: std.ArrayList([]const u8) = .empty;
         for (list.array.items) |a| {

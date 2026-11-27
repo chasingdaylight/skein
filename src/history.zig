@@ -18,6 +18,33 @@ pub const Error = error{
     SnapshotFailed,
 } || std.mem.Allocator.Error;
 
+/// What the message of a baseline's tag starts with (`skein baseline`)
+pub const baseline_mark = "skein baseline";
+
+pub const Baseline = struct { name: []const u8, date: []const u8 };
+
+/// The baselines, oldest first: the tags whose message starts with the
+/// mark; none when there is no git
+pub fn baselines(io: Io, arena: std.mem.Allocator, root: Io.Dir) std.mem.Allocator.Error![]const Baseline {
+    var out: std.ArrayList(Baseline) = .empty;
+    const refs = try git.output(io, arena, root, &.{ "for-each-ref", "--sort=creatordate", "--format=%(refname:short)%09%(creatordate:short)%09%(contents:subject)", "refs/tags" }) orelse return out.items;
+    var lines = std.mem.splitScalar(u8, refs, '\n');
+    while (lines.next()) |line| {
+        var fields = std.mem.splitScalar(u8, std.mem.trimEnd(u8, line, "\r"), '\t');
+        const name = fields.next() orelse continue;
+        const date = fields.next() orelse continue;
+        const subject = fields.next() orelse continue;
+        if (std.mem.startsWith(u8, subject, baseline_mark ++ " ")) try out.append(arena, .{ .name = name, .date = date });
+    }
+    return out.items;
+}
+
+/// The newest baseline; null when there is none or no git
+pub fn lastBaseline(io: Io, arena: std.mem.Allocator, root: Io.Dir) std.mem.Allocator.Error!?[]const u8 {
+    const all = try baselines(io, arena, root);
+    return if (all.len > 0) all[all.len - 1].name else null;
+}
+
 pub const Snapshot = struct {
     io: Io,
     /// where the files are
@@ -25,6 +52,8 @@ pub const Snapshot = struct {
     /// its parent and its name there, to remove it
     parent: Io.Dir,
     name: []const u8,
+    /// where the files are, as an absolute path
+    path: []const u8 = "",
     /// the commit, in full
     commit: []const u8,
     project: Project,
@@ -65,7 +94,7 @@ pub fn snapshotIn(io: Io, arena: std.mem.Allocator, root: Io.Dir, revision: []co
     var dir = parent.createDirPathOpen(io, commit, .{}) catch return error.SnapshotFailed;
     errdefer dir.close(io);
 
-    var out: Snapshot = .{ .io = io, .dir = dir, .parent = parent, .name = commit, .commit = commit, .project = .{}, .graph = .{} };
+    var out: Snapshot = .{ .io = io, .dir = dir, .parent = parent, .name = commit, .path = try Io.Dir.path.join(arena, &.{ scratch, commit }), .commit = commit, .project = .{}, .graph = .{} };
     if (!try extract(io, arena, root, dir, commit, &.{Project.dir_name})) return out;
 
     var ignored: Report = .{ .arena = arena };
@@ -75,6 +104,14 @@ pub fn snapshotIn(io: Io, arena: std.mem.Allocator, root: Io.Dir, revision: []co
         // a path that is not in the commit would make git refuse them all
         const listed = try git.output(io, arena, root, &.{ "ls-tree", "-d", "--name-only", commit, "--", source.path }) orelse continue;
         if (trimmed(listed).len > 0) try paths.append(arena, source.path);
+    }
+    // and the files that cite items, for what coverage was then
+    for (out.project.citations) |c| {
+        const listed = try git.output(io, arena, root, &.{ "ls-tree", "--name-only", commit, "--", c.path }) orelse continue;
+        if (trimmed(listed).len == 0) continue;
+        for (paths.items) |p| {
+            if (std.mem.eql(u8, p, c.path)) break;
+        } else try paths.append(arena, c.path);
     }
     if (paths.items.len > 0) _ = try extract(io, arena, root, dir, commit, paths.items);
     out.graph = try Graph.load(io, arena, dir, &out.project, &ignored);

@@ -9,6 +9,7 @@ const Io = std.Io;
 const Workspace = @import("Workspace.zig");
 const cli = @import("../cli.zig");
 const instructions = @import("../agents/instructions.zig");
+const todo = @import("../agents/todo.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Agents) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options.common)) {
@@ -22,7 +23,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Agents) !Workspace.Out
 
 /// Writes the section, or the skill file; the path written
 pub fn write(io: Io, arena: std.mem.Allocator, ws: *const Workspace, as_skill: bool, file: ?[]const u8) ![]const u8 {
-    const text = try instructions.body(arena, &ws.project);
+    const text = try instructions.body(arena, &ws.project, try todo.list(io, arena, ws));
     if (as_skill) {
         const path = file orelse instructions.skill_file;
         if (Io.Dir.path.dirnamePosix(path)) |parent| try ws.root.createDirPath(io, parent);

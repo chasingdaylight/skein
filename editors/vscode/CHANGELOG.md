@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.1.1 (unreleased)
+## 0.2.0 (unreleased)
+
+- The `skein` program in the Windows and macOS packages is signed: `skein.exe` with an Authenticode signature, the macOS `skein` with a Developer ID and notarized by Apple.
+
+## 0.1.1
 
 - The extension carries the `skein` program for its platform and puts it on the `PATH` of new terminals, so `skein check` works there with nothing else installed. There is a package for Windows, Linux, Alpine and macOS, each for x86_64 and arm64; other platforms get the package without a program.
 - The setting `skein.path` names another `skein` to use, and the command "skein: Show Version" says which one is in use.

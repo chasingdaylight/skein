@@ -44,6 +44,10 @@
     }
     nav .brand { display: block; margin-bottom: 1.25rem; font-size: 1.35rem; font-weight: 700; color: var(--fg); text-decoration: none; }
     nav ul { list-style: none; margin: 0; padding: 0; }
+    nav .editions { margin: -0.75rem 0 1.25rem; font-size: 0.9rem; color: var(--muted); }
+    nav .editions summary { cursor: pointer; }
+    nav .editions ul { margin: 0.25rem 0 0 0.75rem; }
+    nav .editions a[aria-current] { font-weight: 700; }
     nav li a { display: block; padding: 0.3rem 0.6rem; margin: 0 -0.6rem; border-radius: 0.35rem; color: var(--fg); text-decoration: none; }
     nav li a:hover { background: var(--rule); }
     nav li a[aria-current="page"] { color: var(--accent); font-weight: 600; }
@@ -87,17 +91,42 @@
 </head>
 <body>
   <div class="page">
+    {%- comment -%}
+      The edition the page is of: an earlier release's pages are under its
+      directory (vX.Y.Z/, tools/site.sh), the latest release's at the root.
+    {%- endcomment -%}
+    {%- assign first = page.path | split: '/' | first -%}
+    {%- assign edition = site.data.editions | where: "dir", first | first -%}
+    {%- if edition -%}
+      {%- assign prefix = '/' | append: edition.dir -%}
+    {%- else -%}
+      {%- assign edition = site.data.editions | first -%}
+      {%- assign prefix = '' -%}
+    {%- endif -%}
+    {%- assign within = page.url | remove_first: prefix -%}
     <nav aria-label="Documentation">
-      <a class="brand" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+      <a class="brand" href="{{ prefix | append: '/' | relative_url }}">{{ site.title }}</a>
+      <details class="editions">
+        <summary>Version {{ edition.version }}{% if edition.dir == "" %} (the latest){% endif %}</summary>
+        <ul>
+          {%- for e in site.data.editions %}
+          {%- if e.dir == "" -%}{%- assign base = '' -%}{%- else -%}{%- assign base = '/' | append: e.dir -%}{%- endif -%}
+          {%- assign target = base | append: within -%}
+          {%- assign found = site.pages | where: "url", target | first -%}
+          {%- unless found -%}{%- assign target = base | append: '/' -%}{%- endunless %}
+          <li><a href="{{ target | relative_url }}"{% if e.dir == edition.dir %} aria-current="page"{% endif %}>{{ e.version }}{% if forloop.first %} (latest){% endif %}</a></li>
+          {%- endfor %}
+        </ul>
+      </details>
       <ul>
         {%- for item in site.nav %}
         {%- assign here = false -%}
         {%- if item.url == "/" -%}
-          {%- if page.url == "/" -%}{%- assign here = true -%}{%- endif -%}
-        {%- elsif page.url contains item.url -%}
+          {%- if within == "/" -%}{%- assign here = true -%}{%- endif -%}
+        {%- elsif within contains item.url -%}
           {%- assign here = true -%}
         {%- endif %}
-        <li><a href="{{ item.url | relative_url }}"{% if here %} aria-current="page"{% endif %}>{{ item.title }}</a></li>
+        <li><a href="{{ prefix | append: item.url | relative_url }}"{% if here %} aria-current="page"{% endif %}>{{ item.title }}</a></li>
         {%- endfor %}
       </ul>
     </nav>
@@ -111,6 +140,24 @@
     </main>
   </div>
   <script>
+    // Mermaid blocks drawn by the copy of mermaid.js Skein vendors
+    // (vendor/mermaid, copied by tools/site.sh), loaded only where there is one
+    const diagrams = document.querySelectorAll('pre > code.language-mermaid');
+    if (diagrams.length) {
+      const script = document.createElement('script');
+      script.src = '{{ "/assets/mermaid.min.js" | relative_url }}';
+      script.onload = () => {
+        for (const code of diagrams) {
+          const div = document.createElement('div');
+          div.className = 'mermaid';
+          div.textContent = code.textContent;
+          code.parentElement.replaceWith(div);
+        }
+        mermaid.initialize({ startOnLoad: false, theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default' });
+        mermaid.run();
+      };
+      document.head.append(script);
+    }
     // wide tables scroll inside themselves, not the page
     for (const table of document.querySelectorAll('article > table')) {
       const wrap = document.createElement('div');

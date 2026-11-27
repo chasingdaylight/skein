@@ -2,9 +2,10 @@
 //! an annotated git tag that names itself a baseline and says what the
 //! project held then. Without a name, lists the baselines.
 //!
-//! The tag is made in the local repository and not pushed. Nothing of the
-//! forge is in a plan yet, so there is nothing to write before tagging
-//! (design, section 6).
+//! The tag is made in the local repository and not pushed. Where the plan
+//! takes values from the forge (its work items' issues), they are first
+//! written to `.skein/baselines/NAME.toml` and committed, and that commit is
+//! tagged, so the baseline freezes them too (design, section 6; #298).
 
 const std = @import("std");
 const Io = std.Io;
@@ -13,11 +14,15 @@ const check = @import("check.zig");
 const cli = @import("../cli.zig");
 const coverage = @import("../graph/coverage.zig");
 const git = @import("../git.zig");
+const history = @import("../history.zig");
 const Workspace = @import("Workspace.zig");
+const Work = @import("../planning/Work.zig");
+const checks = @import("../forge/checks.zig");
+const frozen = @import("../planning/frozen.zig");
 
 /// What the message of a baseline's tag starts with, which tells a
 /// baseline from another tag
-pub const mark = "skein baseline";
+pub const mark = history.baseline_mark;
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Baseline) !Workspace.Outcome {
     var ws = switch (try Workspace.open(io, arena, options.common)) {
@@ -43,12 +48,58 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Baseline) !Workspace.O
         return problems;
     }
 
+    // the forge's values the plan uses, frozen in a commit of their own
+    const froze = switch (try freeze(io, arena, &ws, name, options.common.offline)) {
+        .ok => |f| f,
+        .failed => |why| return misuse(arena, "{s}", .{why}),
+    };
     const message = try summary(arena, &ws, name, options.message);
     if (try git.output(io, arena, ws.root, &.{ "tag", "--annotate", "--no-sign", "--message", message, name, "HEAD" }) == null) {
         return misuse(arena, "git could not make the tag '{s}'", .{name});
     }
     const commit = std.mem.trim(u8, try git.output(io, arena, ws.root, &.{ "rev-parse", "--short", "HEAD" }) orelse "", " \r\n");
-    return .{ .text = try arena.print("skein: baseline {s} at {s}; share it with: git push origin {s}\n", .{ name, commit, name }) };
+    var said: std.ArrayList(u8) = .empty;
+    if (froze.issues > 0) try said.print(arena, "skein: the forge's values of {d} issue{s} frozen in {s}{s}\n", .{ froze.issues, if (froze.issues == 1) "" else "s", try frozen.fileOf(arena, name), if (options.common.offline) ", as the forge last said them" else "" });
+    if (froze.unknown > 0) try said.print(arena, "skein: {d} issue{s} the forge could say nothing of: not frozen\n", .{ froze.unknown, if (froze.unknown == 1) "" else "s" });
+    try said.print(arena, "skein: baseline {s} at {s}; share it with: git push origin {s}\n", .{ name, commit, name });
+    return .{ .text = said.items };
+}
+
+const Froze = struct { issues: usize = 0, unknown: usize = 0 };
+
+/// Writes and commits what the forge says of the work items' issues, when
+/// there are any; how many were frozen, and how many it said nothing of
+fn freeze(io: Io, arena: std.mem.Allocator, ws: *Workspace, name: []const u8, offline: bool) !union(enum) { ok: Froze, failed: []const u8 } {
+    const works = try Work.collectAll(arena, &ws.project, &ws.graph);
+    var targets: std.ArrayList([]const u8) = .empty;
+    for (works) |w| if (w.issue) |i| try targets.append(arena, i);
+    if (targets.items.len == 0) return .{ .ok = .{} };
+    const known = try checks.learnRefs(io, arena, ws.root, &ws.project, targets.items, offline) orelse return .{ .ok = .{} };
+    var entries: std.ArrayList(frozen.Entry) = .empty;
+    var out: Froze = .{};
+    for (known.answers.keys(), known.answers.values()) |key, answer| {
+        if (answer) |a| switch (a) {
+            .found => |issue| {
+                try entries.append(arena, .{ .key = key, .issue = issue });
+                continue;
+            },
+            else => {},
+        };
+        out.unknown += 1;
+    }
+    out.issues = entries.items.len;
+    if (entries.items.len == 0) return .{ .ok = out };
+    const file = try frozen.fileOf(arena, name);
+    ws.root.createDirPath(io, frozen.dir) catch return .{ .failed = try arena.print("cannot make {s}", .{frozen.dir}) };
+    ws.root.writeFile(io, .{ .sub_path = file, .data = try frozen.text(arena, name, offline, entries.items) }) catch return .{ .failed = try arena.print("cannot write {s}", .{file}) };
+    switch (try git.run(io, arena, ws.root, &.{ "add", "--", file })) {
+        .ok => {},
+        .failed => |why| return .{ .failed = why },
+    }
+    return switch (try git.run(io, arena, ws.root, &.{ "commit", "--quiet", "-m", try arena.print("Baseline {s}: the forge's values its plan uses", .{name}), "--", file })) {
+        .ok => .{ .ok = out },
+        .failed => |why| .{ .failed = try arena.print("the forge's values could not be committed: {s}", .{why}) },
+    };
 }
 
 fn misuse(arena: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !Workspace.Outcome {
@@ -81,24 +132,17 @@ fn summary(arena: std.mem.Allocator, ws: *const Workspace, name: []const u8, mes
     return out.items;
 }
 
-/// The baselines: the tags whose message starts with the mark, oldest
-/// first
+/// The baselines, oldest first
 fn list(io: Io, arena: std.mem.Allocator, ws: *const Workspace) !Workspace.Outcome {
-    const refs = try git.output(io, arena, ws.root, &.{ "for-each-ref", "--sort=creatordate", "--format=%(refname:short)%09%(creatordate:short)%09%(contents:subject)", "refs/tags" }) orelse "";
     var out: std.ArrayList(u8) = .empty;
-    var lines = std.mem.splitScalar(u8, refs, '\n');
-    while (lines.next()) |line| {
-        var fields = std.mem.splitScalar(u8, std.mem.trimEnd(u8, line, "\r"), '\t');
-        const tag = fields.next() orelse continue;
-        const date = fields.next() orelse continue;
-        const subject = fields.next() orelse continue;
-        if (!std.mem.startsWith(u8, subject, mark ++ " ")) continue;
-        try out.print(arena, "{s}  {s}\n", .{ tag, date });
-    }
+    for (try history.baselines(io, arena, ws.root)) |b| try out.print(arena, "{s}  {s}\n", .{ b.name, b.date });
     if (out.items.len == 0) return .{ .text = "skein: there is no baseline yet\n" };
     return .{ .text = out.items };
 }
 
 test {
     _ = @import("_test/baseline.zig");
+    _ = @import("_test/gates.zig");
+    _ = @import("_test/editions.zig");
+    _ = @import("_test/baseline_forge.zig");
 }

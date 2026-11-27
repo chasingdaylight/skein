@@ -170,7 +170,7 @@ pub fn render(s: *Server, a: Allocator, id: json.Value, params: json.Value) Serv
 /// The project's test results; those that cannot be read are left out
 fn loadResults(s: *Server, a: Allocator, ws: *Workspace) Allocator.Error!Results {
     var ignored: Report = .{ .arena = a };
-    return Results.load(s.io, a, ws.root, &ws.project, &ws.graph, &.{}, &ignored);
+    return Results.load(s.io, a, ws.root, &ws.project, &ws.graph, .{}, &ignored);
 }
 
 /// Where the links of a generated page lead in the view

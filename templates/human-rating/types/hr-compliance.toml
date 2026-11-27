@@ -1,0 +1,11 @@
+description = "A row of the project's human-rating compliance matrix: whether it meets a requirement of NPR 8705.2C or NASA-STD-8719.29, and how"
+# fully compliant, tailored (by an approved waiver, deviation or exception: HRC-2.2.2), not applicable
+categories = ["FC", "T", "NA"]
+
+# where or how the requirement is met
+[attributes.evidence]
+normative = false
+
+# the waiver, deviation or exception, for a tailored one
+[attributes.rationale]
+normative = false

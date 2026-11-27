@@ -10,6 +10,7 @@ pub const Report = @import("Report.zig");
 pub const Schema = @import("schema/Schema.zig");
 pub const stdio = @import("stdio.zig");
 pub const toml = @import("toml.zig");
+pub const xml = @import("xml.zig");
 
 pub const main = @import("__main__.zig").main;
 
@@ -23,6 +24,7 @@ test {
     _ = Schema;
     _ = stdio;
     _ = toml;
+    _ = xml;
     _ = @import("graph/walk.zig");
     _ = @import("planning/day.zig");
     _ = @import("planning/_test/work.zig");
@@ -41,6 +43,25 @@ test {
     _ = @import("commands/diff.zig");
     _ = @import("commands/export.zig");
     _ = @import("commands/render.zig");
+    _ = @import("commands/serve.zig");
+    _ = @import("commands/api.zig");
+    _ = @import("serve/stamp.zig");
+    _ = @import("serve/answer.zig");
+    _ = @import("serve/edit_api.zig");
+    _ = @import("serve/guard.zig");
+    _ = @import("serve/saving.zig");
+    _ = @import("serve/changes.zig");
+    _ = @import("serve/workflow_checks.zig");
+    _ = @import("serve/worktrees.zig");
+    _ = @import("serve/propose.zig");
+    _ = @import("serve/oauth.zig");
+    _ = @import("serve/sign_in.zig");
+    _ = @import("serve/query.zig");
+    _ = @import("serve/People.zig");
+    _ = @import("planning/frozen.zig");
+    _ = @import("serve/Server.zig");
+    _ = @import("edit/form.zig");
+    _ = @import("edit/item_form.zig");
     _ = @import("commands/move.zig");
     _ = @import("edit/alias.zig");
     _ = @import("commands/examples.zig");
@@ -48,6 +69,14 @@ test {
     _ = @import("commands/_test/check_formats.zig");
     _ = @import("forge/checks.zig");
     _ = @import("forge/gitlab.zig");
+    _ = @import("forge/forgejo.zig");
+    _ = @import("commands/level.zig");
+    _ = @import("forge/gitlab_requirements.zig");
+    _ = @import("forge/gitlab_publish.zig");
+    _ = @import("forge/jama.zig");
+    _ = @import("forge/jama_text.zig");
+    _ = @import("forge/jama_config.zig");
+    _ = @import("output/reqif.zig");
     _ = @import("template/Template.zig");
     _ = @import("template/_test/use.zig");
     _ = @import("template/_test/start.zig");
@@ -64,6 +93,7 @@ test {
     _ = @import("commands/agents.zig");
     _ = @import("render/markdown.zig");
     _ = @import("render/site.zig");
+    _ = @import("render/edit_mode.zig");
     _ = @import("render/generated.zig");
     _ = @import("render/order.zig");
     _ = @import("render/_test/documents.zig");

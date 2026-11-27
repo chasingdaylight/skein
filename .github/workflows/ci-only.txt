@@ -15,3 +15,7 @@ tools/npr7150/*
 tools/pdf/*
 # the script that takes mermaid.js into vendor/ (which is shipped)
 tools/mermaid/*
+# the generator of a large project for timing skein: run by hand, not shipped
+tools/bench/*
+# the public key CI checks the release signature of SHA256SUMS against (#292)
+SIGNING-KEY.asc

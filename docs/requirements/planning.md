@@ -8,7 +8,7 @@ Work as items: their planning attributes, the links that order them, and their s
 Work shall be items with planning attributes (dates or durations, effort, assignees), linked to each other and to the product items they serve, scheduled from their dependencies, with the critical path computed. (Design, section 10.1.)
 
 %req[planning.roles]
-An item type shall be work when it has a `[planning]` table, which names the attribute that holds each planning role: `start` and `finish` (dates), `duration`, `estimate`, `remaining` and `lag` (whole days, integers), `assignees`, `priority`, `milestone`, and `mode`. Skein names no attribute itself. A role that names no attribute of the type, or one of another kind than the role takes, and a key that is no role, are problems of the schema. (emanspeaks, 2026-11-21, on #85.)
+An item type shall be work when it has a `[planning]` table, which names the attribute that holds each planning role: `start` and `finish` (dates), `duration`, `estimate`, `remaining` and `lag` (whole days, integers), `assignees`, `priority`, `milestone`, `mode`, and `issue` (the forge's issue that is the work, `planning.forge-fields`); and `done`, the statuses of finished work. Skein names no attribute itself. A role that names no attribute of the type, or one of another kind than the role takes, and a key that is neither a role nor `done`, are problems of the schema. (emanspeaks, 2026-11-21, on #85.)
 
 %req[planning.link-roles]
 A link type shall take part in the schedule by its `[planning] role`: `precedes` (finish to start: the target starts once the item has finished, plus the target's lag), `follows` (the same, written on the later work: the item starts once the target has finished, plus the item's lag), `parent` (the item is part of its target), or `blocks` (recorded, not scheduled). Any other role is a problem of the schema.
@@ -28,7 +28,7 @@ A work item shall be scheduled in one of two modes, the value of its `mode` attr
 The schedule shall give each scheduled item its slack, the working days it can finish later before an item after it or the end of the plan moves, and mark as critical the items without slack: the critical path.
 
 %req[planning.stored]
-`skein schedule` shall write the schedule to `.skein/schedule.toml`, a file the project commits and the one source of the schedule offline: every work item with its start, finish, mode, where its dates come from (`written`, `computed`, or `unscheduled`), its slack and whether it is critical. `[schedule] also = ["json", "csv"]` in the configuration writes `.skein/schedule.json` and `.skein/schedule.csv` beside it, from the same schedule, for tools that read those; Skein reads only the TOML. (emanspeaks, 2026-11-21, on #85.)
+`skein schedule` shall write the schedule to `.skein/schedule.toml`, a file the project commits and the one source of the schedule offline: every work item with its start, finish, mode, where its dates come from (`written`, `computed`, `forge`, or `unscheduled`), its slack and whether it is critical. `[schedule] also = ["json", "csv"]` in the configuration writes `.skein/schedule.json` and `.skein/schedule.csv` beside it, from the same schedule, for tools that read those; Skein reads only the TOML. (emanspeaks, 2026-11-21, on #85.)
 
 %req[planning.schedule-checks]
 `skein check` shall report a fixed item that starts before its predecessors let it, an item that runs outside its parent's dates (a parent that spans its children excepted), an item that finishes after its milestone (the work item its milestone names), and a stored schedule, in any of its formats, that is missing or not the one the work items give now.
@@ -50,6 +50,9 @@ A planning repository, `[planning] span = true`, shall schedule and show the wor
 `skein time` without arguments (also `--json`) shall set, for each work item that has an estimate or time spent, the estimate in hours (its estimate in days times the hours of the calendar's working day) against what was spent, the difference and who spent it, with the totals; and `time [TYPE...] [conditions]` in a document gives the same as a table.
 
 ## Issues on the forge
+
+%req[planning.forge]
+What a forge holds about an issue shall stay there and be read through the adapter; `.skein/` holds only what the forge lacks. A what-if plan is a branch whose deviations from the forge are kept as an overlay, and a full mirror is an option. (Design, section 10.4.) Built: GitHub's planning fields of issues (`planning.forge-fields`) and overlays and `skein apply` (`planning.overlay`, `planning.apply`); and the full mirror (`forge.mirror`, `forge.sync`).
 
 %req[planning.forge-fields]
 A work item whose type has the planning role `issue` and whose `issue` attribute names an issue (`#12`, `owner/repo#12`) of the forge in `[forge]` shall take from the forge what the forge holds, as the adapter declares it; GitHub's are the issue's assignees, its milestone with the day it is due, and whether it is closed (not a start, a duration or effort, which stay in the item). An assignee or milestone the item does not write is the issue's; assignees the item writes that differ from the issue's are a warning of `skein check`; a closed issue is finished work (burndown, roadmap); and work with nothing else to place it, whose issue's milestone is due, finishes on that day and starts as many working days before as it lasts (source `forge` in the stored schedule). The forge is asked unless `--offline`; what it last said is kept and used when it cannot be reached, and the stored schedule is not compared while an issue cannot be learned. (Design, section 10.4; emanspeaks, 2026-11-21, on #85.)
@@ -86,3 +89,6 @@ The project's calendar shall be the `[calendar]` of the resources file: its work
 
 %req[planning.overallocation]
 `skein check` shall warn of each week in which a person has more work than hours to work, with both.
+
+%req[planning.level]
+`skein level` shall propose a schedule in which nobody has more work in a week than hours to work, by moving work later: in the order of the work's start, critical work first, each item no earlier than its predecessors' new finishes allow, on the first working day from which its hours, counted as `skein load` counts them, fit beside what its assignees have booked already; finished work stays and is booked, and work that finds no room within two years stays and is listed. It lists each item whose dates change, and with `--write` writes the moves into the work items for review: a new start (and finish, when the item gives one) for fixed work, a longer lag for float work that follows other work, a start (and the mode `fixed`, when it names `float`) for float work that follows none. (Design, section 10.2; issue #94.)

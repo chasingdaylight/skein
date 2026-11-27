@@ -21,7 +21,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Publish) !Workspace.Ou
     };
     defer ws.close();
     const to = options.to orelse return misuse(arena, "publish needs the forge to publish to: --to KIND:OWNER/REPO", .{});
-    const target = parseTarget(to, options.url) orelse return misuse(arena, "'{s}' is no forge: write it KIND:OWNER/REPO, KIND github or gitlab", .{to});
+    const target = parseTarget(to, options.url) orelse return misuse(arena, "'{s}' is no forge: write it KIND:OWNER/REPO, KIND github, gitlab or forgejo", .{to});
     if (options.common.offline) return misuse(arena, "publishing writes to the forge: not with --offline", .{});
     const data = (try Mirror.load(io, arena, ws.root)) orelse return misuse(arena, "there is no mirror to publish: run 'skein mirror' first", .{});
     const git_dir = history.gitDir(io, arena, ws.root) catch return misuse(arena, "this is no git repository", .{});
@@ -60,7 +60,6 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Publish) !Workspace.Ou
 fn parseTarget(text: []const u8, url: ?[]const u8) ?Forge {
     const colon = std.mem.findScalar(u8, text, ':') orelse return null;
     const kind = std.meta.stringToEnum(Forge.Kind, text[0..colon]) orelse return null;
-    if (kind == .forgejo) return null;
     const repository = text[colon + 1 ..];
     if (std.mem.findScalar(u8, repository, '/') == null) return null;
     return .{ .kind = kind, .repository = repository, .url = if (url) |u| std.mem.trimEnd(u8, u, "/") else null };

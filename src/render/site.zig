@@ -10,6 +10,7 @@ const Io = std.Io;
 const Graph = @import("../graph/Graph.zig");
 const Item = @import("../graph/Item.zig");
 const Workspace = @import("../commands/Workspace.zig");
+const Control = @import("control.zig");
 const files = @import("../files.zig");
 const html = @import("../html/blocks.zig");
 const inline_html = @import("../html/inline.zig");
@@ -22,11 +23,16 @@ const walk = @import("../graph/walk.zig");
 /// The files of the sources copied as they are, for the pages to use
 const assets = [_][]const u8{ ".png", ".svg", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".css" };
 
+/// Where the site goes: a directory, or memory, each file by its path
+/// (`skein serve`), kept in the arena the site is built in
+pub const Out = union(enum) { dir: Io.Dir, memory: *Files };
+pub const Files = std.StringArrayHashMapUnmanaged([]const u8);
+
 /// A page of a document or item file: where it is, and its HTML
 const Rendered = struct { file: []const u8, page: layout.Page, body: []const u8 };
 
 /// Writes the site of `ws` to `out`; the number of pages
-pub fn build(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Context, out: Io.Dir) !usize {
+pub fn build(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Context, out: Out) !usize {
     const rendered = try renderAll(io, arena, ws, ctx, out);
 
     var pages: std.ArrayList(layout.Page) = .empty;
@@ -37,31 +43,51 @@ pub fn build(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Con
 
     var diagrams = false;
     for (rendered) |r| {
-        try write(io, out, r.page.path, try layout.page(arena, name, pages.items, r.page, r.body));
+        try write(io, arena, out, r.page.path, try layout.page(arena, name, pages.items, r.page, r.body));
         if (layout.hasDiagram(r.body)) diagrams = true;
     }
     // mermaid.js once, for the pages with diagrams
-    if (diagrams) try write(io, out, layout.mermaid_file, vendor.mermaid);
-    try write(io, out, "index.html", try layout.page(arena, name, pages.items, pages.items[0], try front(arena, name, ws, ctx, rendered.len, pages.items)));
-    try write(io, out, "items.html", try layout.page(arena, name, pages.items, pages.items[pages.items.len - 1], try index(arena, ws, ctx)));
+    if (diagrams) try write(io, arena, out, layout.mermaid_file, vendor.mermaid);
+    try write(io, arena, out, "index.html", try layout.page(arena, name, pages.items, pages.items[0], try front(arena, name, ws, ctx, rendered.len, pages.items)));
+    try write(io, arena, out, "items.html", try layout.page(arena, name, pages.items, pages.items[pages.items.len - 1], try index(arena, ws, ctx)));
     return pages.items.len;
 }
 
 /// Writes each document of `ws` as one HTML file of its own, its images
 /// in it, for delivery; the number of files
-pub fn documents(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Context, out: Io.Dir) !usize {
+pub fn documents(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Context, out: Io.Dir, controlled: bool) !usize {
     var written: usize = 0;
+    // with `controlled`: only the controlled documents (their front matter
+    // gives `document` and `revision`), named `ID-REVISION.html`, and an index
+    var listed: std.ArrayList(u8) = .empty;
     for (try renderAll(io, arena, ws, ctx, null)) |r| {
+        var path = r.page.path;
+        if (controlled) {
+            const text = ws.root.readFileAlloc(io, r.file, arena, .limited(1 << 26)) catch continue;
+            const doc = try Control.documentOf(arena, r.file, text) orelse continue;
+            path = try arena.print("{s}-{s}.html", .{ try safeName(arena, doc.id), try safeName(arena, doc.revision) });
+            try listed.print(arena, "{s}\t{s}\t{s}\t{s}\t{s}\n", .{ path, doc.id, doc.revision, r.page.title, r.file });
+        }
         const body = try embedImages(io, arena, ws.root, r.file, r.body);
-        try write(io, out, r.page.path, try layout.standalone(arena, r.page.title, body));
+        try write(io, arena, .{ .dir = out }, path, try layout.standalone(arena, r.page.title, body));
         written += 1;
     }
+    if (controlled) try write(io, arena, .{ .dir = out }, "documents.tsv", try arena.print("file\tdocument\trevision\ttitle\tsource\n{s}", .{listed.items}));
     return written;
+}
+
+/// A document's identifier or revision as part of a file's name
+fn safeName(arena: std.mem.Allocator, s: []const u8) ![]const u8 {
+    const out = try arena.dupe(u8, s);
+    for (out) |*c| if (!std.ascii.isAlphanumeric(c.*) and c.* != '-' and c.* != '_' and c.* != '.') {
+        c.* = '_';
+    };
+    return out;
 }
 
 /// Every document and item file of `ws` as HTML; the files of the
 /// sources are copied to `out` when there is one
-fn renderAll(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Context, out: ?Io.Dir) ![]const Rendered {
+fn renderAll(io: Io, arena: std.mem.Allocator, ws: *Workspace, ctx: markdown.Context, out: ?Out) ![]const Rendered {
     var rendered: std.ArrayList(Rendered) = .empty;
     for (ws.project.sources) |source| {
         // a source that cannot be read was reported when the items were
@@ -134,9 +160,14 @@ fn mimeOf(src: []const u8) ?[]const u8 {
     return null;
 }
 
-fn write(io: Io, out: Io.Dir, path: []const u8, data: []const u8) !void {
-    if (Io.Dir.path.dirnamePosix(path)) |parent| try out.createDirPath(io, parent);
-    try out.writeFile(io, .{ .sub_path = path, .data = data });
+fn write(io: Io, arena: std.mem.Allocator, out: Out, path: []const u8, data: []const u8) !void {
+    switch (out) {
+        .dir => |dir| {
+            if (Io.Dir.path.dirnamePosix(path)) |parent| try dir.createDirPath(io, parent);
+            try dir.writeFile(io, .{ .sub_path = path, .data = data });
+        },
+        .memory => |m| try m.put(arena, path, data),
+    }
 }
 
 /// `a/b.md` as `a/b.html`
@@ -153,11 +184,11 @@ fn plain(arena: std.mem.Allocator, s: []const u8) ![]const u8 {
     return out.items;
 }
 
-fn copyAssets(io: Io, arena: std.mem.Allocator, root: Io.Dir, dir: []const u8, out: Io.Dir) !void {
+fn copyAssets(io: Io, arena: std.mem.Allocator, root: Io.Dir, dir: []const u8, out: Out) !void {
     const paths = files.list(io, arena, root, dir, &assets) catch return;
     for (paths) |file| {
         const data = root.readFileAlloc(io, file, arena, .limited(1 << 28)) catch continue;
-        try write(io, out, file, data);
+        try write(io, arena, out, file, data);
     }
 }
 

@@ -11,6 +11,7 @@ const Schema = @import("../schema/Schema.zig");
 const Workspace = @import("Workspace.zig");
 const datetime = @import("../toml/datetime.zig");
 const git = @import("../git.zig");
+const signatures = @import("../graph/signatures.zig");
 const toml = @import("../toml.zig");
 
 pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Approve) !Workspace.Outcome {
@@ -66,15 +67,36 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Approve) !Workspace.Ou
             .text = try arena.print("skein: {s} may not approve '{s}'{s}{s}; those who may: {s}\n", .{ by, id, if (options.as != null) " as " else "", options.as orelse "", try std.mem.join(arena, ", ", who) }),
             .status = .misuse,
         };
-        try approvals.put(arena, &ws.graph, &ws.project.schema, item, by, on, options.as);
+        try approvals.put(arena, &ws.graph, &ws.project.schema, item, by, on, options.as, .{ .signed_in = options.signed_in });
         const file = try Approvals.fileOf(arena, item);
         if (!Schema.names.contains(files.items, file)) try files.append(arena, file);
     }
     try approvals.write(io, arena, ws.root, &ws.graph, files.items);
     const n = options.ids.len;
-    return .{
-        .text = try arena.print("skein: {d} item{s} approved by {s}{s} on {d:0>4}-{d:0>2}-{d:0>2}\n", .{ n, if (n == 1) "" else "s", by, if (options.as) |r| try arena.print(" as {s}", .{r}) else "", on.year, on.month, on.day }),
-    };
+    const said = try arena.print("skein: {d} item{s} approved by {s}{s} on {d:0>4}-{d:0>2}-{d:0>2}\n", .{ n, if (n == 1) "" else "s", by, if (options.as) |r| try arena.print(" as {s}", .{r}) else "", on.year, on.month, on.day });
+    if (options.sign) {
+        // the signature is the commit's: of the records alone
+        var args: std.ArrayList([]const u8) = .empty;
+        try args.appendSlice(arena, &.{ "add", "--" });
+        try args.appendSlice(arena, files.items);
+        switch (try git.run(io, arena, ws.root, args.items)) {
+            .ok => {},
+            .failed => |why| return .{ .text = try arena.print("{s}skein: the approval is written, and not committed: {s}\n", .{ said, why }), .status = .problems },
+        }
+        args.clearRetainingCapacity();
+        try args.appendSlice(arena, &.{ "commit", "--quiet", "-S", "-m", try arena.print("Approve {s}", .{try std.mem.join(arena, ", ", options.ids)}), "--" });
+        try args.appendSlice(arena, files.items);
+        return switch (try git.run(io, arena, ws.root, args.items)) {
+            .ok => .{ .text = try arena.print("{s}skein: committed, signed\n", .{said}) },
+            .failed => |why| .{ .text = try arena.print("{s}skein: the approval is written, and not committed signed: {s}\n", .{ said, why }), .status = .problems },
+        };
+    }
+    // a type that asks for signed approvals: say how
+    for (options.ids) |id| {
+        const item_type = ws.project.schema.itemType(ws.graph.find(id).?.type_name).?;
+        if (signatures.needed(item_type, options.as)) return .{ .text = try arena.print("{s}skein: these approvals must be signed: commit them with git commit -S, or approve with --sign\n", .{said}) };
+    }
+    return .{ .text = said };
 }
 
 pub fn parseDate(text: []const u8) ?toml.Date {

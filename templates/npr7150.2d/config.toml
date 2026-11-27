@@ -1,10 +1,3 @@
-
-# NPR 7150.2D as NASA publishes it, and the handbook's reading of each requirement:
-# read-only, written by skein init from the template (skein's tools/npr7150)
-[[sources]]
-path = "standards/npr7150.2d"
-read_only = true
-
 # The maturity of the documents (the handbook's topic 7.08): each document's front
 # matter names its product (item = "PRD-01") and its maturity; skein check warns of
 # one below what its product expects at the review the project is at next. Set
@@ -12,6 +5,20 @@ read_only = true
 [maturity]
 order = ["D", "P", "B", "U", "F"]
 # milestone = "pdr"
+
+# The numeric gates of the handbook's review checklists (topic 7.09), checked at the
+# milestone: the share of requirements still tbd or tbr (at most, in percent), and
+# of those added, changed or removed since the last baseline (under, in percent).
+[maturity.gates]
+sw_rr = { tbd = 20, volatility = 30 }
+mdr = { volatility = 30 }
+sdr = { volatility = 30 }
+pdr = { tbd = 1, volatility = 20 }
+cdr = { tbd = 1, volatility = 20 }
+sir = { tbd = 1, volatility = 20 }
+trr = { tbd = 1, volatility = 5 }
+sar = { tbd = 0 }
+orr = { tbd = 0 }
 
 # Tests cite the software requirements they verify, and code the design it implements,
 # in comments: `// verifies: SRS-001`, `// implements: DES-001`. Give the places and

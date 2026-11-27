@@ -1,0 +1,29 @@
+description = "A human-rating certification requirement of NPR 8705.2C, named by its paragraph (HRC-2.2.1); read-only, from skein's template"
+id = "numbered"
+prefix = "HRC"
+digits = 1
+
+# the paragraph's title, as the NPR gives it
+[attributes.title]
+normative = false
+
+# what the Human-Rating Certification Package holds of it at each review (Appendix D): I the initial release, U an update, X once
+[attributes.srr]
+values = ["I", "U", "X"]
+normative = false
+
+[attributes.sdr]
+values = ["I", "U", "X"]
+normative = false
+
+[attributes.pdr]
+values = ["I", "U", "X"]
+normative = false
+
+[attributes.cdr]
+values = ["I", "U", "X"]
+normative = false
+
+[attributes.orr]
+values = ["I", "U", "X"]
+normative = false

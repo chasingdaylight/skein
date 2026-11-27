@@ -6,10 +6,12 @@ const Io = std.Io;
 
 const Forge = @import("Forge.zig");
 const github = @import("github.zig");
+const forgejo = @import("forgejo.zig");
 const gitlab = @import("gitlab.zig");
 
 /// How the forge's API is asked: the forge itself, or something else in tests
 pub var call: *const fn (Io, std.mem.Allocator, *const Forge, []const u8) anyerror!github.Reply = github.api;
+pub var forgejo_call: *const fn (Io, std.mem.Allocator, *const Forge, []const u8) anyerror!github.Reply = forgejo.api;
 
 pub const Pull = struct {
     /// `YYYY-MM-DD`; null when it is not merged
@@ -20,6 +22,10 @@ pub const Pull = struct {
     merge: ?[]const u8,
     /// the reviewers whose last review approved it, in order
     approvers: []const []const u8,
+    /// its web address, where the forge keeps the record of its review
+    url: ?[]const u8 = null,
+    /// whether the forge asks a reviewer to sign in again to approve (GitLab's setting)
+    reauth: bool = false,
 };
 
 pub const Got = union(enum) {
@@ -30,18 +36,19 @@ pub const Got = union(enum) {
 
 /// What the forge says of pull request `number` of the project's repository
 pub fn get(io: Io, arena: std.mem.Allocator, forge: *const Forge, number: u64) !Got {
-    switch (forge.kind) {
-        .github => {},
+    // Forgejo's pull requests and reviews are GitHub's shape, from its own API
+    const ask = switch (forge.kind) {
+        .github => call,
         .gitlab => return gitlab.pull(io, arena, forge, number),
-        .forgejo => return .{ .unreachable_ = "skein has no adapter for Forgejo yet" },
-    }
-    const head = try call(io, arena, forge, try arena.print("repos/{s}/pulls/{d}", .{ forge.repository, number }));
+        .forgejo => forgejo_call,
+    };
+    const head = try ask(io, arena, forge, try arena.print("repos/{s}/pulls/{d}", .{ forge.repository, number }));
     const json = switch (head) {
         .body => |b| b,
         .missing => return .missing,
         .unreachable_ => |why| return .{ .unreachable_ = why },
     };
-    const reviews = switch (try call(io, arena, forge, try arena.print("repos/{s}/pulls/{d}/reviews?per_page=100", .{ forge.repository, number }))) {
+    const reviews = switch (try ask(io, arena, forge, try arena.print("repos/{s}/pulls/{d}/reviews?per_page=100", .{ forge.repository, number }))) {
         .body => |b| b,
         .missing => "[]",
         .unreachable_ => |why| return .{ .unreachable_ = why },
@@ -73,9 +80,13 @@ pub fn parse(arena: std.mem.Allocator, pull_json: []const u8, reviews_json: []co
         const login = user.object.get("login") orelse continue;
         const state = review.object.get("state") orelse continue;
         if (login != .string or state != .string) continue;
-        if (std.mem.eql(u8, state.string, "APPROVED")) {
+        // Forgejo's: `REQUEST_CHANGES`, and `dismissed` on the review
+        const dismissed = review.object.get("dismissed");
+        if (dismissed != null and dismissed.? == .bool and dismissed.?.bool) {
+            last.put(arena, login.string, false) catch return null;
+        } else if (std.mem.eql(u8, state.string, "APPROVED")) {
             last.put(arena, login.string, true) catch return null;
-        } else if (std.mem.eql(u8, state.string, "CHANGES_REQUESTED") or std.mem.eql(u8, state.string, "DISMISSED")) {
+        } else if (std.mem.eql(u8, state.string, "CHANGES_REQUESTED") or std.mem.eql(u8, state.string, "REQUEST_CHANGES") or std.mem.eql(u8, state.string, "DISMISSED")) {
             last.put(arena, login.string, false) catch return null;
         }
     }
@@ -88,12 +99,30 @@ pub fn parse(arena: std.mem.Allocator, pull_json: []const u8, reviews_json: []co
             return std.mem.lessThan(u8, a, b);
         }
     }.lt);
+    const url = p.object.get("html_url");
     return .{
+        .url = if (url) |u| (if (u == .string) u.string else null) else null,
         .merged_on = merged_on,
         .base = base_sha.string,
         .merge = if (merge) |m| (if (m == .string) m.string else null) else null,
         .approvers = approvers.items,
     };
+}
+
+// req: forge.forgejo
+test "who approved a pull request on Forgejo, whose reviews say it otherwise" {
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
+    defer arena.deinit();
+    const pull = parse(arena.allocator(),
+        \\{"merged_at": "2026-11-21T20:15:00+01:00", "merge_commit_sha": "m1", "base": {"sha": "b1"}, "pull_request": null}
+    ,
+        \\[{"user": {"login": "carol"}, "state": "APPROVED", "dismissed": false},
+        \\ {"user": {"login": "dave"}, "state": "APPROVED", "dismissed": true},
+        \\ {"user": {"login": "ann"}, "state": "APPROVED"},
+        \\ {"user": {"login": "ann"}, "state": "REQUEST_CHANGES"}]
+    ).?;
+    try std.testing.expectEqual(1, pull.approvers.len);
+    try std.testing.expectEqualStrings("carol", pull.approvers[0]);
 }
 
 test "who approved a pull request, by their last review" {

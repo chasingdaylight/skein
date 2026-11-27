@@ -23,15 +23,24 @@ In the root of the repository:
 ```text
 $ skein init
 skein: a project in ., with 0 documents to start from; 'skein check' checks it; AGENTS.md tells coding agents about Skein
+Still to do:
+- Say where the tests and the code are (`[[citations]]` in `.skein/config.toml`, often there as comments to fill in), so that `skein coverage` counts what cites the requirements.
+- Add a CI job that runs `skein check` and `skein coverage` (see "In continuous integration" in Skein's `docs/commands.md`).
 ```
 
-`skein init` writes two files. `.skein/config.toml` is the project's configuration, and the directory `.skein/` is what makes the repository a Skein project:
+`skein init` writes two files. `.skein/config.toml` is the project's configuration, and the directory `.skein/` is what makes the repository a Skein project. The project's name, for reports, is its directory's:
 
 ```toml
+# the project's name, for reports
+[project]
+name = "tally"
+
 # where the items are: Markdown documents whose paragraphs can be items
 [[sources]]
 path = "docs"
 ```
+
+The list of what is still to do is what this tutorial does in steps 4 and 8.
 
 `AGENTS.md` tells coding agents how this project keeps its requirements, so that they cite them as people do (`skein agents` writes it again, or into `CLAUDE.md`). Keep it or delete it.
 
@@ -70,12 +79,7 @@ tally counts the lines, words and bytes of files, as `wc` does.
 %req[REQ-004] A file that cannot be read shall be reported on standard error, and tally shall exit with status 1 after counting the others.
 ```
 
-The document reads as a document on GitHub, in an editor or on paper, and `grep '%req\['` finds every requirement. Give the project a name for the reports while you are in the configuration:
-
-```toml
-[project]
-name = "tally"
-```
+The document reads as a document on GitHub, in an editor or on paper, and `grep '%req\['` finds every requirement.
 
 ## 4. Let the code and the tests cite them
 
@@ -235,6 +239,6 @@ In VS Code, the extension `chasingdaylight.skein` shows what `skein check` repor
 ## Where next
 
 - **Tests as items, design, links between levels:** a project can have more item types (tests, design elements, needs) and typed links between them (`verifies`, `refines`), with links that must be there and links that are expected. See [project files](project-files.md) and [writing items](writing-items.md).
-- **A standard to follow:** if the project works to a standard (ISO/IEC/IEEE 29148, NASA's NPRs), start from a [template](templates.md) instead of writing the types: `skein init --template iso29148`.
+- **A standard to follow:** if the project works to a standard (NASA's NPRs and standards, for one), start from a [template](templates.md) instead of writing the types: `skein init --template npr7150.2d`.
 - **Requirements kept elsewhere:** [importing](importing.md) brings in Doorstop documents and spreadsheets.
 - **Planning the work:** [the other tutorial](tutorial-planning.md) starts from a project with no code, and plans it.

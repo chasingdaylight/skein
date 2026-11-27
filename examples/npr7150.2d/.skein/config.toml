@@ -1,0 +1,61 @@
+# the project's name, for reports
+[project]
+name = "rover"
+
+# where the items are: Markdown documents whose paragraphs can be items
+[[sources]]
+path = "docs"
+
+[template."npr7150.2d"]
+# The software class of the project (NPR 7150.2D, Appendix D; SWE-020)
+"class" = "C"
+# Whether the project has safety-critical software (SWE-205, per NASA-STD-8739.8)
+"safety-critical" = "false"
+# The program and project management directive the software's project is under (NPR 7150.2D, P.4): space-flight (NPR 7120.5F, with NPR 7123.1D's systems engineering), it (NPR 7120.7A), or none (managed within another project, or under NPR 7120.8)
+"program" = "none"
+# Whether software models, simulations or analysis tools are used to qualify flight software or flight equipment (SWE-070, SWE-073), which brings NASA-STD-7009B
+"models-and-simulations" = "false"
+# Whether the software is part of a crewed space system to be human-rated (NPR 8705.2, P.4), which brings NPR 8705.2C and NASA-STD-8719.29
+"crewed" = "false"
+# The maturity of the documents (the handbook's topic 7.08): each document's front
+# matter names its product (item = "PRD-01") and its maturity; skein check warns of
+# one below what its product expects at the review the project is at next. Set
+# milestone to that review: mcr, srr, sw_rr, mdr, sdr, pdr, cdr, sir, trr, sar or orr.
+[maturity]
+order = ["D", "P", "B", "U", "F"]
+milestone = "srr"
+
+# The numeric gates of the handbook's review checklists (topic 7.09), checked at the
+# milestone: the share of requirements still tbd or tbr (at most, in percent), and
+# of those added, changed or removed since the last baseline (under, in percent).
+[maturity.gates]
+sw_rr = { tbd = 20, volatility = 30 }
+mdr = { volatility = 30 }
+sdr = { volatility = 30 }
+pdr = { tbd = 1, volatility = 20 }
+cdr = { tbd = 1, volatility = 20 }
+sir = { tbd = 1, volatility = 20 }
+trr = { tbd = 1, volatility = 5 }
+sar = { tbd = 0 }
+orr = { tbd = 0 }
+
+# Tests cite the software requirements they verify, and code the design it implements,
+# in comments: `// verifies: SRS-001`, `// implements: DES-001`.
+[[citations]]
+name = "test"
+path = "tests"
+files = [".c"]
+marker = "// verifies:"
+to = ["requirement"]
+
+[[citations]]
+name = "code"
+path = "src"
+files = [".c"]
+marker = "// implements:"
+to = ["design"]
+expected = true
+
+# the results of the test runs, for the test report
+[results]
+paths = ["verification/results"]

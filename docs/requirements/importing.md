@@ -3,7 +3,7 @@
 The user documentation is in `docs/importing.md`.
 
 %req[import.place]
-An import shall work in the directory it is run in, or in the one `--root` names, and shall not look for a project above it. Its paths are relative to that directory. If there is no project there, the import creates one.
+An import of items (`doorstop`, `csv`, `reqif`, `jama`) shall work in the directory it is run in, or in the one `--root` names, and shall not look for a project above it. Its paths are relative to that directory. If there is no project there, the import creates one. `import gitlab-requirements`, which records a map in a project that exists, finds it as other commands do (`project.root`) and reads its file from where it is run.
 
 ## From Doorstop
 
@@ -14,7 +14,7 @@ An import shall work in the directory it is run in, or in the one `--root` names
 The settings of the document shall become an item type with numbered IDs (prefix, digits, separator, and names in place of numbers where the document uses them), with an attribute for each attribute its items use. The directory shall become a source of the project.
 
 %req[import.doorstop.fields]
-No data of an item shall be lost. Its links become `parent` links, an inactive item becomes a removed item, and every attribute becomes an attribute. An attribute keeps its name, unless Skein itself reads a key of that name, in which case it is named `doorstop-` followed by the name. The Doorstop category becomes the Skein category when every active item of the document has one.
+No data of an item shall be lost. Its links become `parent` links, an inactive item becomes a removed item, and every attribute becomes an attribute. An attribute keeps its name, unless Skein itself reads a key of that name, in which case it is named `doorstop-` followed by the name. The Doorstop category becomes the Skein category when every active item of the document has one, and the attribute `doorstop-category` otherwise. `normative`, `derived`, `level` and `ref` keep their names, the booleans only where they differ from Doorstop's defaults; `references` becomes an attribute of the paths, separated by commas; the attributes the document lists as `reviewed` are marked `normative = true`; an item kept as YAML gives its `header` as a heading; and the item's own `reviewed` stamp is left out. The `parent` link type is made with `review = true`.
 
 %req[import.doorstop.reviews]
 A link that Doorstop recorded as reviewed shall be recorded as reviewed, against the fingerprint its target has at the time of the import.
@@ -31,7 +31,7 @@ With `--status-from NAME`, the values of the attribute `NAME` shall be the items
 ## From CSV
 
 %req[import.csv.rows]
-`skein import csv` shall create an item file for each row of a CSV file whose first row names the columns. The ID and the text come from the columns named for them. The status, category and verification method come from columns with those names, links from columns named after link types, and attributes from the remaining columns. Empty cells are left out.
+`skein import csv` shall create an item file for each row of a CSV file whose first row names the columns. The ID and the text come from the columns named for them. The status, category and verification method come from columns with those names, links from columns named after link types (the IDs separated by commas, semicolons or spaces), and attributes from the remaining columns, named in lowercase with `-` for spaces. Columns are matched without regard to case; the ID and text columns are `id` and `text` unless `--id-column` and `--text-column` name others. Empty cells are left out.
 
 %req[import.csv.reader]
 The file shall be read in the form spreadsheets write: a quoted field may contain the delimiter, doubled quotes and line endings. The delimiter is the semicolon when the first row has more semicolons than commas.
@@ -41,3 +41,11 @@ When the project has no item type with the given name, one shall be created, wit
 
 %req[import.csv.all-or-nothing]
 Nothing shall be written unless every row can become an item and no existing item file would be overwritten. With `--replace`, existing files are overwritten.
+
+## From ReqIF
+
+%req[import.reqif]
+`skein import reqif FILE --type TYPE --to DIR` shall make an item file of each spec object of a ReqIF 1.2 file, as `import csv` does of each row (with its item type, sources, refusals and `--replace`), in the order of the file's specifications: the ID from the attribute `id` (as `skein export reqif` writes it), else `ReqIF.ForeignID`, else the object's identifier; the text from the XHTML attribute `text` or `ReqIF.Text`, else the first XHTML one, as Markdown; the identifier as the attribute `reqif`; `ReqIF.Name` as the attribute `title`; the other attributes by their long names, an enumeration as the names of its values; `ReqIF.ForeignID`, when there is one, as `reqif-foreign-id`; attributes `status`, `category` and `verification` as those; attributes `type` and `text` that are not the text as `reqif-type` and `reqif-text`; and each spec relation as a link of the type named as the relation type, when the project has that link type, to the item its target became. The text's XHTML becomes Markdown: paragraphs, lists, line breaks, bold, italics, code and links. A `.reqifz` archive is not read: it is unpacked first. What `skein export reqif` writes comes back as the same items. (Issue #241.)
+
+%req[import.jama]
+`skein import jama PROJECT --jama-type KEY --type TYPE --to DIR` shall make an item file of each item of the Jama item type KEY of the Jama Connect project PROJECT (its id), read through Jama's REST API page by page, as `import reqif` does of each spec object: the ID from the item's document key; its description (HTML) as Markdown; its name as the attribute `title`, its id as `jama` and its item type as `jama-type`; and each relationship from it as a link of the type named as the relationship type, to the item of any type the relationship goes to. A Jama item type is taken a time, as a Skein type has one scheme of IDs. The instance is `url` in `.skein/jama.toml`, else `JAMA_URL`, and the sign-in is as `skein jama`'s. (Issue #251.)

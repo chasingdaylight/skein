@@ -39,7 +39,58 @@ repository = "group/sub/project"
 # url = "https://gitlab.example.com"   # for a self-managed server
 ```
 
-Everything above works the same: `#97` is issue 97 of the project, a merge request's approvals are read for `skein approve --from-pull-request`, and the planning fields (assignees, milestone and its due date, closed) are read and written back by `skein apply`. Skein asks through `glab` when it is installed, so its sign-in is used; without it, it calls GitLab's API with the token in `GITLAB_TOKEN` when one is set (public projects need none). Forgejo's adapter is still to come.
+Everything above works the same: `#97` is issue 97 of the project, a merge request's approvals are read for `skein approve --from-pull-request`, and the planning fields (assignees, milestone and its due date, closed) are read and written back by `skein apply`. Skein asks through `glab` when it is installed, so its sign-in is used; without it, it calls GitLab's API with the token in `GITLAB_TOKEN` when one is set (public projects need none).
+
+### GitLab's requirements
+
+GitLab Ultimate has requirements of its own, which a CI job can mark satisfied or failed. Skein keeps the items as the truth and gives GitLab a view of them, through the files GitLab reads and writes:
+
+1. `skein export gitlab-requirements --profile NAME > requirements.csv` writes the items (removed ones left out) as the CSV GitLab's requirements import takes: the title is the item's ID, a colon and its first sentence (or its `title` attribute), the description its text. Import it in GitLab under Plan > Requirements.
+2. Export the requirements from GitLab (it sends the CSV by email), then `skein import gitlab-requirements that-export.csv` records the requirement IID of each item in `.skein/gitlab-requirements.toml`, matched by the ID that starts the title; commit it. Archived requirements, and ones whose title names no item, are left out and listed.
+3. In CI, `skein coverage --results junit.xml --gitlab-requirements requirements.json` also writes the requirements report: an item's requirement fails when a result of any implementation failed, passes when one passed and none failed, and is left out when untested. Upload it as the job's report:
+
+```yaml
+requirements:
+  script:
+    - skein coverage --results junit.xml --gitlab-requirements requirements.json
+  artifacts:
+    reports:
+      requirements_v2: requirements.json  # requirements: on a project without work items
+```
+
+Run the first two steps again when items are added, or let the API do both: `skein gitlab-requirements [--profile NAME]` creates a requirement for each item that has none (recording it in the map), brings the title and description of the others back to their items, archives the requirements of removed items and reopens those of items that are back; `--dry-run` says what it would do. It works through `glab` when it is installed, else with the token in `GITLAB_TOKEN`, and needs work items with the Requirement type (Ultimate). Changes made in GitLab are undone by the next run: the items are the truth.
+
+## Jama Connect
+
+Jama Connect is not a forge, but a project whose truth is Skein can keep a Jama project to its items, for the people who read and review in Jama. `.skein/jama.toml`, written by hand, says where they go:
+
+```toml
+url = "https://example.jamacloud.com"
+project = 42           # the Jama project's id
+parent = 1201          # the folder or set new items go in; the project's root when left out
+
+[types]                # the Jama item type (its id) of each item type that goes to Jama
+requirement = 89
+
+[links]                # the relationship type (its id) of each link type
+derives = 4            # from the link's source to its target
+verifies = { type = 5, reverse = true }   # from its target to its source, as "Verified By"
+```
+
+`skein jama [--profile NAME]` then brings Jama to the items. An item without a Jama item gets one, named by its ID and first sentence (as for GitLab) with its text as the description, and its id is recorded in `.skein/jama-map.toml`, which the project commits. An item whose Jama item says otherwise, compared as plain text since Jama rewrites the HTML it is given, has it brought back, and the run says so: someone changed it in Jama. A removed item's Jama item is reported and left, for its owners to delete. Each link of a type `[links]` names becomes a relationship between the two Jama items; a relationship of such a type between two mapped items that no link calls for is reported, to be linked in Skein or taken out of Jama. `--dry-run` asks Jama and changes nothing.
+
+It signs in as `skein import jama` does, from `JAMA_CLIENT_ID` and `JAMA_CLIENT_SECRET`, else `JAMA_USERNAME` and `JAMA_PASSWORD`; in CI, from the job's secrets. The ids of item and relationship types are on Jama's admin pages, or in `GET /rest/v1/itemtypes` and `/relationshiptypes`. The requests follow Jama's REST reference (rest.jamasoftware.com) and Jama's Python client for the bodies it leaves out; they are tested against recorded answers, not a Jama instance, so try `--dry-run` first.
+
+## Forgejo
+
+```toml
+[forge]
+kind = "forgejo"
+repository = "owner/repo"
+# url = "https://git.example.com"   # for a server of one's own; codeberg.org otherwise
+```
+
+Everything of GitHub works the same here: `#97` is issue 97 of the repository, a pull request's approvals are read for `skein approve --from-pull-request` (a reviewer's last review that approved or asked for changes counts, and a dismissed one does not), and the planning fields are read and written back by `skein apply`. Forgejo has no program that holds a sign-in as `gh` and `glab` do, so Skein calls its API itself, with the token in `FORGEJO_TOKEN` (an access token with the issue scope): public repositories are read without one, and writing needs one. `skein publish --to forgejo:OWNER/REPO` re-creates a mirror there as on the others (`--url` for a server other than codeberg.org).
 
 ## Rendered
 

@@ -120,7 +120,7 @@ An item is approved only when every role has approved what it says now; `check` 
 
 ### Who may approve
 
-Skein has no sign-in of its own, so by default anyone can record an approval: the records are in git, with their commits. A type can say whose approval counts:
+By default anyone can record an approval: the records are in git, with their commits, and carry the name `--by` or git gives, or the person signed in to `skein serve` ([the web interface](web.md#for-a-team)). A type can say whose approval counts:
 
 ```toml
 # .skein/types/proposal.toml
@@ -139,6 +139,63 @@ sma-ta = ["B. Assurance", "C. Assurance"]
 ```
 
 The names are the ones an approval carries: `--by` (by default git's `user.name`), or a reviewer's login for `--from-pull-request`. `skein approve` refuses an approval that would not count, `check` reports an item whose only approval is by someone else, and `--from-pull-request` records a reviewer in the role they may act in, or not at all. The list is a file of the project, so who may change it is a matter of the project's own review of `.skein/types/` (a code owners file on that directory, say).
+
+### Levels, and signed approvals
+
+Some approvals come in levels, and only some levels must be signed. A schedule change approved by the PP&C team needs no signature, while a project that also asks the project manager to approve it wants that second approval, and only that one, signed with the manager's own key (emanspeaks, 2026-11-27):
+
+```toml
+# .skein/types/schedule-change.toml
+[approval]
+statuses = ["approved"]
+roles = ["ppc", "project-manager"]
+signed = ["project-manager"]   # or true: every role
+in_order = true                # the project manager approves after PP&C
+```
+
+With `in_order`, an approval counts only once each role before it has approved the same content; `check` reports one given before an earlier role's.
+
+A signed approval is a signed commit: the commit that records it is signed with the approver's key, as git signs any commit, and `skein check` asks git to verify it. Skein holds no key itself. Any key git signs with will do:
+
+| Key | Git's settings |
+| --- | --- |
+| An X.509 certificate, such as a PIV or CAC badge's | `gpg.format = x509`, with `gpg.x509.program` a program that reaches the card: on Windows, GitHub's `smimesign`, which signs with certificates in the system store, where a badge's shows while the card is in; elsewhere `gpgsm` with the card's PKCS#11 module. |
+| An OpenPGP (GPG) key | git's default: `user.signingkey` names it. |
+| An SSH key | `gpg.format = ssh`, `user.signingkey` its public key, and `gpg.ssh.allowedSignersFile` listing the keys git may verify. |
+
+Each approver's keys are in `.skein/signers.toml`, committed and reviewed like the type's approvers:
+
+```toml
+"A. Manager" = ["SHA256:h0tCl8rpp98V/0jl3CUBfYX792AUCLw3LhXTmFjR8dA"]
+"B. Badge" = "CN=BADGE.B.1234567890"
+```
+
+An entry is matched against what git reports of the signature: its key's fingerprint, its primary key's, its key ID, or its signer. `skein approve ID --as project-manager --sign` writes the approval and commits it, alone, signed with your key. Without `--sign`, approving such an item says that it must be signed: commit the record with `git commit -S`.
+
+`skein check` reports a current approval of such a type when its record is not committed yet, when the commit is not signed, when its signature is bad, expired or revoked, when git cannot check it here (it lacks the key or the certificate's chain, or the allowed signers file for SSH), or when the key is not one of the approver's in `.skein/signers.toml`. A certificate's chain is trusted as git and the system trust it, so a badge verifies where the issuing agency's roots are installed.
+
+### Approvals given in `skein serve` or on the forge
+
+An approval clicked in `skein serve`'s pages, or given in review on the forge, is not signed with the approver's own key. An electronic signature with an audit trail does for it (emanspeaks, 2026-11-27):
+
+- **In `skein serve`**, approving needs someone signed in (`--sign-in`), and the record keeps how they were: `signed_in = { provider, subject, at, again }`. That is where they signed in (`oidc:ISSUER`, `forge:github`, `proxy`), who it says they are, when, and whether they signed in again to give this approval.
+- **On the forge**, `skein approve --from-pull-request` keeps the pull request's address (`pull`), where the forge keeps its own record of the review. On GitLab it also keeps whether the project asks a reviewer to sign in again to approve (`reauth`).
+
+Such an approval counts as signed when the commit that records it is signed by a server the project trusts to have seen it: `skein serve`'s checkout, or the CI job that runs `--from-pull-request`. Each signs with its own key (git's `commit.gpgsign` and `user.signingkey` in that checkout), and the keys are listed in `.skein/signers.toml`:
+
+```toml
+servers = ["SHA256:Qw3n0tAreAlKeyJustAnExampleOfOneXyZ0123456789"]
+```
+
+A project can also ask that the approver sign in again for each such approval (or for those of the roles that must be signed), not only once for the session:
+
+```toml
+# .skein/config.toml
+[serve]
+approve_sign_in = "again"
+```
+
+In `skein serve`, **Approve** then sends the person to sign in again first (OpenID Connect's `prompt=login`), and the sign-in counts for that one approval, within five minutes. This needs `--sign-in oidc`, a provider that can be asked for it: GitLab and most single sign-on services are OpenID Connect providers, and `skein serve` refuses to start with another. On the forge, it is GitLab's setting that asks a reviewer to sign in again to approve. `skein check` reports an approval given without it.
 
 ### From a merged pull request
 

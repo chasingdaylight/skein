@@ -25,6 +25,9 @@ arena: std.mem.Allocator,
 src: []const u8,
 pos: usize = 0,
 diag: *Diagnostic,
+/// the last place found, from which the next is counted on: places are
+/// asked for in order, and counting from the start each time is quadratic
+known: struct { at: usize = 0, line: u32 = 1, column: u32 = 1 } = .{},
 
 pub fn parseDocument(self: *Parser) Error!*Table {
     if (!std.unicode.utf8ValidateSlice(self.src)) return self.failAt(0, "the file is not valid UTF-8");
@@ -56,15 +59,18 @@ pub fn failAt(self: *Parser, at: usize, message: []const u8) error{InvalidToml} 
 }
 
 /// The line and column of the offset `at`
-fn placeAt(self: *const Parser, at: usize) value.Place {
-    var line: u32 = 1;
-    var column: u32 = 1;
-    for (self.src[0..@min(at, self.src.len)]) |c| {
+fn placeAt(self: *Parser, at: usize) value.Place {
+    const end = @min(at, self.src.len);
+    if (end < self.known.at) self.known = .{};
+    var line = self.known.line;
+    var column = self.known.column;
+    for (self.src[self.known.at..end]) |c| {
         if (c == '\n') {
             line += 1;
             column = 1;
         } else column += 1;
     }
+    self.known = .{ .at = end, .line = line, .column = column };
     return .{ .line = line, .column = column };
 }
 

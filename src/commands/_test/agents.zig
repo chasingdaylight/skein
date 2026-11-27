@@ -41,6 +41,7 @@ test "skein agents: a section of CLAUDE.md, written again in place, and a skill 
     try expectContains(first, "- `rule`: A rule of the language; categories `syntax`; statuses `draft`, `approved`, `deprecated`, `removed`.\r\n");
     try expectContains(first, "- `verifies` to `rule`.\r\n");
     try expectContains(first, "- `test`: files under `tests/` ending in `.zig`, `// spec: ID, ID`.\r\n");
+    try expectContains(first, "Approvals and reviews are people's, never an agent's: do not run `skein approve`, `skein review` or `skein clear`");
     try expectContains(first, "run `skein check`");
 
     // after a change to the schema, written again in place
@@ -66,4 +67,39 @@ test "skein init writes AGENTS.md" {
     const said = (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"langspec"} })).text;
     try expectContains(said, "; AGENTS.md tells coding agents about Skein\n");
     try expectContains(try tmp.dir.readFileAlloc(testing.io, "AGENTS.md", a, .limited(1 << 16)), instructions.begin);
+}
+
+// req: agents.todo
+test "what is still to do, as init says it and agents writes it, and gone once done" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try tmp.dir.realPathFileAlloc(testing.io, ".", a);
+    const said = (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7150.2d"} })).text;
+    try expectContains(said, "Still to do:\n- Give the template's option in `.skein/config.toml`: template: the template 'npr7150.2d' needs the option 'class'");
+    try expectContains(said, "- Add a CI job that runs `skein check`");
+
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    try write(tmp.dir, ".skein/config.toml", try std.mem.replaceOwned(u8, a, config, "# \"class\" = \"\"", "\"class\" = \"C\""));
+    const ws_text = struct {
+        fn f(al: std.mem.Allocator, dir: std.Io.Dir, r: []const u8) ![]const u8 {
+            _ = try agents.run(testing.io, al, .{ .common = .{ .root = r } });
+            return dir.readFileAlloc(testing.io, "AGENTS.md", al, .limited(1 << 20));
+        }
+    }.f;
+    const first = try ws_text(a, tmp.dir, root);
+    try expectContains(first, "Still to do in setting up this project");
+    try expectContains(first, "- Write the documents of `nasa-std-8739.8b`, which `npr7150.2d` brings along: `skein template documents`.");
+    try expectContains(first, "- Fill in the documents that are still the template's skeletons (23: docs/classification.md");
+    try expectContains(first, "- Set `[maturity] milestone`");
+
+    // a CI job and a milestone, and those are done
+    try write(tmp.dir, ".github/workflows/docs.yml", "jobs:\n  check:\n    steps:\n      - run: skein check\n");
+    const now = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    try write(tmp.dir, ".skein/config.toml", try std.mem.replaceOwned(u8, a, now, "# milestone = \"pdr\"", "milestone = \"pdr\""));
+    const second = try ws_text(a, tmp.dir, root);
+    try testing.expect(std.mem.find(u8, second, "Add a CI job") == null);
+    try testing.expect(std.mem.find(u8, second, "Set `[maturity] milestone`") == null);
 }

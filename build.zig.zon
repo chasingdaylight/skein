@@ -1,7 +1,7 @@
 .{
     .name = .skein,
     .fingerprint = 0xc45e887a2481d021,
-    .version = "0.1.1",
+    .version = "0.2.0",
     .minimum_zig_version = "0.17.1",
     // none, and none to come: see docs/design.md, principle 7
     .dependencies = .{},

@@ -60,7 +60,7 @@ A link points up, from an item to what it rests on: a test to the rule it verifi
 
 ## `skein coverage`
 
-With test results, kept in the project or given with `--results FILE`, it also says per implementation which items passed, failed or are untested: see [test results](results.md). `skein trace ID` takes `--results` too.
+With test results, kept in the project or given with `--results FILE`, it also says per implementation which items passed, failed or are untested: see [test results](results.md). `skein trace ID` takes `--results` too. `--gitlab-requirements FILE` also writes GitLab's requirements report: see [forges](forge.md#gitlabs-requirements).
 
 Counts, of the items that should be linked to or cited, how many are, and lists the ones that are not. An item with [parts](writing-items.md#parts-items-inside-an-item) also counts when every one of its parts does:
 
@@ -143,6 +143,8 @@ Writes the project's graph to standard output, for other tools.
 | `items` | CSV, one row per item: ID, type, category, status, verification, the item it is a part of, file, line, fingerprint, a column for each attribute, and the text. |
 | `links` | CSV, one row per link: from, its type, the link type, to, its type, and the review state. A traceability matrix in its long form, ready for a pivot table. |
 | `citations` | CSV, one row per citation: the citation set, file, line, the item and its type. |
+| `gitlab-requirements` | CSV for GitLab's requirements import, `title,description`: see [forges](forge.md#gitlabs-requirements). |
+| `reqif` | ReqIF 1.2, for DOORS and other requirements tools: a spec object per item (its ID, category, status, verification and attributes as strings, its text as XHTML, `ReqIF.Text`), a spec relation per link, and a specification per document with the items in order and their parts under them. Identifiers come from the IDs, so a later export updates the same objects; `LAST-CHANGE` is the time of the last commit of the item's file. |
 
 `--profile NAME` exports only the items of that profile, with their links and citations.
 
@@ -177,6 +179,10 @@ The project itself is not changed. `DIR` is created when needed and is best kept
 
 Every link is relative and the styles are inside each page, so `DIR` can be served from any address (GitHub Pages, a file share) or opened straight from disk. The pages follow the reader's light or dark setting.
 
+### `--editions`: each baseline beside the files as they are
+
+With `--editions`, `skein render` also renders each baseline (see `skein baseline`) as it was, into `DIR/editions/NAME/`, in the same format, and writes `DIR/editions/index.md` (or `index.html`) listing them, newest first, after the files as they are now. Readers then pick the edition that matches a release. An edition shows no test results, which are of the files now; one that cannot be rendered (its configuration was not sound then) is said so and left out.
+
 ### Generated pages
 
 A document can ask for a page that Skein makes from the project, in a fenced code block of the language `skein`. `skein render` replaces the block with the page, in both formats; elsewhere (on GitHub, in an editor) the request shows as the code it is.
@@ -193,6 +199,7 @@ list term
 | `matrix LINKTYPE [conditions]` | Each item the link type may point to, with the items that link to it; the gaps marked **none**. A traceability matrix. With `columns=text,classes` and `from.columns=status,evidence`, those columns of the item and of each item linking to it, one row per linking item: a compliance matrix. |
 | `coverage [profile=P]` | The coverage table, with links to the items that are not covered. |
 | `documents` | The register of documents: each document that gives its identifier, with its title, revision and last change. |
+| `history [type=TYPE]` | Measurements over time, for the measurement reports a standard asks for: at each baseline and now, the items of each type (or, with `type=`, of each status of that type) and the coverage of each expectation in percent, as Mermaid charts with a table of the numbers. A baseline is read from the files of its commit. |
 | `burndown MILESTONE [weight] [from=DATE] [to=DATE]`, `burnup ...` | A milestone's burndown (what remains, beside a guideline to none) or burnup (scope and done), day by day up to today, from the project as committed each day; `weight` counts estimates in place of items. Work is done in the statuses of `[planning] done`, by default the type's last status. |
 | `board [TYPE...] [conditions] [by=status\|assignee\|milestone]` | A board of the work items: a column for each status (or assignee, or milestone), a card for each item. |
 | `time [TYPE...] [conditions]` | Time spent on work items against their estimates, in hours, with who spent it: see `skein time`. |
@@ -236,6 +243,16 @@ milestone = "pdr"                   # the attribute of the items that says what 
 
 `skein check` then warns of a document below its item's value of `pdr` (the npr7150.2d template gives each product's expected maturity at each review), of one with no maturity, and of one naming an item there is not.
 
+A milestone may also have a gate, as the handbook's review checklists set them (topic 7.09; the npr7150.2d template gives them):
+
+```toml
+[maturity.gates.pdr]
+tbd = 1          # at most 1% of the requirements undecided
+volatility = 20  # under 20% added, changed or removed since the last baseline
+```
+
+The items counted are those of the types with an undecided status, `tbd` or `tbr` (or the statuses `[maturity] tbd` lists), removed ones left out. `skein check` warns when the milestone's gate is not met, and `skein coverage` gives the numbers. The last baseline is the newest tag `skein baseline` made.
+
 ### Diagrams
 
 A fenced block of the language `mermaid` is drawn as a diagram in HTML (`--format html` and `--format document`), by mermaid.js, which Skein carries (`vendor/mermaid`): the site has one copy of it, which only the pages with a diagram load, and a standalone document with a diagram has it inside (about 5 MB more). Markdown output leaves the block for the site generator.
@@ -247,6 +264,10 @@ graph TD
 ```
 ````
 
+### `--edit --wasm FILE`: pages that edit
+
+With `--format html --edit --wasm FILE`, the site's pages edit the files as `skein serve`'s do, with no server: `FILE` is skein built for WebAssembly (`zig build wasm` writes `zig-out/web/skein.wasm`; each release has `skein-vVERSION-wasm32-wasi.wasm`), which runs in the page over the project's files carried in the site. See [the web interface](web.md#on-the-static-site).
+
 ### `--format document`: one file per document
 
 `skein render --format document --out DIR` writes each document as one HTML file that stands alone, for delivery: no navigation, its images inside it, and a style sheet for printing (or saving as PDF from a browser).
@@ -254,6 +275,26 @@ graph TD
 ### `--profile NAME`: for one profile
 
 With `--profile NAME`, in any format, only the items of that profile (`.skein/profiles/`) are rendered: for example one stage of a language, or one software class. An item outside it is left out with its parts, references to it become plain words, and generated pages list only the profile's items.
+
+## `skein serve [--port N]`
+
+Serves the site `skein render --format html` writes, and edits its files from the pages ([the web interface](web.md)), on this computer while you work on the files, or for a team:
+
+```text
+$ skein serve
+skein: serving calc at http://127.0.0.1:8080/ until stopped (Ctrl+C)
+```
+
+- The pages are rendered from the files as they are, committed or not, and rendered again when a file of the project changes: in an editor, by `git pull`, by another skein command. An open page loads itself again when that happens.
+- By default it answers only on this computer (127.0.0.1), with no sign-in. `--port N` picks another port.
+- For a team: `--listen ADDR` on another address, with `--url URL`, the address people reach it at, and `--sign-in proxy` (a reverse proxy names the person: `--user-header`, `--email-header`, `--proxy IP`), `--sign-in forge` (the project's forge, through OAuth), or `--sign-in oidc --issuer URL` (an OpenID Connect provider). Anyone reads; changing or approving needs someone signed in. See [for a team](web.md#for-a-team).
+- A save reaches git as `[serve] save` says: a pull request, a branch per change, or a commit ([how a save reaches git](web.md#how-a-save-reaches-git)).
+- A configuration or schema with problems is a page that says them, until they are fixed.
+- `--profile`, `--results` and the options for other repositories are those of `skein render`. It writes only what is saved from a page.
+
+## `skein api GET|POST PATH [QUERY]`
+
+Answers one of `skein serve`'s editing requests (`page`, `source`, `check`, `form`, `preview`, `save`, `approve`, `change`), its body read from standard input, its answer, JSON, written to standard output. It is how the static site's edit mode (`render --edit`) asks them of skein built for WebAssembly, in the page; it is not meant to be typed.
 
 ## `skein move OLD NEW`
 
@@ -285,6 +326,7 @@ $ skein diff v1.0
 
 - The tag is annotated, and its message says what the project held: its number of items and its coverage.
 - It is refused while there are uncommitted changes, or while `skein check` reports problems: a baseline is a state others can build on.
+- Where the plan takes values from the forge (work items tied to issues: their assignees, milestone and its due day, whether closed), they are first written to `.skein/baselines/NAME.toml` and committed, and the baseline tags that commit, so it freezes the plan as the forge had it then. An edition of the baseline (`render --editions`) reads them from there. `--offline` freezes what the forge last said.
 - `skein diff` and `skein impact` compare against a baseline like any commit: what changed since v1.0, and what it reaches.
 - Without a name, `skein baseline` lists the baselines, oldest first. Ordinary tags are not listed.
 
@@ -302,13 +344,33 @@ Turns Doorstop documents into Skein items, where they are; see [importing](impor
 
 Makes an item file in `DIR` of each row of a CSV file; see [importing](importing.md).
 
+## `skein import reqif FILE --type TYPE --to DIR`
+
+Makes an item file in `DIR` of each spec object of a ReqIF file, as DOORS and other requirements tools write them; see [importing](importing.md#from-a-reqif-file).
+
+## `skein import jama PROJECT --jama-type KEY --type TYPE --to DIR`
+
+Makes an item file in `DIR` of each item of one item type of a Jama Connect project, read through Jama's REST API, with its relationships as links; see [importing](importing.md#through-jamas-rest-api).
+
+## `skein jama [--profile NAME] [--dry-run]`
+
+Keeps a Jama Connect project to the items, as `.skein/jama.toml` says, through Jama's REST API: creates the missing Jama items and relationships, brings back those that say otherwise, reports the rest, and keeps `.skein/jama-map.toml`; `--dry-run` says what it would do. See [the forge](forge.md#jama-connect).
+
+## `skein gitlab-requirements [--profile NAME] [--dry-run]`
+
+Keeps the GitLab requirements of the project (its forge is GitLab) to its items through GitLab's API: creates the missing ones, updates those that say otherwise, archives those of removed items, and keeps `.skein/gitlab-requirements.toml`; `--dry-run` says what it would do. See [forges](forge.md#gitlabs-requirements).
+
+## `skein import gitlab-requirements FILE`
+
+Records the GitLab requirement of each item, from the CSV GitLab exports of a project's requirements, in `.skein/gitlab-requirements.toml`; see [forges](forge.md#gitlabs-requirements).
+
 ## `skein review ID...` and `skein clear ID...`
 
 Record that links have been reviewed; see [reviewing](reviewing.md). `review` takes the items whose links you looked at, `clear` the items that changed. `--all` takes every link.
 
 ## `skein approve ID...`
 
-Records that someone approved these items as they are now; see [reviewing](reviewing.md). `--by NAME` says who (default: the name git has for the user), `--on DATE` when (default: today).
+Records that someone approved these items as they are now; see [reviewing](reviewing.md). `--by NAME` says who (default: the name git has for the user), `--on DATE` when (default: today), `--as ROLE` in which role, where the type names roles. `--sign` commits the records, alone, signed with your key (`git commit -S`), for a type whose approvals must be signed ([signed approvals](reviewing.md#levels-and-signed-approvals)). `--from-pull-request N` records the approvals a merged pull request had in review.
 
 ## `skein result ID pass|fail|skip`
 
@@ -346,7 +408,7 @@ skein: c.one verifies lex.comment
 
 ## `skein examples --out DIR`
 
-Writes each tested example (see [writing items](writing-items.md#tested-examples)) to a file of its own in `DIR`, named after its ID with its language's extension, and `examples.json`, which lists for each its ID, file, language, whether it must be accepted or rejected, the items it shows, and where it is written:
+Writes each tested example (see [writing items](writing-items.md#tested-examples)) to a file of its own in `DIR`, named after its ID with its language's extension, and `examples.json`, which lists for each its ID, file, language, whether it must be accepted or rejected, the items it shows, where it is written, and the messages it must give (`messages`, empty unless the type names an `example.message`):
 
 ```json
 [
@@ -384,7 +446,7 @@ The plan's schedule, charts and `skein load` see the issue with the overlay appl
 
 ## `skein mirror`, `skein sync` and `skein publish`
 
-`skein mirror` copies everything the forge holds of the project's repository (issues, pull and merge requests with their comments, milestones, labels) into plain text under `.skein/mirror/`, per checkout unless the configuration says `mirror = "committed"`. Offline, what the mirror says of an issue is what `check` and the views use. `skein sync` is the way back: it writes the overlay to the forge as `skein apply` does (`--dry-run`, `--force`) and refreshes the mirror. `skein publish --to KIND:OWNER/REPO [--url ADDRESS] [--dry-run]` re-creates the mirror on another forge, GitHub or GitLab, and records where each issue went in `.skein/forge-map.toml`. After a move, `skein rewrite-refs [--dry-run]` writes the new numbers into the references that were written with the old forge's (`[forge] formerly` names it). See [the forge](forge.md#a-full-mirror-working-offline-for-long-and-moving-between-forges).
+`skein mirror` copies everything the forge holds of the project's repository (issues, pull and merge requests with their comments, milestones, labels) into plain text under `.skein/mirror/`, per checkout unless the configuration says `mirror = "committed"`. Offline, what the mirror says of an issue is what `check` and the views use. `skein sync` is the way back: it writes the overlay to the forge as `skein apply` does (`--dry-run`, `--force`) and refreshes the mirror. `skein publish --to KIND:OWNER/REPO [--url ADDRESS] [--dry-run]` re-creates the mirror on another forge, GitHub, GitLab or Forgejo, and records where each issue went in `.skein/forge-map.toml`. After a move, `skein rewrite-refs [--dry-run]` writes the new numbers into the references that were written with the old forge's (`[forge] formerly` names it). See [the forge](forge.md#a-full-mirror-working-offline-for-long-and-moving-between-forges).
 
 ## `skein time`
 
@@ -401,6 +463,18 @@ ann (Ann Example)
 ```
 
 The work of an item is its estimate (else its duration) in days of the calendar's hours, spread evenly over its working days and shared evenly among its assignees. What a person can work is their share of the calendar's hours (or their hours a week) on their working days, less holidays and absences. Work without dates counts once it is scheduled. `--json` gives the same as JSON.
+
+## `skein level [--write]`
+
+Proposes moving work later so that nobody has more work in a week than hours to work, and lists the moves:
+
+```text
+t.a: 2027-03-08 to 2027-03-12, from 2027-03-01 (start = 2027-03-08)
+t.c: 2027-03-15 to 2027-03-16, from 2027-03-08 (lag = 5)
+skein: nothing written; --write writes these moves into the work items
+```
+
+The work is taken in the order of its start, critical work first; each item starts no earlier than its predecessors' new finishes, and on the first working day from which its hours, counted as `skein load` counts them, fit beside what its assignees have already. Finished work stays where it is. With `--write`, the moves go into the work items, to be reviewed as any change on a branch: fixed work gets its new start (and finish, when it gives one), float work that follows other work a longer lag, and float work that follows none a start (and the mode `fixed`, when it names `float`). Then `skein schedule` writes the new plan. Work that finds no room within two years is left where it is and listed.
 
 ## `skein lsp`
 
@@ -453,6 +527,8 @@ or a `.mcp.json` in the project:
 
 ## `skein agents`
 
+With it goes a list of what is still to do in setting the project up (template options not given, no citation sets or milestone, documents still the template's skeletons, templates brought along without their documents, no CI job), which `skein init` also ends with; an agent starting a project works through it. The documentation site's `llms.txt` says how an agent starts a project.
+
 Writes what a coding agent should know of the project's Skein documents into its agent instructions: `AGENTS.md`, or `CLAUDE.md` where there is one and no `AGENTS.md`, or `--file PATH`. It says how markers and references are written, the project's item types, link types and citations, and to run `skein check` after editing. The section sits between two HTML comments, so running it again after a change to `.skein/` replaces it in place. `--skill` writes it as a skill file, `.claude/skills/skein/SKILL.md`, for agents that read skills. `skein init` writes the section too.
 
 ## `skein help`, `skein version`
@@ -486,5 +562,23 @@ skein:
     reports:
       codequality: gl-code-quality-report.json
 ```
+
+### The documents as PDFs: engineering-docs.zip
+
+On GitHub, Skein's own action does it all: it gets Skein, checks the project, and keeps its controlled documents (those whose front matter gives `document` and `revision`) as PDFs, named after each document and its revision (`SE-PLAN-B.pdf`), with `documents.tsv` listing them and the coverage as Markdown and JSON, in `engineering-docs.zip`, an artifact of the run:
+
+```yaml
+# .github/workflows/skein.yml
+jobs:
+  skein:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: chasingdaylight/skein@v0.2.0
+        with:
+          root: .        # the project's directory
+```
+
+`skein init` writes this workflow when the repository's `origin` is on GitHub. The action prints with the Chrome GitHub's runners have; elsewhere, `skein render --format document --controlled --out DIR` writes the same documents as HTML, for any browser to print.
 
 To get Skein in the job, download the archive of a [release](https://github.com/chasingdaylight/skein/releases) for the runner's platform and check it against the release's `SHA256SUMS`; pin the version, so that a new Skein never changes a job by itself.

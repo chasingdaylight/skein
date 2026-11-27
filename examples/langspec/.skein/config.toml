@@ -1,0 +1,17 @@
+template = ["langspec"]
+
+[project]
+name = "calc"
+
+# the specification: documents whose paragraphs are rules, terms and examples
+[[sources]]
+path = "spec"
+
+# the tests say which rules they check
+[[citations]]
+name = "test"
+path = "tests"
+files = [".calc"]
+marker = "# spec:"
+to = ["rule"]
+expected = true

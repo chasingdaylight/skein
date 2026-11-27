@@ -37,14 +37,14 @@ version_only() {
 
 # shipped_changes TAG: the files changed since TAG that change what a
 # release ships: skein, or the VS Code extension. A version begun on dev
-# changes the version lines and the extension's changelog, which alone ship
-# nothing new.
+# changes the version lines (version.sh) and the extension's changelog,
+# which alone ship nothing new.
 shipped_changes() {
     local f
     while IFS= read -r f; do
         [ -z "$f" ] && continue
         case "$f" in
-            build.zig.zon | editors/vscode/package.json)
+            build.zig.zon | editors/vscode/package.json | editors/vscode/package-lock.json)
                 version_only "$f" "$1" && continue
                 ;;
             editors/vscode/CHANGELOG.md) continue ;;

@@ -18,7 +18,7 @@ pub const end = "<!-- skein: end -->";
 pub const skill_file = ".claude/skills/skein/SKILL.md";
 
 /// The text about the project, without the markers
-pub fn body(a: Allocator, project: *const Project) Allocator.Error![]const u8 {
+pub fn body(a: Allocator, project: *const Project, todo: []const []const u8) Allocator.Error![]const u8 {
     var out: std.ArrayList(u8) = .empty;
     try out.appendSlice(a, "## Skein\n\n");
     try out.appendSlice(a, "This repository keeps its requirements, specifications and their traceability with Skein (<https://github.com/chasingdaylight/skein>). An item is a paragraph or list entry of a Markdown document, or a Markdown file of its own, with a marker:\n\n");
@@ -70,6 +70,11 @@ pub fn body(a: Allocator, project: *const Project) Allocator.Error![]const u8 {
         }
     }
     try out.appendSlice(a, "\nAfter editing documents, item files or `.skein/`, run `skein check` and mend what it reports. `skein trace ID` shows an item with everything above and below it, and `skein coverage` what is not yet linked or cited. `skein mcp` offers all of this as tools to agents that speak the Model Context Protocol.\n");
+    try out.appendSlice(a, "\nApprovals and reviews are people's, never an agent's: do not run `skein approve`, `skein review` or `skein clear`, and do not edit `.skein/approvals/`, `.skein/reviews/`, `.skein/signers.toml` or `.skein/baselines/`. Say which items need approving or which links reviewing, and leave it to the people who do it.\n");
+    if (todo.len > 0) {
+        try out.appendSlice(a, "\nStill to do in setting up this project (`skein agents` writes this list again):\n\n");
+        for (todo) |t| try out.print(a, "- {s}\n", .{t});
+    }
     return out.items;
 }
 

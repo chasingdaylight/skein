@@ -3,6 +3,8 @@
 const std = @import("std");
 
 const Network = @import("network/Network.zig");
+const Project = @import("Project.zig");
+const Approvals = @import("graph/Approvals.zig");
 const Results = @import("results/Results.zig");
 
 pub const usage =
@@ -14,19 +16,26 @@ pub const usage =
     \\  coverage          Count the items that are linked to or cited as expected
     \\  diff [REV [REV]]  Show the items added, removed or changed since a commit
     \\  impact [REV]      Show what the changes since a commit reach
-    \\  export [WHAT]     Write the graph as JSON, or items, links or citations as CSV
+    \\  export [WHAT]     Write the graph as JSON, or items, links or citations as CSV,
+    \\                    gitlab-requirements: a CSV for GitLab's requirements import,
+    \\                    or reqif: ReqIF 1.2, for DOORS and other requirements tools
     \\  render --out DIR  Write the documents as Markdown for a site generator
-    \\  move OLD NEW      Give an item another ID, everywhere the old one is used
+    \\  serve [--port N]  Serve the site, rendered as the files change, and edit it
+    \\                    there: on this computer, or for a team with --sign-in
+    \\  move OLD NEW     Give an item another ID, everywhere the old one is used
     \\  new TYPE [ID]     Start an item: its file, or the marker for a document
     \\  link FROM TYPE TO Add a link of a type from one item to another
     \\  baseline [NAME]   Tag what is committed as a baseline; without NAME, list them
-    \\  init [--template NAME]...
+    \\  init [--template NAME]... [--option NAME=VALUE]...
     \\                    Start a project here, from templates' document skeletons
     \\  template list     The templates built into skein
     \\  template show NAME
     \\                    What a template declares, and its options
     \\  template eject NAME
     \\                    Write a template's files into .skein/, to change them
+    \\  template documents
+    \\                    Write the document skeletons of the templates in use that
+    \\                    are not in docs/ yet, those brought along by options too
     \\  examples --out DIR
     \\                    Write the tested examples as files, with an index, for
     \\                    the project's own test driver
@@ -36,6 +45,14 @@ pub const usage =
     \\                    Turn Doorstop documents into skein items, in place
     \\  import csv FILE --type TYPE --to DIR
     \\                    Make an item file in DIR of each row of a CSV file
+    \\  import reqif FILE --type TYPE --to DIR
+    \\                    Make an item file in DIR of each spec object of a ReqIF file
+    \\  import jama PROJECT --jama-type KEY --type TYPE --to DIR
+    \\                    Make an item file in DIR of each item of a Jama Connect
+    \\                    project, through its REST API
+    \\  import gitlab-requirements FILE
+    \\                    Record the GitLab requirement of each item, from the CSV
+    \\                    GitLab exports of a project's requirements
     \\  review ID...      Record the links of these items as reviewed
     \\  clear ID...       Record the links to these items as reviewed
     \\  approve ID...     Record an approval of these items as they are now
@@ -43,6 +60,14 @@ pub const usage =
     \\                    Record a result a person obtained, such as a procedure
     \\                    carried out by hand, in the results the project keeps
     \\  schedule          Schedule the work items, and write .skein/schedule.toml
+    \\  gitlab-requirements [--profile NAME] [--dry-run]
+    \\                    Bring the project's GitLab requirements to its items, through
+    \\                    GitLab's API: create, update, archive; and keep the map
+    \\  jama [--profile NAME] [--dry-run]
+    \\                    Bring a Jama Connect project's items to the items, through
+    \\                    its REST API (.skein/jama.toml): create, update, relate
+    \\  level [--write]   Move work later so that nobody has more work than time; list
+    \\                    the moves, or write them into the work items
     \\  time [ITEM HOURS] Log hours spent on a work item; without them, spent against estimate
     \\  overlay [ISSUE FIELD VALUE]
     \\                    A what-if plan's deviations from the forge: list, record or --remove
@@ -53,6 +78,9 @@ pub const usage =
     \\                    Re-create the mirror on another forge (--url, --dry-run)
     \\  rewrite-refs      Write the new numbers into references to a former forge's issues (--dry-run)
     \\  load              Each person's work, week by week, beside the time they have
+    \\  api GET|POST PATH [QUERY]
+    \\                    One of skein serve's editing requests, its body on standard
+    \\                    input: how the static site's edit mode asks (render --edit)
     \\  lsp              Serve editors as a language server, on standard input and output
     \\  mcp               Serve AI agents skein's tools (Model Context Protocol), on
     \\                    standard input and output
@@ -65,15 +93,18 @@ pub const usage =
     \\  --root DIR        The project, or a directory inside it (default: here)
     \\  --json            trace, coverage, diff, impact, load, time: as JSON
     \\  --markdown        coverage, diff, impact: as Markdown, for a pull request
-    \\  --profile NAME    coverage, export, render: only the items of this profile
-    \\  --current         check, trace, coverage, export, render: read the other
+    \\  --profile NAME    coverage, export, render, serve, jama, gitlab-requirements:
+    \\                    only the items of this profile
+    \\  --current         check, trace, coverage, export, render, serve: read the other
     \\                    repositories at the commit each has checked out, not the
     \\                    one pinned
     \\  --working         the same, with their files as they are, committed or not
     \\  --offline         the same commands, and pin: fetch nothing; a repository
-    \\                    by url is read from what its cache holds
-    \\  --results FILE    trace, coverage, render: test results besides the project's own
-    \\                    (TOML, JSON or YAML); may be given more than once
+    \\                    by url is read from what its cache holds; schedule, load,
+    \\                    baseline: what the forge last said
+    \\  --results FILE    trace, coverage, render, serve: test results besides the project's own
+    \\                    (TOML, JSON, YAML, JUnit XML or TAP); may be given more
+    \\                    than once
     \\  --alias, --no-alias
     \\                    move: keep the old ID as an alias, or not (default: kept
     \\                    when the project declares an id, so others can cite it)
@@ -81,30 +112,62 @@ pub const usage =
     \\  --from-pull-request N
     \\                    approve: the approvals merged pull request N had in review,
     \\                    of what it changed
+    \\  --option NAME=VALUE
+    \\                    init: a template's option; may be given more than once
     \\  --as ROLE         approve: the role the approval is given in, where the type
     \\                    names the roles that must each approve
+    \\  --sign            approve: commit the approval, signed with your key (git's
+    \\                    user.signingkey: OpenPGP, SSH, or an X.509 certificate)
     \\  --by NAME         approve, result, time: who (default: git's user.name)
     \\  --on DATE         approve, result, time: when, as 2027-03-01 (default: today)
     \\  --note TEXT       result, time: what to keep with it
     \\  --evidence PATH   result: a file that shows it; may be given more than once
     \\  --implementation NAME
-    \\                    result: what produced it
-    \\  --type TYPE       import csv: the item type of the rows
-    \\  --to DIR          import csv: where the item files go
+    \\                    result: what produced it; trace, coverage, render: what
+    \\                    produced the results of --results that name nothing
+    \\  --implementation-version VERSION
+    \\                    trace, coverage, render: its version
+    \\  --gitlab-requirements FILE
+    \\                    coverage: also write GitLab's requirements report, for a CI
+    \\                    job's artifacts
+    \\  --type TYPE       import csv, reqif, jama: the item type of the rows
+    \\  --to DIR          import csv, reqif, jama: where the item files go
     \\  --id-column NAME, --text-column NAME
     \\                    import csv: the columns of the IDs and the text
     \\                    (default: id, text)
-    \\  --replace         import csv: write over item files that are there
+    \\  --replace         import csv, reqif, jama: write over item files that are there
+    \\  --jama-type KEY   import jama: the Jama item type to take (REQ)
     \\  --headings-as-text
     \\                    import doorstop: non-normative items as plain Markdown
     \\  --status-from NAME, --verification-from NAME
     \\                    import doorstop: the attribute that gives the status,
     \\                    or the verification method
+    \\  --message TEXT    baseline: what the baseline is, in its tag
+    \\  --port N          serve: the port (default 8080)
+    \\  --listen ADDR     serve: the address to listen on (default 127.0.0.1); another
+    \\                    needs --sign-in and --url
+    \\  --url URL         serve: the address people reach it at, behind a proxy
+    \\  --sign-in proxy|forge|oidc
+    \\                    serve: people sign in through a reverse proxy's header, the
+    \\                    project's forge, or an OpenID Connect provider (--issuer
+    \\                    URL); the last two with SKEIN_OAUTH_CLIENT_ID and _SECRET
+    \\  --user-header NAME, --email-header NAME
+    \\                    serve --sign-in proxy: the headers that name the person
+    \\                    (default X-Forwarded-User, X-Forwarded-Email)
+    \\  --proxy IP        serve --sign-in proxy: an address the proxy connects from
+    \\                    (default this computer's); may be given more than once
     \\  --out DIR         render, examples: where the files go
     \\  --format NAME     render: markdown for a site generator (the default),
     \\                    html: the site itself, or document: one file per document;
     \\                    check: text (the default), github: annotations for
     \\                    GitHub Actions, or gitlab: a Code Quality report
+    \\  --editions        render: each baseline too, under editions/NAME/, with
+    \\                    a page that lists them
+    \\  --edit --wasm FILE
+    \\                    render --format html: pages that edit the files, with skein
+    \\                    built for WebAssembly (zig build wasm) running in them
+    \\  --controlled      render --format document: only the controlled documents,
+    \\                    named ID-REVISION.html, with documents.tsv listing them
     \\
 ;
 
@@ -116,6 +179,9 @@ pub const Command = union(enum) {
     coverage: Coverage,
     load: Load,
     schedule: Schedule,
+    level: Level,
+    gitlab_requirements: GitlabRequirements,
+    jama: GitlabRequirements,
     time: TimeSpent,
     overlay: OverlayCommand,
     apply: Apply,
@@ -128,6 +194,9 @@ pub const Command = union(enum) {
     /// `export`
     exporting: Export,
     render: Render,
+    serve: Serve,
+    /// one of `skein serve`'s editing requests (`skein api`), for the static site's edit mode
+    api: Api,
     move: Move,
     new: New,
     link: Link,
@@ -160,6 +229,11 @@ pub const Common = struct {
     state: Network.State = .recorded,
     /// fetch nothing; repositories by url are read from their caches
     offline: bool = false,
+    /// files read as given here, not as they are on disk (`skein serve`)
+    unsaved: []const Project.Unsaved = &.{},
+    /// the baseline the project is read as (an edition of it): its plan takes
+    /// the forge's values frozen then, not the forge's now
+    baseline: ?[]const u8 = null,
 };
 
 pub const TemplateCommand = struct {
@@ -167,7 +241,7 @@ pub const TemplateCommand = struct {
     what: What,
     name: ?[]const u8 = null,
 
-    pub const What = enum { list, show, eject };
+    pub const What = enum { list, show, eject, documents };
 };
 
 pub const Init = struct {
@@ -175,6 +249,8 @@ pub const Init = struct {
     root: []const u8 = ".",
     /// the templates it uses; an overlay goes with the template it overlays
     templates: []const []const u8 = &.{},
+    /// the templates' options, as `NAME=VALUE`
+    options: []const []const u8 = &.{},
 };
 
 pub const Check = struct {
@@ -203,8 +279,8 @@ pub const Trace = struct {
     common: Common = .{},
     id: []const u8,
     json: bool = false,
-    /// results files besides the project's own
-    results: []const []const u8 = &.{},
+    /// results files besides the project's own, and what produced them
+    results: Results.Given = .{},
 };
 
 pub const Coverage = struct {
@@ -213,13 +289,28 @@ pub const Coverage = struct {
     json: bool = false,
     /// as Markdown, for a job summary or a pull request
     markdown: bool = false,
-    /// results files besides the project's own
-    results: []const []const u8 = &.{},
+    /// results files besides the project's own, and what produced them
+    results: Results.Given = .{},
+    /// where to write GitLab's requirements report
+    gitlab_requirements: ?[]const u8 = null,
 };
 
 pub const Load = struct {
     common: Common = .{},
     json: bool = false,
+};
+
+/// `gitlab-requirements` and `jama`: the items published to another tool
+pub const GitlabRequirements = struct {
+    common: Common = .{},
+    profile: ?[]const u8 = null,
+    dry_run: bool = false,
+};
+
+pub const Level = struct {
+    common: Common = .{},
+    /// write the moves into the work items
+    write: bool = false,
 };
 
 pub const Schedule = struct {
@@ -315,6 +406,10 @@ pub const Export = struct {
         items,
         links,
         citations,
+        /// as CSV for GitLab's requirements import
+        @"gitlab-requirements",
+        /// ReqIF 1.2, for DOORS and other requirements tools
+        reqif,
     };
 };
 
@@ -359,8 +454,14 @@ pub const Render = struct {
     format: Format = .markdown,
     /// only the items of this profile
     profile: ?[]const u8 = null,
-    /// results files besides the project's own
-    results: []const []const u8 = &.{},
+    /// results files besides the project's own, and what produced them
+    results: Results.Given = .{},
+    /// --format document: only the controlled documents, named ID-REVISION
+    controlled: bool = false,
+    /// each baseline too, under editions/NAME/
+    editions: bool = false,
+    /// --format html: the edit mode, with skein for WebAssembly from this file
+    wasm: ?[]const u8 = null,
 
     pub const Format = enum {
         /// Markdown for a site generator
@@ -370,6 +471,55 @@ pub const Render = struct {
         /// each document as one HTML file of its own, for delivery
         document,
     };
+};
+
+pub const Serve = struct {
+    common: Common = .{},
+    port: u16 = default_port,
+    /// only the items of this profile
+    profile: ?[]const u8 = null,
+    /// results files besides the project's own, and what produced them
+    results: Results.Given = .{},
+    /// the address it listens on: this computer's own by default
+    listen: []const u8 = "127.0.0.1",
+    /// the address people reach it at, behind a proxy (`https://reqs.example.com`)
+    url: ?[]const u8 = null,
+    /// how people sign in; none on this computer alone
+    sign_in: SignIn = .none,
+    /// with `proxy`: the headers that name the signed-in user, and their email
+    user_header: []const u8 = "X-Forwarded-User",
+    email_header: []const u8 = "X-Forwarded-Email",
+    /// with `proxy`: the addresses the proxy connects from (default: this computer)
+    proxies: []const []const u8 = &.{},
+    /// with `oidc`: the OpenID Connect provider
+    issuer: ?[]const u8 = null,
+
+    pub const default_port = 8080;
+
+    /// Whether `ip` is this computer's own address
+    pub fn loopback(ip: []const u8) bool {
+        return std.mem.startsWith(u8, ip, "127.") or std.mem.eql(u8, ip, "::1");
+    }
+
+    pub const SignIn = enum {
+        none,
+        /// a reverse proxy signs people in and names them in a header
+        proxy,
+        /// the project's forge, through OAuth
+        forge,
+        /// an OpenID Connect provider (`--issuer`)
+        oidc,
+    };
+};
+
+pub const Api = struct {
+    common: Common = .{},
+    method: Method,
+    /// under `/_skein/`, without it: `page`, `source`, `save`
+    path: []const u8,
+    query: []const u8 = "",
+
+    pub const Method = @import("serve/guard.zig").Method;
 };
 
 pub const Import = struct {
@@ -393,7 +543,10 @@ pub const Import = struct {
     /// doorstop: the attribute whose values are the verification methods
     verification_from: ?[]const u8 = null,
 
-    pub const Format = enum { doorstop, csv };
+    /// jama: the Jama Connect item type to take, by its key (`REQ`)
+    jama_type: ?[]const u8 = null,
+
+    pub const Format = enum { doorstop, csv, reqif, @"gitlab-requirements", jama };
 };
 
 pub const Review = struct {
@@ -411,6 +564,10 @@ pub const Approve = struct {
     from_pull_request: ?u64 = null,
     /// the role the approval is given in, where the type names roles
     as: ?[]const u8 = null,
+    /// commit the records, signed with the approver's key
+    sign: bool = false,
+    /// given in `skein serve`: how the approver was signed in
+    signed_in: ?Approvals.SignedIn = null,
 };
 
 pub const Result = struct {
@@ -453,16 +610,33 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--results", .takes_value = true },
     .{ .name = "--note", .takes_value = true },
     .{ .name = "--implementation", .takes_value = true },
+    .{ .name = "--implementation-version", .takes_value = true },
+    .{ .name = "--gitlab-requirements", .takes_value = true },
+    .{ .name = "--jama-type", .takes_value = true },
+    .{ .name = "--editions", .takes_value = false },
+    .{ .name = "--controlled", .takes_value = false },
+    .{ .name = "--edit", .takes_value = false },
+    .{ .name = "--wasm", .takes_value = true },
+    .{ .name = "--write", .takes_value = false },
     .{ .name = "--from-pull-request", .takes_value = true },
     .{ .name = "--evidence", .takes_value = true },
     .{ .name = "--as", .takes_value = true },
+    .{ .name = "--sign", .takes_value = false },
     .{ .name = "--template", .takes_value = true },
+    .{ .name = "--option", .takes_value = true },
     .{ .name = "--remove", .takes_value = false },
     .{ .name = "--dry-run", .takes_value = false },
     .{ .name = "--force", .takes_value = false },
     .{ .name = "--skill", .takes_value = false },
     .{ .name = "--file", .takes_value = true },
     .{ .name = "--url", .takes_value = true },
+    .{ .name = "--port", .takes_value = true },
+    .{ .name = "--issuer", .takes_value = true },
+    .{ .name = "--proxy", .takes_value = true },
+    .{ .name = "--email-header", .takes_value = true },
+    .{ .name = "--user-header", .takes_value = true },
+    .{ .name = "--sign-in", .takes_value = true },
+    .{ .name = "--listen", .takes_value = true },
 };
 
 /// The command `args` (without the program's name) ask for; help when
@@ -511,16 +685,16 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
     }
     if (eql(name, "template")) {
         if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
-        const forms = "template: list, show NAME, or eject NAME";
+        const forms = "template: list, show NAME, eject NAME, or documents";
         if (words.len == 0) return .{ .misuse = forms };
         const what = std.meta.stringToEnum(TemplateCommand.What, words[0]) orelse return .{ .misuse = forms };
-        if ((what != .list) != (words.len == 2) or words.len > 2) return .{ .misuse = forms };
+        if ((what != .list and what != .documents) != (words.len == 2) or words.len > 2) return .{ .misuse = forms };
         return .{ .template = .{ .common = common, .what = what, .name = if (words.len == 2) words[1] else null } };
     }
     if (eql(name, "init")) {
-        if (try p.allow(&.{ "--root", "--template" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--template", "--option" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "init takes no items" };
-        return .{ .init = .{ .root = p.value("--root") orelse ".", .templates = try p.values("--template") } };
+        return .{ .init = .{ .root = p.value("--root") orelse ".", .templates = try p.values("--template"), .options = try p.values("--option") } };
     }
     if (eql(name, "examples")) {
         if (try p.allow(&.{ "--root", "--out" })) |problem| return .{ .misuse = problem };
@@ -534,15 +708,15 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .pin = .{ .common = common, .name = if (words.len > 0) words[0] else null, .revision = if (words.len == 2) words[1] else null } };
     }
     if (eql(name, "trace")) {
-        if (try p.allow(&.{ "--root", "--json", "--current", "--working", "--offline", "--results" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version" })) |problem| return .{ .misuse = problem };
         if (words.len != 1) return .{ .misuse = "trace takes one item" };
-        return .{ .trace = .{ .common = common, .id = words[0], .json = p.flag("--json"), .results = try p.values("--results") } };
+        return .{ .trace = .{ .common = common, .id = words[0], .json = p.flag("--json"), .results = try p.results() } };
     }
     if (eql(name, "coverage")) {
-        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working", "--offline", "--results" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--markdown", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--gitlab-requirements" })) |problem| return .{ .misuse = problem };
         if (p.flag("--json") and p.flag("--markdown")) return .{ .misuse = "give --json or --markdown, not both" };
         if (words.len > 0) return .{ .misuse = "coverage takes no items" };
-        return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.values("--results") } };
+        return .{ .coverage = .{ .common = common, .profile = p.value("--profile"), .json = p.flag("--json"), .markdown = p.flag("--markdown"), .results = try p.results(), .gitlab_requirements = p.value("--gitlab-requirements") } };
     }
     if (eql(name, "overlay")) {
         if (try p.allow(&.{ "--root", "--offline", "--remove" })) |problem| return .{ .misuse = problem };
@@ -586,13 +760,28 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (words.len != 0 and words.len != 2) return .{ .misuse = "time takes a work item and the hours spent, or nothing for the report" };
         return .{ .time = .{ .common = common, .id = if (words.len == 2) words[0] else null, .hours = if (words.len == 2) words[1] else null, .by = p.value("--by"), .on = p.value("--on"), .note = p.value("--note"), .json = p.flag("--json") } };
     }
+    if (eql(name, "gitlab-requirements")) {
+        if (try p.allow(&.{ "--root", "--profile", "--dry-run" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "gitlab-requirements takes no items" };
+        return .{ .gitlab_requirements = .{ .common = common, .profile = p.value("--profile"), .dry_run = p.flag("--dry-run") } };
+    }
+    if (eql(name, "jama")) {
+        if (try p.allow(&.{ "--root", "--profile", "--dry-run" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "jama takes no items" };
+        return .{ .jama = .{ .common = common, .profile = p.value("--profile"), .dry_run = p.flag("--dry-run") } };
+    }
+    if (eql(name, "level")) {
+        if (try p.allow(&.{ "--root", "--write", "--offline" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "level takes no items" };
+        return .{ .level = .{ .common = common, .write = p.flag("--write") } };
+    }
     if (eql(name, "schedule")) {
-        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "schedule takes no items" };
         return .{ .schedule = .{ .common = common } };
     }
     if (eql(name, "load")) {
-        if (try p.allow(&.{ "--root", "--json" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--json", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "load takes no items" };
         return .{ .load = .{ .common = common, .json = p.flag("--json") } };
     }
@@ -608,11 +797,11 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (try p.allow(&.{ "--root", "--profile", "--current", "--working", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 1) return .{ .misuse = "export takes one thing to export" };
         const what = if (words.len == 0) .json else std.meta.stringToEnum(Export.What, words[0]) orelse
-            return .{ .misuse = "export: json, items, links or citations" };
+            return .{ .misuse = "export: json, items, links, citations, gitlab-requirements or reqif" };
         return .{ .exporting = .{ .common = common, .what = what, .profile = p.value("--profile") } };
     }
     if (eql(name, "baseline")) {
-        if (try p.allow(&.{ "--root", "--message" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--message", "--offline" })) |problem| return .{ .misuse = problem };
         if (words.len > 1) return .{ .misuse = "baseline takes one name" };
         if (words.len == 0 and p.value("--message") != null) return .{ .misuse = "baseline: a message goes with a name" };
         return .{ .baseline = .{ .common = common, .name = if (words.len == 1) words[0] else null, .message = p.value("--message") } };
@@ -635,15 +824,43 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .move = .{ .common = common, .old = words[0], .new = words[1], .alias = keep } };
     }
     if (eql(name, "render")) {
-        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline", "--results" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--out", "--format", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--editions", "--controlled", "--edit", "--wasm" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "render takes no items" };
         const format: Render.Format = if (p.value("--format")) |f| std.meta.stringToEnum(Render.Format, f) orelse
             return .{ .misuse = "render: the formats are markdown, html and document" } else .markdown;
         const out = p.value("--out") orelse return .{ .misuse = "render: say where the files go, with --out DIR" };
-        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.values("--results") } };
+        if (p.flag("--edit") and (format != .html or p.value("--wasm") == null)) return .{ .misuse = "render --edit: with --format html, and --wasm FILE, skein built for WebAssembly (zig build wasm, or a release's skein-vVERSION-wasm32-wasi.wasm)" };
+        if (p.value("--wasm") != null and !p.flag("--edit")) return .{ .misuse = "render --wasm: with --edit" };
+        if (p.flag("--controlled") and format != .document) return .{ .misuse = "render --controlled: with --format document" };
+        return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results(), .editions = p.flag("--editions"), .controlled = p.flag("--controlled"), .wasm = p.value("--wasm") } };
+    }
+    if (eql(name, "api")) {
+        if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+        if (words.len < 2 or words.len > 3) return .{ .misuse = "api takes GET or POST, a request's path (page, source, save) and its query" };
+        const method: Api.Method = if (eql(words[0], "GET")) .get else if (eql(words[0], "POST")) .post else return .{ .misuse = "api: GET or POST" };
+        return .{ .api = .{ .common = common, .method = method, .path = words[1], .query = if (words.len == 3) words[2] else "" } };
+    }
+    if (eql(name, "serve")) {
+        if (try p.allow(&.{ "--root", "--port", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--listen", "--url", "--sign-in", "--user-header", "--email-header", "--proxy", "--issuer" })) |problem| return .{ .misuse = problem };
+        if (words.len > 0) return .{ .misuse = "serve takes no items" };
+        const port = if (p.value("--port")) |n| std.fmt.parseInt(u16, n, 10) catch return .{ .misuse = "serve --port: a port's number, as 8080" } else Serve.default_port;
+        const sign_in: Serve.SignIn = if (p.value("--sign-in")) |s| std.meta.stringToEnum(Serve.SignIn, s) orelse return .{ .misuse = "serve --sign-in: proxy, forge or oidc" } else .none;
+        var o: Serve = .{ .common = common, .port = port, .profile = p.value("--profile"), .results = try p.results(), .url = p.value("--url"), .sign_in = sign_in, .proxies = try p.values("--proxy") };
+        if (p.value("--listen")) |l| o.listen = l;
+        if (p.value("--user-header")) |h| o.user_header = h;
+        if (p.value("--email-header")) |h| o.email_header = h;
+        _ = std.Io.net.IpAddress.parse(o.listen, port) catch return .{ .misuse = "serve --listen: an IP address, as 0.0.0.0 or 10.0.0.5" };
+        if (!Serve.loopback(o.listen)) {
+            if (sign_in == .none) return .{ .misuse = "serve --listen: on an address other than this computer's own, people sign in: give --sign-in proxy or forge" };
+            if (o.url == null) return .{ .misuse = "serve --listen: give --url, the address people reach it at" };
+        }
+        if (sign_in == .forge and o.url == null) return .{ .misuse = "serve --sign-in forge: give --url, the address the forge sends people back to" };
+        o.issuer = p.value("--issuer");
+        if (sign_in == .oidc and (o.url == null or o.issuer == null)) return .{ .misuse = "serve --sign-in oidc: give --issuer, the OpenID Connect provider, and --url, the address it sends people back to" };
+        return .{ .serve = o };
     }
     if (eql(name, "import")) {
-        const forms = "import: doorstop DIR..., or csv FILE --type TYPE --to DIR";
+        const forms = "import: doorstop DIR..., csv FILE, reqif FILE or jama PROJECT with --type TYPE --to DIR, or gitlab-requirements FILE";
         if (words.len == 0) return .{ .misuse = forms };
         const format = std.meta.stringToEnum(Import.Format, words[0]) orelse return .{ .misuse = forms };
         switch (format) {
@@ -673,6 +890,21 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
                     .replace = p.flag("--replace"),
                 } };
             },
+            .reqif => {
+                if (try p.allow(&.{ "--root", "--type", "--to", "--replace" })) |problem| return .{ .misuse = problem };
+                if (words.len != 2) return .{ .misuse = "import reqif: name one ReqIF file" };
+                return .{ .import = .{ .common = common, .format = format, .paths = words[1..], .item_type = p.value("--type"), .to = p.value("--to"), .replace = p.flag("--replace") } };
+            },
+            .jama => {
+                if (try p.allow(&.{ "--root", "--type", "--to", "--replace", "--jama-type" })) |problem| return .{ .misuse = problem };
+                if (words.len != 2) return .{ .misuse = "import jama: name the Jama project by its id" };
+                return .{ .import = .{ .common = common, .format = format, .paths = words[1..], .item_type = p.value("--type"), .to = p.value("--to"), .replace = p.flag("--replace"), .jama_type = p.value("--jama-type") } };
+            },
+            .@"gitlab-requirements" => {
+                if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
+                if (words.len != 2) return .{ .misuse = "import gitlab-requirements: name the CSV file GitLab exported" };
+                return .{ .import = .{ .common = common, .format = format, .paths = words[1..] } };
+            },
         }
     }
     if (eql(name, "review") or eql(name, "clear")) {
@@ -688,14 +920,14 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .result = .{ .common = common, .id = words[0], .outcome = outcome, .by = p.value("--by"), .on = p.value("--on"), .note = p.value("--note"), .implementation = p.value("--implementation"), .evidence = try p.values("--evidence") } };
     }
     if (eql(name, "approve")) {
-        if (try p.allow(&.{ "--root", "--by", "--on", "--from-pull-request", "--as" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--by", "--on", "--from-pull-request", "--as", "--sign" })) |problem| return .{ .misuse = problem };
         if (p.value("--from-pull-request")) |n| {
-            if (words.len > 0 or p.flag("--by") or p.flag("--on")) return .{ .misuse = "approve --from-pull-request takes the pull request's number alone" };
+            if (words.len > 0 or p.flag("--by") or p.flag("--on") or p.flag("--as") or p.flag("--sign")) return .{ .misuse = "approve --from-pull-request takes the pull request's number alone" };
             const number = std.fmt.parseInt(u64, std.mem.trimStart(u8, n, "#"), 10) catch return .{ .misuse = "approve --from-pull-request: the number of a pull request" };
             return .{ .approve = .{ .common = common, .ids = &.{}, .from_pull_request = number } };
         }
         if (words.len == 0) return .{ .misuse = "name the items to approve" };
-        return .{ .approve = .{ .common = common, .ids = words, .by = p.value("--by"), .on = p.value("--on"), .as = p.value("--as") } };
+        return .{ .approve = .{ .common = common, .ids = words, .by = p.value("--by"), .on = p.value("--on"), .as = p.value("--as"), .sign = p.flag("--sign") } };
     }
     return .{ .unknown = name };
 }
@@ -755,6 +987,11 @@ const Parsed = struct {
         return out.items;
     }
 
+    /// `--results`, and what produced those that name nothing
+    fn results(self: *const Parsed) !Results.Given {
+        return .{ .files = try self.values("--results"), .implementation = self.value("--implementation"), .version = self.value("--implementation-version") };
+    }
+
     /// What is wrong when an option other than `allowed` was given
     fn allow(self: *const Parsed, allowed: []const []const u8) !?[]const u8 {
         next: for (self.given.items) |g| {
@@ -771,214 +1008,6 @@ fn eql(a: []const u8, b: []const u8) bool {
     return std.mem.eql(u8, a, b);
 }
 
-// req: cli.commands, cli.options, principle.no-silent-mistakes
-const testing = std.testing;
-
-/// A parser for tests, whose arena is freed with `deinit`
-const Fixture = struct {
-    arena: std.heap.ArenaAllocator,
-
-    fn init() Fixture {
-        return .{ .arena = .init(testing.allocator) };
-    }
-
-    fn deinit(self: *Fixture) void {
-        self.arena.deinit();
-    }
-
-    fn run(self: *Fixture, args: []const []const u8) !Command {
-        return parse(self.arena.allocator(), args);
-    }
-};
-
-test "no arguments ask for help" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    try testing.expectEqual(Command.help, try f.run(&.{}));
-}
-
-test "help and version, as commands and as options" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    try testing.expectEqual(Command.help, try f.run(&.{"help"}));
-    try testing.expectEqual(Command.help, try f.run(&.{"--help"}));
-    try testing.expectEqual(Command.help, try f.run(&.{"-h"}));
-    try testing.expectEqual(Command.version, try f.run(&.{"version"}));
-    try testing.expectEqual(Command.version, try f.run(&.{"--version"}));
-}
-
-test "an unknown command is reported by name" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    try testing.expectEqualStrings("frobnicate", (try f.run(&.{ "frobnicate", "x" })).unknown);
-}
-
-test "options: values, unknown ones, and ones that do not go with the command" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    try testing.expectEqualStrings(".", (try f.run(&.{"check"})).check.common.root);
-    try testing.expectEqualStrings("docs", (try f.run(&.{ "check", "--root", "docs" })).check.common.root);
-    try testing.expectEqualStrings("--root needs a value after it", (try f.run(&.{ "check", "--root" })).misuse);
-    try testing.expectEqualStrings("check takes no items", (try f.run(&.{ "check", "everything" })).misuse);
-    try testing.expectEqualStrings("unknown option --fast", (try f.run(&.{ "check", "--fast" })).misuse);
-    try testing.expectEqualStrings("--json does not go with check", (try f.run(&.{ "check", "--json" })).misuse);
-    try testing.expectEqualStrings("--profile does not go with trace", (try f.run(&.{ "trace", "a.b", "--profile", "s0" })).misuse);
-}
-
-test "trace takes one item" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    const t = (try f.run(&.{ "trace", "--json", "a.b" })).trace;
-    try testing.expectEqualStrings("a.b", t.id);
-    try testing.expect(t.json);
-    try testing.expectEqualStrings("trace takes one item", (try f.run(&.{"trace"})).misuse);
-    try testing.expectEqualStrings("trace takes one item", (try f.run(&.{ "trace", "a", "b" })).misuse);
-}
-
-test "coverage takes a profile" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    const c = (try f.run(&.{ "coverage", "--profile", "s0", "--json" })).coverage;
-    try testing.expectEqualStrings("s0", c.profile.?);
-    try testing.expect(c.json);
-    try testing.expectEqual(null, (try f.run(&.{"coverage"})).coverage.profile);
-    try testing.expectEqualStrings("--profile needs a value after it", (try f.run(&.{ "coverage", "--profile" })).misuse);
-}
-
-test "review and clear take items, or all" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    const review = (try f.run(&.{ "review", "a.b", "--root", "docs", "c.d" })).review;
-    try testing.expectEqual(2, review.ids.len);
-    try testing.expectEqualStrings("c.d", review.ids[1]);
-    try testing.expectEqualStrings("docs", review.common.root);
-    try testing.expect(!review.all);
-    try testing.expect((try f.run(&.{ "clear", "--all" })).clear.all);
-    try testing.expectEqualStrings("name the items, or give --all", (try f.run(&.{"review"})).misuse);
-    try testing.expectEqualStrings("name the items, or give --all", (try f.run(&.{ "clear", "a.b", "--all" })).misuse);
-}
-
-test "approve takes items, and who and when" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    const approve = (try f.run(&.{ "approve", "SRS-001", "--by", "A. Reviewer", "--on", "2027-03-01", "SRS-002" })).approve;
-    try testing.expectEqual(2, approve.ids.len);
-    try testing.expectEqualStrings("A. Reviewer", approve.by.?);
-    try testing.expectEqualStrings("2027-03-01", approve.on.?);
-    try testing.expectEqual(null, (try f.run(&.{ "approve", "a.b" })).approve.by);
-    try testing.expectEqualStrings("name the items to approve", (try f.run(&.{"approve"})).misuse);
-}
-
-test "diff and impact take commits" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    const d = (try f.run(&.{ "diff", "v0.1", "HEAD", "--json" })).diff;
-    try testing.expectEqual(2, d.revisions.len);
-    try testing.expectEqualStrings("HEAD", d.revisions[1]);
-    try testing.expect(d.json and !d.impact and !d.markdown);
-    const i = (try f.run(&.{ "impact", "--markdown" })).diff;
-    try testing.expect(i.impact and i.markdown);
-    try testing.expectEqual(0, i.revisions.len);
-    try testing.expectEqualStrings("diff takes one commit or two", (try f.run(&.{ "diff", "a", "b", "c" })).misuse);
-    try testing.expectEqualStrings("impact takes one commit: it is about the project as it is now", (try f.run(&.{ "impact", "a", "b" })).misuse);
-    try testing.expectEqualStrings("give --json or --markdown, not both", (try f.run(&.{ "diff", "--json", "--markdown" })).misuse);
-}
-
-test "export takes what to export" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    try testing.expectEqual(.json, (try f.run(&.{"export"})).exporting.what);
-    const e = (try f.run(&.{ "export", "links", "--profile", "s0" })).exporting;
-    try testing.expectEqual(.links, e.what);
-    try testing.expectEqualStrings("s0", e.profile.?);
-    try testing.expectEqualStrings("export: json, items, links or citations", (try f.run(&.{ "export", "everything" })).misuse);
-}
-
-test "lsp takes nothing but the transport" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    try testing.expectEqual(.lsp, try f.run(&.{"lsp"}));
-    try testing.expectEqual(.lsp, try f.run(&.{ "lsp", "--stdio" }));
-    try testing.expectEqualStrings("lsp takes no arguments", (try f.run(&.{ "lsp", "--port", "1" })).misuse);
-}
-
-test "link takes two items and a type" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    const l = (try f.run(&.{ "link", "c.one", "verifies", "lex.a" })).link;
-    try testing.expectEqualStrings("c.one", l.from);
-    try testing.expectEqualStrings("verifies", l.type_name);
-    try testing.expectEqualStrings("lex.a", l.to);
-    try testing.expectEqualStrings("link takes the item, the link type, and the item to link to", (try f.run(&.{ "link", "c.one" })).misuse);
-}
-
-test "the forge commands: mirror, sync, publish with its forge and address, rewrite-refs" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    try testing.expectEqual(false, (try f.run(&.{"mirror"})).mirror.common.offline);
-    try testing.expect((try f.run(&.{ "sync", "--dry-run" })).sync.dry_run);
-    const p = (try f.run(&.{ "publish", "--to", "gitlab:group/project", "--url", "http://gitlab.example:8080", "--dry-run" })).publish;
-    try testing.expectEqualStrings("gitlab:group/project", p.to.?);
-    try testing.expectEqualStrings("http://gitlab.example:8080", p.url.?);
-    try testing.expect(p.dry_run);
-    try testing.expect((try f.run(&.{ "rewrite-refs", "--dry-run" })).rewrite_refs.dry_run);
-}
-
-test "new takes a type, and maybe an ID" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    const n = (try f.run(&.{ "new", "srs", "--to", "requirements" })).new;
-    try testing.expectEqualStrings("srs", n.type_name);
-    try testing.expectEqual(null, n.id);
-    try testing.expectEqualStrings("requirements", n.to.?);
-    try testing.expectEqualStrings("lex.a", (try f.run(&.{ "new", "rule", "lex.a" })).new.id.?);
-    try testing.expectEqualStrings("new takes an item type, and the ID where the type's IDs are not numbered", (try f.run(&.{"new"})).misuse);
-}
-
-test "move takes two IDs" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    const m = (try f.run(&.{ "move", "lex.a", "lex.b" })).move;
-    try testing.expectEqualStrings("lex.a", m.old);
-    try testing.expectEqualStrings("lex.b", m.new);
-    try testing.expectEqualStrings("move takes the ID an item has, and the ID it is to have", (try f.run(&.{ "move", "lex.a" })).misuse);
-}
-
-test "render needs a place to write to" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    try testing.expectEqualStrings("site", (try f.run(&.{ "render", "--out", "site", "--format", "markdown" })).render.out);
-    try testing.expectEqualStrings("render: say where the files go, with --out DIR", (try f.run(&.{"render"})).misuse);
-    try testing.expectEqual(.html, (try f.run(&.{ "render", "--out", "x", "--format", "html" })).render.format);
-    try testing.expectEqualStrings("render: the formats are markdown, html and document", (try f.run(&.{ "render", "--out", "x", "--format", "pdf" })).misuse);
-}
-
-test "import takes a format and what to import" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    const i = (try f.run(&.{ "import", "doorstop", "docs/sys", "docs/srs" })).import;
-    try testing.expectEqual(.doorstop, i.format);
-    try testing.expectEqual(2, i.paths.len);
-    try testing.expectEqualStrings("docs/srs", i.paths[1]);
-    try testing.expect(std.mem.startsWith(u8, (try f.run(&.{"import"})).misuse, "import: doorstop DIR..."));
-    try testing.expect(std.mem.startsWith(u8, (try f.run(&.{ "import", "excel", "x" })).misuse, "import: doorstop DIR..."));
-    try testing.expectEqualStrings("import doorstop: name the directories of the Doorstop documents", (try f.run(&.{ "import", "doorstop" })).misuse);
-}
-
-test "pin, and the state of the other repositories" {
-    var f: Fixture = .init();
-    defer f.deinit();
-    const all = (try f.run(&.{"pin"})).pin;
-    try testing.expectEqual(null, all.name);
-    const one = (try f.run(&.{ "pin", "compiler", "v1.2" })).pin;
-    try testing.expectEqualStrings("compiler", one.name.?);
-    try testing.expectEqualStrings("v1.2", one.revision.?);
-    try testing.expectEqualStrings("pin takes a repository, and a commit of it", (try f.run(&.{ "pin", "a", "b", "c" })).misuse);
-    try testing.expectEqual(.recorded, (try f.run(&.{"check"})).check.common.state);
-    try testing.expectEqual(.current, (try f.run(&.{ "check", "--current" })).check.common.state);
-    try testing.expectEqual(.working, (try f.run(&.{ "trace", "x", "--working" })).trace.common.state);
-    try testing.expectEqualStrings("give --current or --working, not both", (try f.run(&.{ "check", "--current", "--working" })).misuse);
-    try testing.expect((try f.run(&.{ "pin", "--offline" })).pin.common.offline);
-    try testing.expect((try f.run(&.{ "render", "--out", "x", "--offline" })).render.common.offline);
-    try testing.expectEqualStrings("--current does not go with pin", (try f.run(&.{ "pin", "--current" })).misuse);
+test {
+    _ = @import("_test/cli.zig");
 }

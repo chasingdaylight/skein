@@ -7,3 +7,13 @@
 
 {"rule":"PCT_SINGULAR_NOUN_PLURAL_VERB_AGREEMENT","sentence":"^\\Q%reqlink.refusals \\E(?:Dummy|Ina|Jimmy-|Dummy-|Maniquí-|Maniquíes-|Atrapa-|Dummy\\+|Dummy's\\+)[0-9]+\\Q shall refuse, and write nothing, what \\E(?:Dummy|Ina|Jimmy-|Dummy-|Maniquí-|Maniquíes-|Atrapa-|Dummy\\+|Dummy's\\+)[0-9]+\\Q would report: an item or link type that does not exist, a link type the item's type cannot have, a target of a type the link cannot point to, a removed target, a link to the item itself, and a link that is there already.\\E$"}
 {"rule":"HAVE_PART_AGREEMENT","sentence":"^\\QThe project is the one in the directory the editor has open.\\E$"}
+
+{"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\Q%ruleexpr.number.syntax syntax stage=core A number is one or more decimal digits, optionally followed by a point and one or more decimal digits.\\E$"}
+{"rule":"LC_AFTER_PERIOD","sentence":"^\\Q%ruleexpr.number.value dynamic stage=core The %expr.value value of a number is the number its digits spell in base ten.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\Q%ruleexpr.binary.syntax syntax stage=core A binary expression is two %expr.operand operands with one of these operators between them:\\E$"}
+{"rule":"LC_AFTER_PERIOD","sentence":"^\\Q%ruleexpr.binary.syntax syntax stage=core A binary expression is two %expr.operand operands with one of these operators between them:\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\Q%ruleexpr.power.syntax syntax stage=full A power expression is two %expr.operand operands with \\E(?:Dummy|Ina|Jimmy-|Dummy-|Maniquí-|Maniquíes-|Atrapa-|Dummy\\+|Dummy's\\+)[0-9]+\\Q between them.\\E$"}
+{"rule":"LC_AFTER_PERIOD","sentence":"^\\Q%ruleexpr.power.syntax syntax stage=full A power expression is two %expr.operand operands with \\E(?:Dummy|Ina|Jimmy-|Dummy-|Maniquí-|Maniquíes-|Atrapa-|Dummy\\+|Dummy's\\+)[0-9]+\\Q between them.\\E$"}
+{"rule":"OK_OK_COMMA","sentence":"^\\QMitigates damage if a hazardous condition/event occurs No No mitigation in HA-R-01 is software.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\QMedium Medium The unit tests run on the host; the stand procedures are kept short.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\QLow Low The timeout is set from the ground station's rate, and can be changed by a release.\\E$"}

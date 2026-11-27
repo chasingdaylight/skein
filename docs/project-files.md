@@ -26,7 +26,7 @@ type = "srs"
 | `project.name` | The project's name, for reports. |
 | `template` | The templates the project uses: `"langspec"`, a list of names, or `[template.KEY]` tables with a `name` and options. See [templates](templates.md). |
 | `project.id` | What other projects know this one by, whatever short name they give it: `"cesiumlang/cesium"`. |
-| `forge.kind`, `forge.repository`, `forge.url` | Where the project's issues and pull requests are: `"github"` or `"gitlab"`, `"owner/repo"`, and a server other than the public one. See [the forge](forge.md). |
+| `forge.kind`, `forge.repository`, `forge.url` | Where the project's issues and pull requests are: `"github"`, `"gitlab"` or `"forgejo"`, `"owner/repo"`, and a server other than the public one. See [the forge](forge.md). |
 | `forge.formerly` | The forges the project was on, `["github:example/spec"]`: references with their numbers resolve through `.skein/forge-map.toml`. See [the forge](forge.md#references-after-a-move). |
 | `forge.mirror` | `"local"` (the default) for a full mirror that is per checkout and ignored by git, or `"committed"`. See [the forge](forge.md#a-full-mirror-working-offline-for-long-and-moving-between-forges). |
 | `results.paths` | The test results files the project keeps, or directories of them: see [test results](results.md). |
@@ -52,6 +52,12 @@ type = "srs"
 | `citations.expected` | Every item of a `to` type should be cited by the set; coverage counts the ones that are not. |
 | `planning.repository` | The project's planning repository, one of its `repositories`: its `.skein/resources.toml` (people and calendar) is used when the project has none. |
 | `planning.span` | `true` in a planning repository: its schedule and its Gantt charts, boards, roadmap and time reports include the work of the repositories it declares, as `repository:ID`, and its work can precede theirs (`precedes=compiler:t.parse`). |
+| `serve.save` | How a save from `skein serve` reaches git: `"pull-request"` (the default with a `forge`), `"branch"` (the default without one) or `"commit"`. See [the web interface](web.md#how-a-save-reaches-git). |
+| `serve.branch` | The branch changes go to; by default the branch checked out when `skein serve` started. |
+| `serve.approve_sign_in` | `"session"` (the default) or `"again"`: an approval that must be signed, given in `skein serve` or on the forge, needs the approver to have signed in again to give it. See [reviewing](reviewing.md#approvals-given-in-skein-serve-or-on-the-forge). |
+| `serve.editors` | With `save = "commit"`: who commits, by git's name; `check` warns of commits to the sources by anyone else. |
+| `maturity.order`, `maturity.milestone`, `maturity.tbd` | The maturities a document may be at, lowest first; the milestone the project is at; the statuses that count as undecided. See [document control](commands.md#document-control). |
+| `maturity.gates.NAME.tbd`, `maturity.gates.NAME.volatility` | A milestone's gate: the most of the requirements, in percent, that may be undecided, and that may have changed since the last baseline. |
 | `schedule.also` | The formats `skein schedule` writes the schedule in besides `.skein/schedule.toml`: `["json", "csv"]` for `.skein/schedule.json` and `.skein/schedule.csv`. |
 
 ```toml
@@ -96,10 +102,11 @@ normative = false
 | `statuses` | The lifecycle. Default: draft, approved, deprecated, removed. |
 | `tombstone` | The status of a removed item, whose ID stays taken. Default `"removed"`, when the statuses have it. |
 | `verification` | The verification methods an item of the type may name. |
-| `approval` | The statuses an item may have only while it is approved as it is: see [reviewing](reviewing.md). As a table, `[approval]` with `statuses` and `roles`: the roles that must each approve. |
+| `approval` | The statuses an item may have only while it is approved as it is: see [reviewing](reviewing.md). As a table, `[approval]` with `statuses`; `roles`, the roles that must each approve; `approvers`, who may approve (a list, or `[approval.approvers]` with a list per role); `signed`, `true` or the roles whose approvals must be signed; and `in_order`, whether the roles approve in their order. See [levels, and signed approvals](reviewing.md#levels-and-signed-approvals). |
 | `example` | A table that makes the type one of tested examples: see [writing items](writing-items.md#tested-examples). |
 | `example.link` | The link type an example inside an item counts as, to that item: `"shows"`. |
 | `example.rejects` | The category of an example that must be rejected. Default `"rejects"`. |
+| `example.message` | The string attribute that holds the messages a rejected example must give: `"error"`, written `%example[.open rejects error="unterminated string"]`. Default: none. |
 | `example.extensions` | The file name extension of each language's examples: `{ cesium = ".csm" }`. Default: the language. |
 | `attributes.<name>.type` | `"string"` (the default), `"integer"`, `"boolean"` or `"date"`. |
 | `attributes.<name>.values` | The values a string attribute may take. |

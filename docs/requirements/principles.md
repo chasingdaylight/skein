@@ -6,10 +6,10 @@ What holds for all of Skein. The reasons are in `docs/design.md`, section 2.
 Everything Skein stores about a project shall be in plain text files in the repository of the project: the schema, the items, the review records and the approvals. Skein shall keep no database, and reading those files shall not depend on anything Skein derives from them.
 
 %req[principle.git-only]
-Every command that reads the current project shall work with nothing but the files. Skein shall need the `git` program only for information that only git has: the name of the user, and the content of the files at an earlier commit.
+Every command that reads the current project shall work with nothing but the files. Skein shall need the `git` program only for what only git has or does: the name of the user; the content of the files at an earlier commit, their history and who last changed them; tags (`baseline.tag`); the other repositories it fetches (`network.fetched`); the commits, branches, worktrees, merges, pushes and pulls of `skein serve` and `approve --sign` (`serve.save`, `serve.team`); signatures (`approval.signed`); and the address of `origin` (`ci.engineering-docs`).
 
-%req[principle.forge-neutral planned]
-Skein shall reach a forge (GitHub, GitLab, Forgejo) only through an adapter, and no feature of Skein shall depend on something that one of the three lacks. Built: GitHub's and GitLab's adapters (`forge.gitlab`); Forgejo's is to come.
+%req[principle.forge-neutral]
+Skein shall reach a forge (GitHub, GitLab, Forgejo) only through an adapter, and no feature of Skein shall depend on something that one of the three lacks. The adapters of all three are built (`forge.gitlab`, `forge.forgejo`), each reading issues, pull requests and their reviews, writing the planning fields back, and taking a published mirror (`forge.publish`; issue #299). GitLab's requirements (`forge.gitlab-requirements`) and Jama Connect (`forge.jama`) are tools of their own that Skein keeps to the items, not features that need them.
 
 %req[principle.schema-driven]
 Skein shall have no built-in item type, link type, attribute, category or status. A project declares them, and Skein checks the items of the project against those declarations.

@@ -99,9 +99,12 @@ A command-line tool, `skein`, with subcommands that each do one thing and fail w
 | `apply` | Writes a planning overlay's values to the forge and removes them from `.skein/` (section 10.4). |
 | `mirror` / `sync` / `publish` | Copies the forge's data into a full plain-text mirror, writes offline edits back to the forge, and re-creates mirrored data on another forge (section 10.4). |
 | `import` | Converts Doorstop trees; imports items from CSV (requirements from a spreadsheet or a DOORS export, an external standard); imports test results. |
-| `export` | Writes the whole graph as JSON (for other tools and agents) and any matrix or list as CSV; later ReqIF for interchange with DOORS and similar. |
+| `export` | Writes the whole graph as JSON (for other tools and agents) and any matrix or list as CSV, and ReqIF for interchange with DOORS and similar tools. |
 | `render` | Builds the site, and each document as a single file for delivery (section 8). |
-| `lsp` | The language server (section 9). Later. |
+| `lsp` | The language server (section 9). |
+| `serve` | The site, live from a checkout, and editing it in a browser, on one's own computer or for a team (section 9). |
+| `api` | One of `skein serve`'s editing requests: how the static site's edit mode asks skein built for WebAssembly (section 9.1). |
+| `jama` / `gitlab-requirements` | Keep Jama Connect's items, or GitLab's requirements, to the items (section 9.5). |
 
 The graph is built from the files on every run; for large projects a cache under the build directory may speed it up, but deleting it changes nothing.
 
@@ -110,9 +113,9 @@ The graph is built from the files on every run; for large projects a cache under
 - Every item has a fingerprint over its normative content. For each link, Skein records the fingerprint of the target as last reviewed; a changed target makes the link suspect, and `check` reports it until `clear` records the review.
 - Review records are kept in `.skein/`, never in the items or beside the documents (emanspeaks, 2026-11-21), so sources hold no hashes and document folders hold no extra files. Under `.skein/reviews/` there is one file per document or item directory, with one sorted line per link, so two branches conflict only where both reviewed the same document. Skein writes these files; no one edits them by hand.
 - **Baselines are git tags**; `check`, `coverage` and `diff` can compare against one ("what changed since v0.3", "which rules are new and untested"). A tag freezes everything that is in git. The only thing it does not freeze is a value the forge holds (an issue's due date or milestone), so where a plan uses such values, `skein baseline` first writes them to a file under `.skein/baselines/`, commits it, and tags that commit. A project with no forge data in its plan just tags.
-- **Approvals are in git** (emanspeaks, 2026-11-21): who approved which item, when, and at which fingerprint, under `.skein/` like the review records. `skein approve` writes one; the forge adapter can also write them from a merged pull request's approvals, so the forge's review is the act and git keeps the record. They survive a move to another forge and can be shown to an auditor. An item whose content changed after its approval is reported as no longer approved, and the schema can require approval for a status (no `approved` requirement without one).
+- **Approvals are in git** (emanspeaks, 2026-11-21), and can be required in roles, in order, and signed (section 9.4): who approved which item, when, and at which fingerprint, under `.skein/` like the review records. `skein approve` writes one; the forge adapter can also write them from a merged pull request's approvals, so the forge's review is the act and git keeps the record. They survive a move to another forge and can be shown to an auditor. An item whose content changed after its approval is reported as no longer approved, and the schema can require approval for a status (no `approved` requirement without one).
 - **IDs are never reused.** `check` reports an ID that a tombstone holds, and two branches that took the same new number are caught when they meet, with `skein move` to renumber one.
-- **History as data:** counts over time (items by status, changes per baseline, coverage) come from git history the same way burndown does (section 10.3), for the measurement reports that standards such as NPR 7150.2D ask for. Later.
+- **History as data:** counts over time (items by status, changes per baseline, coverage) come from git history the same way burndown does (section 10.3), for the measurement reports that standards such as NPR 7150.2D ask for: the generated request `history`.
 
 ## 7. Forges
 
@@ -136,7 +139,7 @@ A capability that only one forge has (for example GitHub Projects fields or issu
 - The output is plain HTML and CSS; `skein render` can also write plain Markdown pages for another site generator.
 - Search, backlinks and a broken-reference check are Skein's own, built from the graph.
 - **Documents for delivery:** each document can also be rendered as one self-contained HTML file with a print style sheet (title page, numbered sections, page headers, a change record from the baselines), which any browser prints to PDF. Projects that hand over documents, as NPR 7150.2D work does, need this more than a site.
-- **Profiles and editions:** a document or the whole site can be rendered for one profile (only what applies to one stage, or to one software class), and, later, for several baselines side by side, so readers can pick the edition that matches a release.
+- **Profiles and editions:** a document or the whole site can be rendered for one profile (only what applies to one stage, or to one software class), and for several baselines side by side (`render --editions`), so readers can pick the edition that matches a release.
 - **Charts and diagrams that Skein computes** (trace graphs, Gantt charts, burndown and burnup, resource load) are drawn by Skein itself as static SVG, so they are deterministic, diff cleanly, and need no JavaScript or outside tool.
 - **Mermaid** blocks written by hand in documents (flowcharts, sequence and state diagrams) are kept as they are. VS Code and all three forges draw them in their own Markdown views; on the rendered site they are drawn by a copy of mermaid.js that is vendored in Skein's repository and shipped with the site (emanspeaks, 2026-11-21), never loaded from a content delivery network, and updated when Skein chooses. Mermaid's own command-line renderer is not used, since it needs Node.js and a headless browser. Skein can also export its own graphs as Mermaid source, for pasting into issues and pull requests, which all three forges render.
 
@@ -144,7 +147,175 @@ A capability that only one forge has (for example GitHub Projects fields or issu
 
 1. **A language server** (`skein lsp`) for the item and document sources in any editor: go to definition on an ID, find references, completion of IDs and link targets, hover previews, diagnostics from `check`, rename of an ID across files.
 2. **A VS Code extension** on top of it is Skein's graphical interface (emanspeaks, 2026-11-21): the item tree, trace views, coverage, forms for items, and the interactive planning views (section 10), where dragging a bar in the Gantt chart or a card on a board writes the change to the item's file. The extension is thin, as a language-server extension should be: its TypeScript only connects VS Code to the `skein` binary, which holds the logic and draws the views, so other editors can use the same server. The packages an extension must take from npm are the one outside dependency that cannot be avoided for now; keeping the TypeScript to that connection keeps them to the minimum.
-3. **No hosted application in the first scope.** People who edit (authors, project managers) have VS Code; everyone else reads the rendered documents, schedules and charts, which are static files that any web server, or a file share, can serve. A hosted web interface that edits the same files is a backlog feature (emanspeaks, 2026-11-21).
+3. **A web interface on the same files, in two steps** (#105; emanspeaks, 2026-11-27), for everyone: reviewers, managers and authors. First `skein serve`, in the skein binary, which serves the rendered site from a checkout and edits its files (on this computer, then for a team on a shared server, with no forge needed). Then an edit mode on the static site, with skein built for WebAssembly checking the edits in the browser and the forge's API saving them, so the hosted pages stay static files that any web server, or a file share, can serve. A save reaches git as the project chooses: a pull request (the default where there is a forge), a branch merged in the interface (the default where there is none), or a commit with the items approved after; Skein warns where the chosen way was not followed, and does not block it (#280).
+
+### 9.1 Where an edit is made, and how it is checked
+
+Every way of editing runs the same code: the language server, `skein serve` and the static site's edit mode all read the project with `Workspace.open`, write with the same form code (`edit/form.zig`, `edit/item_form.zig`), and check with `skein check`'s own checks, the text as typed given in place of the file on disk (`cli.Common.unsaved`). Only where the code runs differs.
+
+| Where | What runs `check` | What a save writes | Who |
+| --- | --- | --- | --- |
+| VS Code | `skein lsp`, on the computer | the file, as the editor saves it | the computer's user |
+| `skein serve`, on one computer | the server | the checkout, or the person's change's worktree | git's user |
+| `skein serve`, for a team | the server | the person's change's worktree | the person signed in |
+| The static site | skein built for WebAssembly, in the page | the browser's storage, then the forge's API | the token's owner |
+
+An edit in `skein serve`'s pages, from the form to the file:
+
+```mermaid
+sequenceDiagram
+    actor P as Person
+    participant B as Page (edit.js)
+    participant S as skein serve
+    participant F as Files (checkout or worktree)
+    P->>B: opens an item's form
+    B->>S: GET /_skein/form?id=ID
+    S->>F: reads the project
+    S-->>B: the type's fields, the item's values, a hash of its file
+    loop as the person types
+        B->>S: POST /_skein/preview (the values)
+        S->>S: the file as the form would write it, checked, not saved
+        S-->>B: the problems of that file, and how many elsewhere
+    end
+    P->>B: Save
+    B->>S: POST /_skein/save (the values, the hash)
+    S->>F: the file's hash now
+    alt the file changed since the form read it
+        S-->>B: refused, nothing written
+    else unchanged
+        S->>F: writes the marker or front matter
+        S->>F: commits, as the project saves (9.2)
+        S-->>B: saved
+        B->>S: GET /_skein/stamp, every second
+        S-->>B: the files changed: the page loads again
+    end
+```
+
+The static site asks the same requests of skein in the page:
+
+```mermaid
+sequenceDiagram
+    actor P as Person
+    participant B as Page (edit.js, static.js)
+    participant W as skein.wasm (wasi.js)
+    participant L as Browser storage
+    participant G as Forge API
+    B->>B: loads skein.wasm and files.json, applies what L keeps
+    P->>B: edits, saves
+    B->>W: skein api POST save (the files in memory)
+    W-->>B: written, in memory
+    B->>L: the changed files
+    P->>B: Propose them on the forge
+    B->>P: asks a token (once a session)
+    B->>G: a branch edit/NAME, one commit, a pull request
+    G-->>B: the pull request's address
+    B->>L: forgets the changes
+```
+
+### 9.2 How a save reaches git
+
+`[serve] save` decides (#280; emanspeaks, 2026-11-27). A checkout cannot enforce it, so `skein check` warns where it was not followed, from the commit that set it, and refuses nothing.
+
+```mermaid
+flowchart TD
+    save[A save in skein serve] --> mode{"[serve] save"}
+    mode -->|commit| commit[A commit on the branch, as the person]
+    commit --> push1[Pushed when the branch has an upstream]
+    mode -->|branch or pull-request| open{A change open?}
+    open -->|no| start[Start one: a branch edit/NAME in a worktree of its own]
+    start --> into
+    open -->|yes| into[A commit in the change's worktree]
+    into --> done{When the change is done}
+    done -->|branch| merge[Merge into the branch, in the serving checkout] --> push2[Pushed when the branch has an upstream]
+    done -->|pull-request| propose[Push edit/NAME, open a pull request] --> review[Reviewed and merged on the forge]
+    review --> record[skein approve --from-pull-request in CI]
+```
+
+The default is `pull-request` where the project names its forge and `branch` where it does not; `commit` is never the default. Each change has a worktree of its own under the git directory, so several people edit at once and the serving checkout stays on the branch changes go to.
+
+### 9.3 Signing in
+
+Reading needs nobody to sign in; changing or approving anything does (emanspeaks, 2026-11-27).
+
+```mermaid
+sequenceDiagram
+    actor P as Person
+    participant B as Browser
+    participant X as Reverse proxy
+    participant S as skein serve
+    participant I as Forge or OIDC provider
+    alt --sign-in proxy
+        P->>X: signs in to the organization (the proxy's job)
+        X->>S: each request, with X-Forwarded-User and X-Forwarded-Email
+        S->>S: believed only from the proxy's addresses (--proxy)
+    else --sign-in forge or oidc
+        B->>S: GET /_skein/sign-in?back=PAGE
+        S-->>B: to the provider's authorize page, with a state
+        B->>I: signs in
+        I-->>B: back to /_skein/oauth with a code
+        B->>S: the code and the state
+        S->>I: the code, with the app's secret
+        I-->>S: a token, and with OIDC an ID token (who, and when)
+        S-->>B: a session cookie (HttpOnly), back to PAGE
+    end
+```
+
+### 9.4 Approvals
+
+An approval is a record in git, `.skein/approvals/`, of who approved an item's content (its fingerprint), when, and in which role. A change to the item leaves the record and makes the item no longer approved. How the record is made, and what makes it count where a type asks for a signature (`[approval] signed`, for every role or some; #287, #288):
+
+```mermaid
+flowchart LR
+    subgraph given[Given]
+        local[skein approve --sign, on one's own computer]
+        serve[Approve in skein serve, signed in]
+        pr[A review on the forge, then approve --from-pull-request in CI]
+    end
+    local --> key[The commit signed with the approver's key: OpenPGP, SSH, or a badge's X.509 certificate]
+    serve --> trail[The record keeps the sign-in: provider, subject, when, whether again]
+    pr --> link[The record keeps the pull request's address, and whether the forge asked for a sign-in again]
+    trail --> server[The commit signed by the server's key]
+    link --> server
+    key --> check{skein check}
+    server --> check
+    check -->|the approver's key, in signers.toml| ok[Counts as signed]
+    check -->|a server's key, in signers.toml servers| electronic[Counts as an electronic signature]
+    electronic -->|"approve_sign_in = again"| again[Only if signed in again, or the forge asked]
+```
+
+With `[approval] in_order = true` the roles are levels: an approval counts only once each role before it has approved the same content. A schedule change approved by PP&C needs no signature, and the project manager's approval after it does:
+
+```mermaid
+sequenceDiagram
+    actor C as PP&C
+    actor M as Project manager
+    participant S as skein serve
+    participant I as OIDC provider
+    participant G as git
+    C->>S: Approve, as ppc
+    S->>G: the record, with the session's sign-in (no signature asked of ppc)
+    M->>S: Approve, as project-manager
+    S-->>M: must be signed: sign in again
+    M->>I: signs in again (prompt=login)
+    I-->>S: an ID token whose auth_time is now
+    M->>S: Approve, as project-manager
+    S->>G: the record, signed_in again = true, committed and signed by the server's key
+    Note over S,G: skein check: project-manager after ppc, its e-signature from a listed server
+```
+
+### 9.5 Other tools
+
+Git stays the truth; other tools are kept to the items, and what changed there is reported, never taken in silently.
+
+```mermaid
+flowchart LR
+    skein[Items in git] -->|skein jama: create, update, relate| jama[Jama Connect]
+    jama -->|skein import jama: once, to begin| skein
+    skein -->|skein gitlab-requirements| gl[GitLab requirements]
+    skein -->|export reqif| doors[DOORS and others]
+    doors -->|import reqif, csv| skein
+    jama -.->|changed or removed there: reported| skein
+```
 
 ## 10. Planning
 
@@ -187,7 +358,7 @@ A branch of the plan can explore a different schedule: other priorities, assignm
 - `check` reports an overlay whose upstream value has since changed, as a merge would report a conflict.
 - Views and charts on the branch show the plan with the overlay applied, and can show it beside the current plan.
 - When the plan is adopted, `skein apply` writes the overlay's values to the forge through the adapter and removes them from `.skein/`; a plan that is not adopted is a branch that is never merged.
-- The same mechanism releveling uses: Skein proposes reassignments or new dates to remove overallocation as an overlay, for review like any other change.
+- Releveling (`skein level`) proposes new dates to remove overallocation, written into the work items on a branch for review like any other change; reassignments are for a person to make, as an overlay.
 
 #### Full mirror and moving between forges
 
@@ -223,7 +394,8 @@ A project spread over several repositories (a compiler, a website, an editor ext
 4. **Planning, first part:** work items, scheduling and the critical path, Gantt, burndown and burnup, boards and the roadmap as rendered pages; the GitHub adapter's planning fields. Proven on Skein's own work and on one other project's roadmap.
 5. **Editing:** `new`/`move`/`link`, the language server, the VS Code extension with forms and interactive planning views.
 6. **Planning, second part:** resources, calendars and load, time spent, releveling, overlays and `skein apply`.
-7. **Wider:** GitLab and Forgejo adapters, the full mirror with `sync` and `publish` between forges, ReqIF export, tested examples, editions side by side, measurements over time. Backlog: a hosted web interface.
+7. **Wider:** GitLab and Forgejo adapters, the full mirror with `sync` and `publish` between forges, ReqIF export, tested examples, editions side by side, measurements over time.
+8. **The web interface and approvals (v0.2.0):** `skein serve` on one's own computer and for a team, the static site's edit mode, how saves reach git, signed approvals and their levels, electronic signatures in `skein serve` and on the forge, Jama Connect (section 9).
 
 ## 13. Open questions
 

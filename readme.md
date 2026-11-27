@@ -8,11 +8,22 @@ Skein holds the threads of a project together: what is needed, what is decided, 
 
 It is for projects that want the rigor of requirements management without a database or a proprietary tool: from a language specification written as atomic, numbered paragraphs (like the Ferrocene Language Specification) to a NASA-style V-model of system requirements, software requirements, design and tests.
 
-**Status:** early, version 0.x: the file formats can still change. A project's schema, items in documents and in files of their own, citations in code and tests, reviews and approvals, test results, rendering (a static site, standalone documents, or Markdown for a site generator), templates for common standards, planning (schedules, resources, Gantt charts, boards, burndown), the GitHub and GitLab adapters, the language server, the VS Code extension and the MCP server for coding agents all work; `docs/design.md` describes them and what is still to come.
+**Status:** early, version 0.x: the file formats can still change. A project's schema, items in documents and in files of their own, citations in code and tests, reviews and approvals, test results, rendering (a static site, standalone documents, or Markdown for a site generator), templates for common standards, planning (schedules, resources, Gantt charts, boards, burndown), the GitHub, GitLab and Forgejo adapters, Jama Connect, the language server, the VS Code extension, the MCP server for coding agents, a web interface that edits the files (`skein serve`, on one computer or for a team, and the static site's edit mode), and approvals in roles, in order and signed all work; `docs/design.md` describes them and what is still to come.
 
 ## Installing
 
-Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as one program for Linux, macOS and Windows (x86_64 and arm64), with a `SHA256SUMS` file. Unpack the archive for your platform and put `bin/skein` on your `PATH`; it needs nothing else.
+Each [release](https://github.com/chasingdaylight/skein/releases) has `skein` as one program for Linux, macOS and Windows (x86_64 and arm64), with a `SHA256SUMS` file. Unpack the archive for your platform and put `bin/skein` on your `PATH`; it needs nothing else. On macOS there is also an installer package, `skein-v<version>-macos.pkg`, one for Apple Silicon and Intel: open it, and it installs `skein` into `/usr/local/bin` and the license into `/usr/local/share/doc/skein`. To remove it, delete those and forget the package (`sudo pkgutil --forget com.github.chasingdaylight.skein`).
+
+Releases from 0.2.0 on are signed: `skein.exe` with an Authenticode signature, and `skein` on macOS, in the archives and the installer package, with a Developer ID and notarized by Apple; the programs in the VS Code extension are the same signed ones. A browser still marks what it downloads as coming from the internet. On macOS, double-clicking the unpacked `skein` in Finder then shows a warning, as it does for any command-line program marked that way: run it from a terminal instead, or use the installer package. Unpack the archive with `tar -xzf` in a terminal (Finder's Archive Utility passes the mark on to what it unpacks); if a mark is on `skein` already, remove it with `xattr -d com.apple.quarantine skein`. On Windows, SmartScreen may still ask about a program it has not seen often: unblock the zip before unpacking it (`Unblock-File`, or "Unblock" in its Properties).
+
+From 0.2.0 on, `SHA256SUMS` is also signed (`SHA256SUMS.asc`) with the release signing key in [`SIGNING-KEY.asc`](SIGNING-KEY.asc), fingerprint `9431 3677 98CC D8E2 8BC0  E589 BB30 DEF7 34E5 F690`, and each file has a build attestation of the workflow that built it. To check a download:
+
+```text
+gpg --import SIGNING-KEY.asc
+gpg --verify SHA256SUMS.asc SHA256SUMS
+sha256sum --ignore-missing -c SHA256SUMS
+gh attestation verify skein-v0.2.0-x86_64-linux.tar.gz --repo chasingdaylight/skein
+```
 
 For VS Code and editors built on it, the extension [Skein](editors/vscode/readme.md) (`chasingdaylight.skein`, on the Visual Studio Marketplace and Open VSX) highlights markers and references in Markdown and carries the `skein` program for its platform, on the `PATH` of its terminals.
 
@@ -29,18 +40,22 @@ skein coverage
 
 | Read | For |
 | --- | --- |
+| [`docs/quickstart.md`](docs/quickstart.md) | A quick-start: a project from a template, a requirement cited by a test, a site, in five minutes. |
+| [`docs/tutorial-npr7150.md`](docs/tutorial-npr7150.md) | A tutorial: a new project from the `npr7150.2d` template to its requirements review. |
+| [`docs/examples.md`](docs/examples.md) | The example projects, each rendered on the site. |
 | [`docs/tutorial-existing-code.md`](docs/tutorial-existing-code.md) | A tutorial: Skein added to a program that exists, its requirements cited by its code and tests. |
 | [`docs/tutorial-planning.md`](docs/tutorial-planning.md) | A tutorial: a project planned before its code, from needs to a schedule. |
-| [`examples/`](examples/) | Two small projects to copy from: a specification as a document, and requirements as files. |
+| [`examples/`](examples/) | Small projects to copy from: software under NPR 7150.2D and a language specification, each from its template, and requirements as files. |
 | [`docs/writing-items.md`](docs/writing-items.md) | How items, references and citations are written. |
 | [`docs/project-files.md`](docs/project-files.md) | The files in `.skein/`: item types, link types, profiles. |
 | [`docs/commands.md`](docs/commands.md) | The commands. |
-| [`docs/reviewing.md`](docs/reviewing.md) | Fingerprints, suspect links, approvals. |
+| [`docs/reviewing.md`](docs/reviewing.md) | Fingerprints, suspect links, approvals: in roles, in order, signed. |
+| [`docs/web.md`](docs/web.md) | The web interface: `skein serve`, for one person or a team, and the static site's edit mode. |
 | [`docs/repositories.md`](docs/repositories.md) | Referring to the items of other repositories. |
 | [`docs/results.md`](docs/results.md) | Test results. |
 | [`docs/forge.md`](docs/forge.md) | Issues and pull requests on the forge. |
 | [`docs/templates.md`](docs/templates.md) | Templates built into Skein. |
-| [`docs/importing.md`](docs/importing.md) | Coming from Doorstop, or from a spreadsheet. |
+| [`docs/importing.md`](docs/importing.md) | Coming from Doorstop, a spreadsheet, ReqIF or Jama Connect. |
 | [`docs/requirements/`](docs/requirements/readme.md) | What Skein is required to do, in its own format, traced to its tests. |
 | [`docs/design.md`](docs/design.md) | What Skein is to be. |
 

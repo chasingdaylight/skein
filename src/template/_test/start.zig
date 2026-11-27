@@ -10,6 +10,7 @@ const coverage_command = @import("../../commands/coverage.zig");
 const render_command = @import("../../commands/render.zig");
 const init_command = @import("../../commands/init.zig");
 const template_command = @import("../../commands/template.zig");
+const Template = @import("../Template.zig");
 
 fn expectContains(haystack: []const u8, needle: []const u8) !void {
     if (std.mem.find(u8, haystack, needle) == null) {
@@ -251,6 +252,161 @@ test "systems engineering under NPR 7123.1D: its requirements and its reviews" {
     try expectContains(criteria, "- %criteria[.e1] ");
 }
 
+// req: templates.includes
+test "no two templates have a document of the same name, so templates used together write all of theirs" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var seen: std.StringHashMapUnmanaged([]const u8) = .empty;
+    for (try Template.names(a)) |name| for (try Template.filesOf(a, name, "documents/")) |f| {
+        const got = try seen.getOrPut(a, f.path);
+        if (got.found_existing) {
+            std.debug.print("{s} is in both {s} and {s}\n", .{ f.path, got.value_ptr.*, name });
+            return error.TestUnexpectedResult;
+        }
+        got.value_ptr.* = name;
+    };
+}
+
+// req: templates.init-options
+test "init takes the templates' options, and writes the documents of the templates they bring along" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    const wrong = [_][]const []const u8{ &.{"class"}, &.{"class=Z"}, &.{ "class=C", "colour=red" } };
+    const said = [_][]const u8{ "--option takes NAME=VALUE", "'Z' is not a value of the option 'class' of 'npr7150.2d'", "no template named has the option 'colour'" };
+    for (wrong, said) |options, text| {
+        const out = try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7150.2d"}, .options = options });
+        try testing.expectEqual(.misuse, out.status);
+        try expectContains(out.text, text);
+    }
+    try testing.expectError(error.FileNotFound, tmp.dir.access(testing.io, ".skein", .{}));
+
+    const started = try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7150.2d"}, .options = &.{ "class=C", "program=space-flight" } });
+    try testing.expectEqual(.ok, started.status);
+    try testing.expect(std.mem.find(u8, started.text, "needs the option") == null);
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    try expectContains(config, "\n\"class\" = \"C\"\n");
+    try expectContains(config, "\n\"program\" = \"space-flight\"\n");
+    // brought along: software assurance, with the safety-criticality determination, and the NPRs of a space flight project
+    for ([_][]const u8{ "docs/safety-criticality.md", "docs/pm-compliance.md", "docs/se-compliance.md" }) |p| {
+        _ = try tmp.dir.readFileAlloc(testing.io, p, a, .limited(1 << 16));
+    }
+    const checked = (try check_command.run(testing.io, a, .{ .root = root })).text;
+    try expectContains(checked, "no problems");
+    try testing.expect(std.mem.find(u8, checked, "brings along") == null);
+}
+
+test "NPR 7150.2D brings along the standards it defers to, by its options" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7150.2d"} })).status);
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    const set = struct {
+        fn f(dir: std.Io.Dir, al: std.mem.Allocator, base: []const u8, options: []const u8) !void {
+            try dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = try std.mem.replaceOwned(u8, al, base, "# \"class\" = \"\"", options) });
+        }
+    }.f;
+
+    // class C: software assurance and the safety-critical determination come along
+    try set(tmp.dir, a, config, "\"class\" = \"C\"");
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "the template nasa-std-8739.8b, which npr7150.2d brings along, has none of its 6 documents in docs/");
+    try expectContains((try template_command.run(testing.io, a, .{ .common = .{ .root = root }, .what = .documents })).text, "6 documents of nasa-std-8739.8b, which npr7150.2d brings along");
+    _ = try tmp.dir.readFileAlloc(testing.io, "docs/safety-criticality.md", a, .limited(1 << 16));
+    _ = try tmp.dir.readFileAlloc(testing.io, "standards/nasa-std-8739.8b/tasks.md", a, .limited(1 << 20));
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+
+    // a crewed space flight project with models and simulations: all of them
+    var all = try std.mem.replaceOwned(u8, a, config, "\"program\" = \"none\"", "\"program\" = \"space-flight\"");
+    all = try std.mem.replaceOwned(u8, a, all, "\"models-and-simulations\" = \"false\"", "\"models-and-simulations\" = \"true\"");
+    all = try std.mem.replaceOwned(u8, a, all, "\"crewed\" = \"false\"", "\"crewed\" = \"true\"");
+    try set(tmp.dir, a, all, "\"class\" = \"A\"");
+    try expectContains((try template_command.run(testing.io, a, .{ .common = .{ .root = root }, .what = .documents })).text, "of npr7120.5f, which npr7150.2d brings along");
+    for ([_][]const u8{ "npr7120.5f", "npr7123.1d", "nasa-std-7009b", "human-rating" }) |t| {
+        _ = try tmp.dir.readFileAlloc(testing.io, try a.print("standards/{s}/.gitignore", .{t}), a, .limited(1 << 16));
+    }
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+
+    // class F (business IT) is not under NASA-STD-8739.8's tasks
+    var tmp2 = testing.tmpDir(.{});
+    defer tmp2.cleanup();
+    const root2 = try rootOf(a, tmp2);
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root2, .templates = &.{"npr7150.2d"} })).status);
+    try set(tmp2.dir, a, config, "\"class\" = \"F\"");
+    try testing.expect(std.mem.find(u8, (try check_command.run(testing.io, a, .{ .root = root2 })).text, "brings along") == null);
+
+    const shown = (try template_command.run(testing.io, a, .{ .what = .show, .name = "npr7150.2d" })).text;
+    try expectContains(shown, "Brings along:\n  nasa-std-8739.8b, when class is A or B or C or D or E: SWE-022");
+}
+
+// req: templates.standards-provided
+test "a template's standards come from skein, kept out of git, and a copy of them is told it can go" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7123.1d"} })).status);
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    try testing.expect(std.mem.find(u8, config, "standards/") == null);
+    try expectContains(try tmp.dir.readFileAlloc(testing.io, "standards/npr7123.1d/.gitignore", a, .limited(1 << 16)), "\n*\n");
+    // read as a read-only source, though the configuration names none
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    try expectContains((try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text, "complies-se links to se items: 0 of 62");
+    // gone, it is written again
+    try tmp.dir.deleteTree(testing.io, "standards");
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    _ = try tmp.dir.readFileAlloc(testing.io, "standards/npr7123.1d/requirements.md", a, .limited(1 << 20));
+
+    // a project that named the source itself keeps its copy, and is told when it is unchanged
+    try tmp.dir.deleteFile(testing.io, "standards/npr7123.1d/.gitignore");
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = try a.print("{s}\n[[sources]]\npath = \"standards/npr7123.1d\"\nread_only = true\n", .{config}) });
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "standards/npr7123.1d is the template npr7123.1d's own text, unchanged: skein provides it, so the directory and its [[sources]] can go");
+    const req = try tmp.dir.readFileAlloc(testing.io, "standards/npr7123.1d/requirements.md", a, .limited(1 << 20));
+    try tmp.dir.writeFile(testing.io, .{ .sub_path = "standards/npr7123.1d/requirements.md", .data = try a.print("{s}\nA note of the project's.\n", .{req}) });
+    try testing.expect(std.mem.find(u8, (try check_command.run(testing.io, a, .{ .root = root })).text, "can go") == null);
+}
+
+// req: templates.human-rating
+test "human-rating under NPR 8705.2C and NASA-STD-8719.29, alone and with NPR 7150.2D" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"human-rating"} })).status);
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+    const coverage = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text;
+    try expectContains(coverage, "complies-hr links to hrc items: 0 of ");
+    try expectContains(coverage, "complies-hr links to hr items: 0 of ");
+    const npr = try tmp.dir.readFileAlloc(testing.io, "standards/human-rating/npr8705.2c.md", a, .limited(1 << 20));
+    try expectContains(npr, "%hrc[HRC-2.2.2 srr=I sdr=U pdr=U cdr=U orr=U title=");
+    try expectContains(npr, "- %hrc[.a] A list of the significant risk contributors");
+    const std_text = try tmp.dir.readFileAlloc(testing.io, "standards/human-rating/nasa-std-8719.29.md", a, .limited(1 << 20));
+    try expectContains(std_text, "%hr[HR-4.3.1] The space system shall provide at least single failure tolerance");
+
+    var tmp2 = testing.tmpDir(.{});
+    defer tmp2.cleanup();
+    const root2 = try rootOf(a, tmp2);
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root2, .templates = &.{ "npr7150.2d", "human-rating" } })).status);
+    // class A: the software of a crewed system
+    const config = try tmp2.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    try tmp2.dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = try std.mem.replaceOwned(u8, a, config, "# \"class\" = \"\"", "\"class\" = \"A\"") });
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root2 })).text, "no problems");
+}
+
 // req: templates.npr7120.5f
 test "program and project management under NPR 7120.5F, with NPR 7123.1D" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);
@@ -265,24 +421,6 @@ test "program and project management under NPR 7120.5F, with NPR 7123.1D" {
     const coverage = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text;
     try expectContains(coverage, "complies-pm links to pm items: 0 of 51");
     try expectContains(coverage, "complies-se links to se items: 0 of 62");
-}
-
-// req: templates.iso29148
-test "a project with requirements as ISO/IEC/IEEE 29148 describes them" {
-    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
-    defer arena.deinit();
-    const a = arena.allocator();
-    var tmp = testing.tmpDir(.{});
-    defer tmp.cleanup();
-    const root = try rootOf(a, tmp);
-
-    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"iso29148"} })).status);
-    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems (5 items of 5 types, 4 link types");
-    const coverage = (try coverage_command.run(testing.io, a, .{ .common = .{ .root = root } })).text;
-    // the examples trace from business needs down to a verification
-    try expectContains(coverage, "refines links to business items: 1 of 1");
-    try expectContains(coverage, "derives links to stakeholder items: 1 of 1");
-    try expectContains(coverage, "verifies links to software items: 1 of 1");
 }
 
 test "eject writes the template's files into .skein/ and keeps the project's own" {

@@ -12,6 +12,7 @@ const Io = std.Io;
 
 const Report = @import("Report.zig");
 const Schema = @import("schema/Schema.zig");
+const Workflow = @import("serve/Workflow.zig");
 const toml = @import("toml.zig");
 
 const Project = @This();
@@ -45,6 +46,22 @@ planning_span: bool = false,
 /// `.skein/schedule.toml`
 schedule_also: []const []const u8 = &.{},
 schema: Schema = .{},
+/// `[serve]`: how a save from `skein serve` reaches git
+workflow: Workflow = .{},
+/// files whose text is given in place of what is on disk: what is typed
+/// in a page of `skein serve` and not saved yet
+unsaved: []const Unsaved = &.{},
+/// the baseline the project is read as, whose frozen forge values its plan
+/// takes (planning/frozen.zig); null for the files as they are
+baseline: ?[]const u8 = null,
+
+pub const Unsaved = struct { file: []const u8, text: []const u8 };
+
+/// The text of `file` that is given, when it is
+pub fn unsavedText(self: *const Project, file: []const u8) ?[]const u8 {
+    for (self.unsaved) |u| if (std.mem.eql(u8, u.file, file)) return u.text;
+    return null;
+}
 
 /// `[maturity]`: the maturities a document may be at, lowest first
 /// (`order = ["D", "P", "B", "U", "F"]`), and the milestone the project is
@@ -54,6 +71,27 @@ schema: Schema = .{},
 pub const Maturity = struct {
     order: []const []const u8 = &.{},
     milestone: ?[]const u8 = null,
+    /// the statuses of an item not yet decided; the items of the types that
+    /// have one are the ones the gates count
+    tbd: []const []const u8 = &.{ "tbd", "tbr" },
+    /// `[maturity.gates.NAME]`: the numbers each milestone holds them to
+    gates: []const Gate = &.{},
+
+    pub const Gate = struct {
+        milestone: []const u8,
+        /// the most of them that may be undecided, in percent
+        tbd: ?i64 = null,
+        /// what share of them may have changed since the last baseline:
+        /// less than this, in percent
+        volatility: ?i64 = null,
+    };
+
+    /// The gate of the milestone the project is at; null when it has none
+    pub fn gate(self: Maturity) ?Gate {
+        const m = self.milestone orelse return null;
+        for (self.gates) |g| if (std.mem.eql(u8, g.milestone, m)) return g;
+        return null;
+    }
 
     /// The rank of `value` in the order; null for one outside it (X, PPS)
     pub fn rank(self: Maturity, value: []const u8) ?usize {
@@ -66,6 +104,7 @@ pub const Repository = @import("network/Repository.zig");
 pub const Forge = @import("forge/Forge.zig");
 const ForgeMap = @import("forge/Map.zig");
 pub const Template = @import("template/Template.zig");
+const template_standards = @import("template/standards.zig");
 const template_use = @import("template/use.zig");
 
 /// A place whose files cite items in comments
@@ -126,6 +165,8 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
     if (try readToml(io, arena, root, config_file, report)) |table| {
         try out.readConfig(.{ .report = report, .arena = arena, .file = config_file, .table = table });
     }
+    // the standards of the templates it names, which skein provides
+    try template_standards.provide(io, arena, root, &out, report);
     if (out.forge) |*f| if (f.formerly.len > 0) {
         f.moved = try ForgeMap.load(io, arena, root);
     };
@@ -154,7 +195,8 @@ pub fn load(io: Io, arena: std.mem.Allocator, root: Io.Dir, report: *Report) std
 }
 
 fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
-    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template", "maturity", "schedule", "planning" });
+    try r.known(&.{ "project", "sources", "citations", "repositories", "results", "forge", "template", "maturity", "schedule", "planning", "serve" });
+    self.workflow = try Workflow.read(r);
     if (try r.child("planning")) |p| {
         try p.known(&.{ "repository", "span" });
         self.planning_repository = try p.string("repository");
@@ -163,8 +205,22 @@ fn readConfig(self: *Project, r: Schema.Reader) Schema.Reader.Error!void {
     self.templates = try template_use.readAll(r);
     self.forge = try Forge.read(r);
     if (try r.child("maturity")) |m| {
-        try m.known(&.{ "order", "milestone" });
+        try m.known(&.{ "order", "milestone", "tbd", "gates" });
         self.maturity = .{ .order = try m.strings("order"), .milestone = try m.string("milestone") };
+        if (m.table.get("tbd") != null) self.maturity.tbd = try m.strings("tbd");
+        if (try m.child("gates")) |gates| {
+            var list: std.ArrayList(Maturity.Gate) = .empty;
+            for (gates.table.keys()) |name| {
+                const g = try gates.child(name) orelse continue;
+                try g.known(&.{ "tbd", "volatility" });
+                const gate: Maturity.Gate = .{ .milestone = name, .tbd = try g.integer("tbd"), .volatility = try g.integer("volatility") };
+                for ([_]?i64{ gate.tbd, gate.volatility }, [_][]const u8{ "tbd", "volatility" }) |v, key| {
+                    if (v) |n| if (n < 0 or n > 100) try g.complain(key, "a share in percent, 0 to 100", .{});
+                }
+                try list.append(r.arena, gate);
+            }
+            self.maturity.gates = list.items;
+        }
     }
     if (try r.child("schedule")) |s| {
         try s.known(&.{"also"});
@@ -347,7 +403,14 @@ pub fn readToml(io: Io, arena: std.mem.Allocator, root: Io.Dir, path: []const u8
 /// The nearest directory at or above `start` (a path) that has a
 /// `.skein/`; null when none has
 pub fn findRoot(io: Io, arena: std.mem.Allocator, start: []const u8) !?[]const u8 {
-    var at: []const u8 = try Io.Dir.cwd().realPathFileAlloc(io, start, arena);
+    var at: []const u8 = Io.Dir.cwd().realPathFileAlloc(io, start, arena) catch |e| switch (e) {
+        // where there are no real paths (WebAssembly, in a page): the start itself, or none
+        error.OperationUnsupported => {
+            const candidate = try Io.Dir.path.join(arena, &.{ start, dir_name });
+            if (Io.Dir.cwd().access(io, candidate, .{})) |_| return start else |_| return null;
+        },
+        else => return e,
+    };
     while (true) {
         const candidate = try Io.Dir.path.join(arena, &.{ at, dir_name });
         if (Io.Dir.cwd().access(io, candidate, .{})) |_| return at else |_| {}
