@@ -15,15 +15,7 @@ pub fn build(b: *std.Build) void {
     // the templates, built into the program
     const templates = b.createModule(.{ .root_source_file = b.path("templates/__root__.zig") });
 
-    const mod = b.createModule(.{
-        .root_source_file = b.path("src/__root__.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    mod.addOptions("build_options", options);
-    mod.addImport("templates", templates);
-    // code of other projects built into skein: mermaid.js
-    mod.addImport("vendor", b.createModule(.{ .root_source_file = b.path("vendor/__root__.zig") }));
+    const mod = skein(b, target, optimize, options, templates);
 
     const exe = b.addExecutable(.{
         .name = "skein",
@@ -36,6 +28,14 @@ pub fn build(b: *std.Build) void {
     run_cmd.addPassthruArgs();
     const run_step = b.step("run", "Run skein");
     run_step.dependOn(&run_cmd.step);
+
+    // skein built for WebAssembly, for the static site's edit mode (`render --edit`)
+    const wasm = b.addExecutable(.{
+        .name = "skein",
+        .root_module = skein(b, b.resolveTargetQuery(.{ .cpu_arch = .wasm32, .os_tag = .wasi }), .small, options, templates),
+    });
+    const install_wasm = b.addInstallArtifact(wasm, .{ .dest_dir = .{ .override = .{ .custom = "web" } } });
+    b.step("wasm", "Build skein for WebAssembly, for render --edit: zig-out/web/skein.wasm").dependOn(&install_wasm.step);
 
     const tests = b.addTest(.{ .root_module = mod });
     const test_step = b.step("test", "Run skein's unit tests");
@@ -65,4 +65,18 @@ pub fn build(b: *std.Build) void {
     pdf_run.addPassthruArgs();
     b.step("pdftext", "Write the text of a PDF: -- FILE.pdf OUT.txt").dependOn(&pdf_run.step);
     test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = pdf })).step);
+}
+
+/// The skein program's module, for `target`
+fn skein(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.lang.Optimize, options: *std.Build.Step.Options, templates: *std.Build.Module) *std.Build.Module {
+    const mod = b.createModule(.{
+        .root_source_file = b.path("src/__root__.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    mod.addOptions("build_options", options);
+    mod.addImport("templates", templates);
+    // code of other projects built into skein: mermaid.js
+    mod.addImport("vendor", b.createModule(.{ .root_source_file = b.path("vendor/__root__.zig") }));
+    return mod;
 }

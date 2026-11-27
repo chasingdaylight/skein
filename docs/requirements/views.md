@@ -166,6 +166,9 @@ None of the ways of saving can be enforced in a checkout, so `skein check` shall
 %req[serve.approve-sign-in]
 `skein serve --sign-in oidc --issuer URL` shall sign people in with an OpenID Connect provider found by its discovery document, reading who they are and when they signed in from the ID token the token endpoint gives. With `[serve] approve_sign_in = "again"`, approving an item whose approval must be signed shall send the person to sign in again (`prompt=login`, `max_age=0`) unless they did in the last five minutes for no other approval; a sign-in the provider says is older is refused. `skein serve` shall refuse to start with that setting and a sign-in that cannot be asked for again. (Issue #288.)
 
+%req[serve.static-edit]
+`skein render --format html --edit --wasm FILE` shall make pages that edit the project's files with no server: skein built for WebAssembly (`zig build wasm`; a release's `skein-vVERSION-wasm32-wasi.wasm`), the project's text files that `check` reads (its configuration and schema, sources, places that cite, results), and the scripts that run skein in the page over those files go into the site under `_skein/`, and every page loads them. The pages shall edit files and items as `skein serve`'s do (`serve.edit`, `serve.check`), each request answered by `skein api` in the page; what is saved shall be kept in the browser, listed with a link to download each changed file, and forgotten only when asked. A file that is not a WebAssembly module is refused. (Issue #282; #105.)
+
 %req[serve.local]
 `skein serve` shall answer only requests addressed to `127.0.0.1` or `localhost` at its port, or to the host of its `--url`, and change a file only for a request that carries its own header (`x-skein`), which a page of another site cannot send without the browser asking first, which it refuses. (Issues #278, #279.)
 

@@ -16,6 +16,7 @@ const history = @import("../history.zig");
 const markdown = @import("../render/markdown.zig");
 const order = @import("../render/order.zig");
 const site = @import("../render/site.zig");
+const edit_mode = @import("../render/edit_mode.zig");
 const xml = @import("../xml.zig");
 const Results = @import("../results/Results.zig");
 
@@ -49,7 +50,13 @@ fn renderInto(io: Io, arena: std.mem.Allocator, ws: *Workspace, options: cli.Ren
     }
     if (options.format == .html) {
         const pages = try site.build(io, arena, ws, ctx, .{ .dir = out });
-        return .{ .text = try arena.print("skein: {d} page{s} rendered to {s}\n", .{ pages, if (pages == 1) "" else "s", out_path }) };
+        const said = try arena.print("skein: {d} page{s} rendered to {s}\n", .{ pages, if (pages == 1) "" else "s", out_path });
+        const wasm = options.wasm orelse return .{ .text = said };
+        const html = try files.list(io, arena, out, ".", &.{".html"});
+        return switch (try edit_mode.write(io, arena, ws, out, wasm, html)) {
+            .ok => |n| .{ .text = try arena.print("{s}skein: the pages edit {d} file{s}, with skein for WebAssembly\n", .{ said, n, if (n == 1) "" else "s" }) },
+            .failed => |why| .{ .text = try arena.print("skein: {s}\n", .{why}), .status = .misuse },
+        };
     }
 
     var count: usize = 0;
