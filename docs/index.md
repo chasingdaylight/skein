@@ -38,7 +38,7 @@ These pages are of the release their menu names, the latest by default; the menu
 | --- | --- |
 | [Writing items](writing-items.md) | Markers, parts, item files, references in text, citations in code and tests. |
 | [Project files](project-files.md) | The `.skein/` directory: configuration, item types, link types, profiles. |
-| [Commands](commands.md) | `check`, `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `baseline`, `pin`, `examples`, `result`, `template`, `move`, `new`, `link`, `import`, `review`, `approve`, `serve`, `lsp`. |
+| [Commands](commands.md) | `check`, `trace`, `coverage`, `diff`, `impact`, `export`, `render`, `baseline`, `pin`, `examples`, `result`, `template`, `move`, `new`, `link`, `import`, `review`, `approve`, `serve`, `api`, `jama`, `gitlab-requirements`, `init`, `schedule`, `lsp`, `mcp`. |
 | [Reviewing](reviewing.md) | Fingerprints, suspect links, reviews and approvals. |
 | [The web interface](web.md) | `skein serve`: the site in a browser, with its files and items edited from there. |
 | [Other repositories](repositories.md) | Items of other repositories, `pin`, and the state of the network. |
@@ -53,4 +53,4 @@ The requirements pages are produced by `skein render` from the same files that `
 
 ## Status
 
-Skein is early and its version is 0.x: the file formats can still change. The core, the command line, rendering, links across repositories, tested examples, test results, templates, planning, the forge adapters for GitHub and GitLab, the language server and the VS Code extension work and are tested on every platform. The [design](design.md) describes all of it, and what is still to come.
+Skein is early and its version is 0.x: the file formats can still change. The core, the command line, rendering, links across repositories, tested examples, test results, templates, planning, the forge adapters for GitHub, GitLab and Forgejo, Jama Connect, the language server and the VS Code extension, the web interface (`skein serve`, and the static site's edit mode) and approvals in roles, in order and signed work and are tested on every platform. The [design](design.md) describes all of it, and what is still to come.

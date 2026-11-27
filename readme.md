@@ -8,7 +8,7 @@ Skein holds the threads of a project together: what is needed, what is decided, 
 
 It is for projects that want the rigor of requirements management without a database or a proprietary tool: from a language specification written as atomic, numbered paragraphs (like the Ferrocene Language Specification) to a NASA-style V-model of system requirements, software requirements, design and tests.
 
-**Status:** early, version 0.x: the file formats can still change. A project's schema, items in documents and in files of their own, citations in code and tests, reviews and approvals, test results, rendering (a static site, standalone documents, or Markdown for a site generator), templates for common standards, planning (schedules, resources, Gantt charts, boards, burndown), the GitHub and GitLab adapters, the language server, the VS Code extension and the MCP server for coding agents all work; `docs/design.md` describes them and what is still to come.
+**Status:** early, version 0.x: the file formats can still change. A project's schema, items in documents and in files of their own, citations in code and tests, reviews and approvals, test results, rendering (a static site, standalone documents, or Markdown for a site generator), templates for common standards, planning (schedules, resources, Gantt charts, boards, burndown), the GitHub, GitLab and Forgejo adapters, Jama Connect, the language server, the VS Code extension, the MCP server for coding agents, a web interface that edits the files (`skein serve`, on one computer or for a team, and the static site's edit mode), and approvals in roles, in order and signed all work; `docs/design.md` describes them and what is still to come.
 
 ## Installing
 
@@ -49,12 +49,13 @@ skein coverage
 | [`docs/writing-items.md`](docs/writing-items.md) | How items, references and citations are written. |
 | [`docs/project-files.md`](docs/project-files.md) | The files in `.skein/`: item types, link types, profiles. |
 | [`docs/commands.md`](docs/commands.md) | The commands. |
-| [`docs/reviewing.md`](docs/reviewing.md) | Fingerprints, suspect links, approvals. |
+| [`docs/reviewing.md`](docs/reviewing.md) | Fingerprints, suspect links, approvals: in roles, in order, signed. |
+| [`docs/web.md`](docs/web.md) | The web interface: `skein serve`, for one person or a team, and the static site's edit mode. |
 | [`docs/repositories.md`](docs/repositories.md) | Referring to the items of other repositories. |
 | [`docs/results.md`](docs/results.md) | Test results. |
 | [`docs/forge.md`](docs/forge.md) | Issues and pull requests on the forge. |
 | [`docs/templates.md`](docs/templates.md) | Templates built into Skein. |
-| [`docs/importing.md`](docs/importing.md) | Coming from Doorstop, or from a spreadsheet. |
+| [`docs/importing.md`](docs/importing.md) | Coming from Doorstop, a spreadsheet, ReqIF or Jama Connect. |
 | [`docs/requirements/`](docs/requirements/readme.md) | What Skein is required to do, in its own format, traced to its tests. |
 | [`docs/design.md`](docs/design.md) | What Skein is to be. |
 

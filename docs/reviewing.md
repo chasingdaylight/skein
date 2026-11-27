@@ -120,7 +120,7 @@ An item is approved only when every role has approved what it says now; `check` 
 
 ### Who may approve
 
-Skein has no sign-in of its own, so by default anyone can record an approval: the records are in git, with their commits. A type can say whose approval counts:
+By default anyone can record an approval: the records are in git, with their commits, and carry the name `--by` or git gives, or the person signed in to `skein serve` ([the web interface](web.md#for-a-team)). A type can say whose approval counts:
 
 ```toml
 # .skein/types/proposal.toml

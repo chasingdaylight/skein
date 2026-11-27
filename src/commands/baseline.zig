@@ -2,9 +2,9 @@
 //! an annotated git tag that names itself a baseline and says what the
 //! project held then. Without a name, lists the baselines.
 //!
-//! The tag is made in the local repository and not pushed. Nothing of the
-//! forge is in a plan yet, so there is nothing to write before tagging
-//! (design, section 6).
+//! The tag is made in the local repository and not pushed. Writing the
+//! forge's values a plan uses before tagging is still to come (design,
+//! section 6; `baselines`, planned).
 
 const std = @import("std");
 const Io = std.Io;

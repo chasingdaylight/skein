@@ -19,6 +19,9 @@ A source with `read_only = true` shall be read and checked as any other, and `sk
 %req[standards.waivers]
 A link type may count as another (`counts_as`) or excuse from it (`excuses`), not both. For the coverage of the other link type, an item with a link of the first kind is covered (`counts_as`), or is waived (`excuses`): listed as waived and counted neither as covered nor as not, so that an item whose every requirement is met or waived is at 100%. Such a link counts only while the item it comes from is in force: not removed, and, when its type asks for approval, in one of the statuses that need it. A generated matrix of the other link type names the link (`tailors by ...`) or the waiver (`waived by ...`), and counts the waived apart.
 
+%req[standards.external]
+A standard the project must comply with shall be an item set of its own, read-only, which the project's items link to, with applicability by profile and with waivers and deviations as item types. (Design, section 4.7.) Built: `standards.read-only`, `standards.waivers`, profiles, and generated matrices.
+
 %req[project.files-by-name]
 Each item type, link type and profile shall be declared by one TOML file, in `.skein/types/`, `.skein/links/` and `.skein/profiles/`, and takes its name from the file name. A name is lowercase letters, digits, `-` and `_`, starting with a letter.
 
@@ -37,7 +40,7 @@ A problem with a key or a value of a file of `.skein/` or of the front matter of
 ## The schema
 
 %req[schema.item-type]
-An item type shall declare its ID scheme: hierarchical (`lex.comment.line`), or numbered (`SRS-012`) with a prefix, a number of digits, a separator that may be empty, and whether a name may be used in place of the number. A numbered ID may go on with a part's name after a dot (`SRS-012.a`), in lowercase words as hierarchical IDs have.
+An item type shall declare its ID scheme: hierarchical (`lex.comment.line`), or numbered (`SRS-012`) with a prefix, a number of digits, a separator that may be empty, and whether a name may be used in place of the number. A numbered ID may go on with a part's name after a dot (`SRS-012.a`), in lowercase words as hierarchical IDs have. Every key of an item type's file has a default, so an empty file is a type; item types, link types and profiles may each say what they are for (`description`).
 
 %req[schema.categories]
 An item type may declare categories. An item of such a type has exactly one of them; an item of a type without categories has none.

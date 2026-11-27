@@ -44,6 +44,9 @@ rm -rf "$out"
 mkdir -p "$out"
 pages docs "$skein" . "$out"
 cp -R site/. "$out/"
+# mermaid.js for the diagrams of the docs pages, the copy skein vendors
+mkdir -p "$out/assets"
+cp vendor/mermaid/mermaid.min.js "$out/assets/"
 latest=$(version_of .)
 mkdir -p "$out/_data"
 printf -- '- version: "%s"\n  dir: ""\n' "$latest" > "$out/_data/editions.yml"

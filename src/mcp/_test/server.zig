@@ -1,7 +1,7 @@
 //! The Model Context Protocol server, given messages as an agent sends
 //! them, on a project on disk.
 
-// req: mcp.protocol, mcp.tools
+// req: mcp.protocol, mcp.tools, coverage.json
 const std = @import("std");
 const testing = std.testing;
 const Io = std.Io;

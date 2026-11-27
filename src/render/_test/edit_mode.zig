@@ -1,7 +1,7 @@
 //! `skein render --format html --edit --wasm FILE`, and `skein api`, which
 //! its pages ask, on a project on disk.
 
-// req: serve.static-edit, serve.static-forge
+// req: serve.static-edit, serve.static-forge, serve.api
 const std = @import("std");
 const testing = std.testing;
 

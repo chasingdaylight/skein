@@ -6,7 +6,7 @@ What `skein check` reports. The user documentation is in `docs/writing-items.md`
 A problem shall be reported on one line, as `file:line:column: error: message`, with the file path relative to the project root. The line and column are left out when the problem has no single location. Problems are ordered by file and location.
 
 %req[check.exit-status]
-A command shall end with status 0 when it did what was asked, 1 when the project has problems, and 2 when it was used incorrectly or there is no project. With status 0 the result is on standard output; otherwise the problem is described on standard error.
+A command shall end with status 0 when it did what was asked, 1 when the project has problems, and 2 when it was used incorrectly or there is no project. With status 0 the result is on standard output; otherwise the problem is described on standard error, except where a format is for a CI system to read (`check.formats`), which goes to standard output whatever the status. `skein check` with no problems says, on one line, what it read: the items and their types, the link types, the profiles and the citations.
 
 %req[check.schema-first]
 When the configuration or the schema has problems, the items shall not be read: only those problems are reported.

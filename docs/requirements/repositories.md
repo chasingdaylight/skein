@@ -6,6 +6,9 @@ A project's items can refer to the items of other repositories: a compiler's spe
 
 ## Declaring them
 
+%req[links.repositories]
+Items, code and tests of another repository shall be citable by a qualified reference, checked against a recorded commit of that repository. (Design, section 10.5.)
+
 %req[network.declared]
 A project shall declare each other repository in `.skein/config.toml` under `[[repositories]]`, with the short name its targets use before the colon (`name:id`) and either the `path` of a checkout, from the project's root, or a `url` git can fetch from. A name given twice, a repository with both or neither, and a path that is absolute or has backslashes are reported. A project may give itself an `id` under `[project]`, which other projects know it by whatever short name they give it.
 

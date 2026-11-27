@@ -278,7 +278,7 @@ With `--profile NAME`, in any format, only the items of that profile (`.skein/pr
 
 ## `skein serve [--port N]`
 
-Serves the site `skein render --format html` writes, on this computer, while you work on the files:
+Serves the site `skein render --format html` writes, and edits its files from the pages ([the web interface](web.md)), on this computer while you work on the files, or for a team:
 
 ```text
 $ skein serve
@@ -286,9 +286,15 @@ skein: serving calc at http://127.0.0.1:8080/ until stopped (Ctrl+C)
 ```
 
 - The pages are rendered from the files as they are, committed or not, and rendered again when a file of the project changes: in an editor, by `git pull`, by another skein command. An open page loads itself again when that happens.
-- It answers only on this computer (127.0.0.1): it has no sign-in. `--port N` picks another port.
+- By default it answers only on this computer (127.0.0.1), with no sign-in. `--port N` picks another port.
+- For a team: `--listen ADDR` on another address, with `--url URL`, the address people reach it at, and `--sign-in proxy` (a reverse proxy names the person: `--user-header`, `--email-header`, `--proxy IP`), `--sign-in forge` (the project's forge, through OAuth), or `--sign-in oidc --issuer URL` (an OpenID Connect provider). Anyone reads; changing or approving needs someone signed in. See [for a team](web.md#for-a-team).
+- A save reaches git as `[serve] save` says: a pull request, a branch per change, or a commit ([how a save reaches git](web.md#how-a-save-reaches-git)).
 - A configuration or schema with problems is a page that says them, until they are fixed.
-- `--profile`, `--results` and the options for other repositories are those of `skein render`. It writes only what is saved from a page ([the web interface](web.md)).
+- `--profile`, `--results` and the options for other repositories are those of `skein render`. It writes only what is saved from a page.
+
+## `skein api GET|POST PATH [QUERY]`
+
+Answers one of `skein serve`'s editing requests (`page`, `source`, `check`, `form`, `preview`, `save`, `approve`, `change`), its body read from standard input, its answer, JSON, written to standard output. It is how the static site's edit mode (`render --edit`) asks them of skein built for WebAssembly, in the page; it is not meant to be typed.
 
 ## `skein move OLD NEW`
 
@@ -363,7 +369,7 @@ Record that links have been reviewed; see [reviewing](reviewing.md). `review` ta
 
 ## `skein approve ID...`
 
-Records that someone approved these items as they are now; see [reviewing](reviewing.md). `--by NAME` says who (default: the name git has for the user), `--on DATE` when (default: today).
+Records that someone approved these items as they are now; see [reviewing](reviewing.md). `--by NAME` says who (default: the name git has for the user), `--on DATE` when (default: today), `--as ROLE` in which role, where the type names roles. `--sign` commits the records, alone, signed with your key (`git commit -S`), for a type whose approvals must be signed ([signed approvals](reviewing.md#levels-and-signed-approvals)). `--from-pull-request N` records the approvals a merged pull request had in review.
 
 ## `skein result ID pass|fail|skip`
 
