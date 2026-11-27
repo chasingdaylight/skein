@@ -34,6 +34,30 @@ pub const Approval = struct {
     fingerprint: []const u8,
     /// the role it was given in, where the type names roles
     as: ?[]const u8 = null,
+    /// what shows who gave it, besides git's record (#288)
+    evidence: Evidence = .{},
+};
+
+/// The electronic signature of an approval given in `skein serve` or on
+/// the forge: how its approver was signed in, or the forge's own record
+pub const Evidence = struct {
+    /// in `skein serve`: how the approver was signed in
+    signed_in: ?SignedIn = null,
+    /// on the forge: the address of the pull request it was given in
+    pull: ?[]const u8 = null,
+    /// on the forge: whether it asked the reviewer to sign in again to approve
+    reauth: bool = false,
+};
+
+pub const SignedIn = struct {
+    /// `oidc:ISSUER`, `forge:KIND`, `proxy`
+    provider: []const u8,
+    /// who the provider says they are
+    subject: []const u8,
+    /// when they signed in, as RFC 3339
+    at: []const u8,
+    /// whether they signed in again to give this approval
+    again: bool = false,
 };
 
 /// The approvals of `id`, in the order of their approvers
@@ -57,16 +81,17 @@ pub fn isCurrent(arena: std.mem.Allocator, graph: *const Graph, schema: *const S
 
 /// Records that `by` approved `item` as it is now, on `on`, in place of
 /// an earlier approval by the same person
-pub fn put(self: *Approvals, arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema, item: *const Item, by: []const u8, on: toml.Date, as: ?[]const u8) std.mem.Allocator.Error!void {
+pub fn put(self: *Approvals, arena: std.mem.Allocator, graph: *const Graph, schema: *const Schema, item: *const Item, by: []const u8, on: toml.Date, as: ?[]const u8, evidence: Evidence) std.mem.Allocator.Error!void {
     const fp = try arena.dupe(u8, &try fingerprint.of(arena, graph, schema, item));
     for (self.all.items) |*a| {
         if (!std.mem.eql(u8, a.item, item.id) or !std.mem.eql(u8, a.by, by)) continue;
         a.on = on;
         a.fingerprint = fp;
         a.as = as;
+        a.evidence = evidence;
         return;
     }
-    try self.all.append(arena, .{ .item = item.id, .by = by, .on = on, .fingerprint = fp, .as = as });
+    try self.all.append(arena, .{ .item = item.id, .by = by, .on = on, .fingerprint = fp, .as = as, .evidence = evidence });
 }
 
 /// Who may approve items of `item_type` in `role` (null for the plain
@@ -179,7 +204,7 @@ fn read(self: *Approvals, arena: std.mem.Allocator, table: *const toml.Table) !v
             const fp = record.table.get("fingerprint") orelse return error.NotRecords;
             if (on != .datetime or on.datetime.date == null or fp != .string) return error.NotRecords;
             const as: ?[]const u8 = if (record.table.get("as")) |v| (if (v == .string) v.string else return error.NotRecords) else null;
-            try self.all.append(arena, .{ .item = item, .by = by, .on = on.datetime.date.?, .fingerprint = fp.string, .as = as });
+            try self.all.append(arena, .{ .item = item, .by = by, .on = on.datetime.date.?, .fingerprint = fp.string, .as = as, .evidence = try evidenceOf(record.table) });
         }
     }
 }
@@ -221,10 +246,32 @@ pub fn check(self: *const Approvals, arena: std.mem.Allocator, schema: *const Sc
 
 /// The line that records `a`, of the item `id`, as the files hold it
 pub fn recordLine(arena: std.mem.Allocator, id: []const u8, a: Approval) std.mem.Allocator.Error![]const u8 {
-    const as = if (a.as) |r| try arena.print(", as = \"{s}\"", .{try record_files.escape(arena, r)}) else "";
+    const e = record_files.escape;
+    var extra: std.ArrayList(u8) = .empty;
+    if (a.as) |r| try extra.print(arena, ", as = \"{s}\"", .{try e(arena, r)});
+    if (a.evidence.signed_in) |si| try extra.print(arena, ", signed_in = {{ provider = \"{s}\", subject = \"{s}\", at = \"{s}\", again = {} }}", .{ try e(arena, si.provider), try e(arena, si.subject), try e(arena, si.at), si.again });
+    if (a.evidence.pull) |url| try extra.print(arena, ", pull = \"{s}\", reauth = {}", .{ try e(arena, url), a.evidence.reauth });
     return arena.print("\"{s}\".\"{s}\" = {{ on = {d:0>4}-{d:0>2}-{d:0>2}, fingerprint = \"{s}\"{s} }}", .{
-        id, try record_files.escape(arena, a.by), a.on.year, a.on.month, a.on.day, a.fingerprint, as,
+        id, try e(arena, a.by), a.on.year, a.on.month, a.on.day, a.fingerprint, extra.items,
     });
+}
+
+/// The evidence a record keeps, when it keeps any
+fn evidenceOf(record: *const toml.Table) !Evidence {
+    var out: Evidence = .{};
+    if (record.get("signed_in")) |v| {
+        if (v != .table) return error.NotRecords;
+        const t = v.table;
+        const provider = t.get("provider") orelse return error.NotRecords;
+        const subject = t.get("subject") orelse return error.NotRecords;
+        const at = t.get("at") orelse return error.NotRecords;
+        if (provider != .string or subject != .string or at != .string) return error.NotRecords;
+        const again = if (t.get("again")) |g| (if (g == .boolean) g.boolean else return error.NotRecords) else false;
+        out.signed_in = .{ .provider = provider.string, .subject = subject.string, .at = at.string, .again = again };
+    }
+    if (record.get("pull")) |v| out.pull = if (v == .string) v.string else return error.NotRecords;
+    if (record.get("reauth")) |v| out.reauth = if (v == .boolean) v.boolean else return error.NotRecords;
+    return out;
 }
 
 /// Writes the approval files named in `files` again, from the approvals

@@ -11,6 +11,17 @@
 //!
 //! An entry is matched against the signature's key fingerprint, its primary
 //! key's, its key ID or its signer, as git reports them.
+//!
+//! An approval given in `skein serve` or on the forge is not signed by the
+//! approver's own key; an electronic signature will do (emanspeaks,
+//! 2026-11-27, #288): the record keeps how the approver was signed in, or
+//! the forge's record of it, and its commit is signed by a server the
+//! project trusts to have seen it, whose keys are `servers` in the same file:
+//!
+//!     servers = ["SHA256:Qw3..."]
+//!
+//! With `[serve] approve_sign_in = "again"`, the approver must have signed
+//! in again to give it, or the forge must have asked them to.
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -76,9 +87,14 @@ pub const Signature = struct {
     keys: []const []const u8,
 };
 
+/// The key of the signers file that lists the servers trusted to attest
+pub const servers_key = "servers";
+
 /// Why `approval` does not count as signed; null when it does. `line` is
 /// its record as `Approvals.write` writes it.
-pub fn problem(io: Io, a: Allocator, root: Io.Dir, signers: *const Signers, file: []const u8, line: []const u8, by: []const u8) !?[]const u8 {
+pub fn problem(io: Io, a: Allocator, root: Io.Dir, signers: *const Signers, file: []const u8, line: []const u8, ap: Approvals.Approval, again: bool) !?[]const u8 {
+    const by = ap.by;
+    const attested = ap.evidence.signed_in != null or ap.evidence.pull != null;
     const out = try git.output(io, a, root, &.{ "log", "-1", "--format=%G?%x1f%GS%x1f%GF%x1f%GP%x1f%GK", "-S", line, "--", file }) orelse return "it is not in git: its signature is that of the commit that records it";
     const text = std.mem.trim(u8, out, " \r\n");
     if (text.len == 0) return "it is not committed yet: its signature is that of the commit that records it ('skein approve --sign')";
@@ -95,12 +111,27 @@ pub fn problem(io: Io, a: Allocator, root: Io.Dir, signers: *const Signers, file
         'R' => return "the commit that records it was signed with a revoked key",
         else => return "the signature of the commit that records it cannot be checked here (git lacks the key, or for SSH keys gpg.ssh.allowedSignersFile)",
     }
-    const wanted = signers.get(by) orelse return try a.print("{s} has no key in {s}", .{ by, signers_file });
-    for (wanted) |w| {
-        if (matches(w, signer)) return null;
-        for (keys.items) |k| if (matches(w, k)) return null;
+    if (signers.get(by)) |wanted| if (anyMatches(wanted, signer, keys.items)) return null;
+    // an electronic signature: the sign-in or the forge's record, attested by a server
+    if (attested) {
+        const servers = signers.get(servers_key) orelse return try a.print("it was given in skein serve or on the forge, and {s} lists no servers to attest it", .{signers_file});
+        if (!anyMatches(servers, signer, keys.items)) return try a.print("it was given in skein serve or on the forge, and its commit is signed by {s}, which is none of the servers in {s}", .{ if (signer.len > 0) signer else keys.items[0], signers_file });
+        if (again) {
+            if (ap.evidence.signed_in) |si| if (!si.again) return "it was given with the session's sign-in, and the project asks for a sign-in again to approve ([serve] approve_sign_in)";
+            if (ap.evidence.pull != null and !ap.evidence.reauth) return "the forge did not ask the reviewer to sign in again to approve, and the project asks for it ([serve] approve_sign_in)";
+        }
+        return null;
     }
+    if (signers.get(by) == null) return try a.print("{s} has no key in {s}", .{ by, signers_file });
     return try a.print("the commit that records it is signed by {s}, which is not one of {s}'s keys in {s}", .{ if (signer.len > 0) signer else keys.items[0], by, signers_file });
+}
+
+fn anyMatches(wanted: []const []const u8, signer: []const u8, keys: []const []const u8) bool {
+    for (wanted) |w| {
+        if (matches(w, signer)) return true;
+        for (keys) |k| if (matches(w, k)) return true;
+    }
+    return false;
 }
 
 fn matches(want: []const u8, have: []const u8) bool {
@@ -112,7 +143,9 @@ fn matches(want: []const u8, have: []const u8) bool {
 
 /// Reports each current approval of a type that asks for signed approvals
 /// whose record's commit is not signed by a key of the approver's
-pub fn check(io: Io, a: Allocator, root: Io.Dir, schema: *const Schema, graph: *const Graph, approvals: *const Approvals, report: *Report) !void {
+pub fn check(io: Io, a: Allocator, root: Io.Dir, project: *const Project, graph: *const Graph, approvals: *const Approvals, report: *Report) !void {
+    const schema = &project.schema;
+    const again = project.workflow.approve_sign_in == .again;
     var signers: ?Signers = null;
     for (approvals.all.items) |ap| {
         const item = graph.find(ap.item) orelse continue;
@@ -122,7 +155,7 @@ pub fn check(io: Io, a: Allocator, root: Io.Dir, schema: *const Schema, graph: *
         if (signers == null) signers = try loadSigners(io, a, root, report);
         const file = try Approvals.fileOf(a, item);
         const line = try Approvals.recordLine(a, item.id, ap);
-        if (try problem(io, a, root, &signers.?, file, line, ap.by)) |why| {
+        if (try problem(io, a, root, &signers.?, file, line, ap, again)) |why| {
             try report.add(item.file, item.line, 1, "{s}: the approval by {s}{s} must be signed, and {s}", .{ item.id, ap.by, if (ap.as) |r| try a.print(" as {s}", .{r}) else "", why });
         }
     }

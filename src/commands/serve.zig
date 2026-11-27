@@ -15,6 +15,7 @@ const Workspace = @import("Workspace.zig");
 const changes = @import("../serve/changes.zig");
 const cli = @import("../cli.zig");
 const env = @import("../env.zig");
+const oauth = @import("../serve/oauth.zig");
 const sign_in = @import("../serve/sign_in.zig");
 const stdio = @import("../stdio.zig");
 
@@ -71,6 +72,7 @@ pub fn serve(io: Io, gpa: std.mem.Allocator, options: cli.Serve) !u8 {
             .none => "",
             .proxy => "; people sign in through the proxy",
             .forge => "; people sign in through the forge",
+            .oidc => "; people sign in through the OpenID Connect provider",
         },
         if (site.failed != null) "; it cannot be rendered yet: see the page" else "",
     }));
@@ -97,18 +99,35 @@ fn setUp(io: Io, a: std.mem.Allocator, options: cli.Serve) !union(enum) { ok: si
             for (given) |p| try proxies.append(a, Io.net.IpAddress.parse(p, 0) catch return .{ .failed = try a.print("serve --proxy: '{s}' is not an IP address", .{p}) });
             setup.proxies = proxies.items;
         },
-        .forge => {
-            var ws = switch (try Workspace.open(io, a, options.common)) {
-                .ok => |w| w,
-                .failed => |o| return .{ .failed = std.mem.trimEnd(u8, o.text, "\n") },
-            };
-            defer ws.close();
-            setup.forge = ws.project.forge orelse return .{ .failed = "serve --sign-in forge: the project names no forge ([forge] in .skein/config.toml)" };
+        .forge, .oidc => {
             const id = env.get("SKEIN_OAUTH_CLIENT_ID") orelse "";
             const secret = env.get("SKEIN_OAUTH_CLIENT_SECRET") orelse "";
-            if (id.len == 0 or secret.len == 0) return .{ .failed = "serve --sign-in forge: set SKEIN_OAUTH_CLIENT_ID and SKEIN_OAUTH_CLIENT_SECRET, an OAuth app's id and secret on the forge, whose callback is URL/_skein/oauth" };
+            if (id.len == 0 or secret.len == 0) return .{ .failed = "serve --sign-in: set SKEIN_OAUTH_CLIENT_ID and SKEIN_OAUTH_CLIENT_SECRET, the id and secret of an OAuth or OpenID Connect app made with the provider, whose callback is URL/_skein/oauth" };
             setup.app = .{ .id = id, .secret = secret };
+            if (options.sign_in == .oidc) {
+                setup.provider = switch (try oauth.discover(io, a, options.issuer.?)) {
+                    .ok => |p| p,
+                    .failed => |why| return .{ .failed = try a.print("serve --issuer: {s}", .{why}) },
+                };
+            } else {
+                var ws = switch (try Workspace.open(io, a, options.common)) {
+                    .ok => |w| w,
+                    .failed => |o| return .{ .failed = std.mem.trimEnd(u8, o.text, "\n") },
+                };
+                defer ws.close();
+                const forge = ws.project.forge orelse return .{ .failed = "serve --sign-in forge: the project names no forge ([forge] in .skein/config.toml)" };
+                setup.provider = try oauth.ofForge(a, &forge);
+            }
         },
+    }
+    // an approval that must be signed with a sign-in again needs a provider that can ask for it
+    var ws = switch (try Workspace.open(io, a, options.common)) {
+        .ok => |w| w,
+        .failed => return .{ .ok = setup },
+    };
+    defer ws.close();
+    if (ws.project.workflow.approve_sign_in == .again and options.sign_in != .none and !(setup.provider != null and setup.provider.?.reauth)) {
+        return .{ .failed = "the project asks for a sign-in again to approve ([serve] approve_sign_in = \"again\"), which needs --sign-in oidc: a provider that can be asked for it (GitLab and most single sign-on are OpenID Connect providers)" };
     }
     return .{ .ok = setup };
 }

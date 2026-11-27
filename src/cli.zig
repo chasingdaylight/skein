@@ -4,6 +4,7 @@ const std = @import("std");
 
 const Network = @import("network/Network.zig");
 const Project = @import("Project.zig");
+const Approvals = @import("graph/Approvals.zig");
 const Results = @import("results/Results.zig");
 
 pub const usage =
@@ -140,9 +141,10 @@ pub const usage =
     \\  --listen ADDR     serve: the address to listen on (default 127.0.0.1); another
     \\                    needs --sign-in and --url
     \\  --url URL         serve: the address people reach it at, behind a proxy
-    \\  --sign-in proxy|forge
-    \\                    serve: people sign in through a reverse proxy's header, or
-    \\                    the project's forge (SKEIN_OAUTH_CLIENT_ID, _SECRET)
+    \\  --sign-in proxy|forge|oidc
+    \\                    serve: people sign in through a reverse proxy's header, the
+    \\                    project's forge, or an OpenID Connect provider (--issuer
+    \\                    URL); the last two with SKEIN_OAUTH_CLIENT_ID and _SECRET
     \\  --user-header NAME, --email-header NAME
     \\                    serve --sign-in proxy: the headers that name the person
     \\                    (default X-Forwarded-User, X-Forwarded-Email)
@@ -473,6 +475,8 @@ pub const Serve = struct {
     email_header: []const u8 = "X-Forwarded-Email",
     /// with `proxy`: the addresses the proxy connects from (default: this computer)
     proxies: []const []const u8 = &.{},
+    /// with `oidc`: the OpenID Connect provider
+    issuer: ?[]const u8 = null,
 
     pub const default_port = 8080;
 
@@ -487,6 +491,8 @@ pub const Serve = struct {
         proxy,
         /// the project's forge, through OAuth
         forge,
+        /// an OpenID Connect provider (`--issuer`)
+        oidc,
     };
 };
 
@@ -534,6 +540,8 @@ pub const Approve = struct {
     as: ?[]const u8 = null,
     /// commit the records, signed with the approver's key
     sign: bool = false,
+    /// given in `skein serve`: how the approver was signed in
+    signed_in: ?Approvals.SignedIn = null,
 };
 
 pub const Result = struct {
@@ -595,6 +603,7 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--file", .takes_value = true },
     .{ .name = "--url", .takes_value = true },
     .{ .name = "--port", .takes_value = true },
+    .{ .name = "--issuer", .takes_value = true },
     .{ .name = "--proxy", .takes_value = true },
     .{ .name = "--email-header", .takes_value = true },
     .{ .name = "--user-header", .takes_value = true },
@@ -795,10 +804,10 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .render = .{ .common = common, .out = out, .format = format, .profile = p.value("--profile"), .results = try p.results(), .editions = p.flag("--editions"), .controlled = p.flag("--controlled") } };
     }
     if (eql(name, "serve")) {
-        if (try p.allow(&.{ "--root", "--port", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--listen", "--url", "--sign-in", "--user-header", "--email-header", "--proxy" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--port", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--listen", "--url", "--sign-in", "--user-header", "--email-header", "--proxy", "--issuer" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "serve takes no items" };
         const port = if (p.value("--port")) |n| std.fmt.parseInt(u16, n, 10) catch return .{ .misuse = "serve --port: a port's number, as 8080" } else Serve.default_port;
-        const sign_in: Serve.SignIn = if (p.value("--sign-in")) |s| std.meta.stringToEnum(Serve.SignIn, s) orelse return .{ .misuse = "serve --sign-in: proxy or forge" } else .none;
+        const sign_in: Serve.SignIn = if (p.value("--sign-in")) |s| std.meta.stringToEnum(Serve.SignIn, s) orelse return .{ .misuse = "serve --sign-in: proxy, forge or oidc" } else .none;
         var o: Serve = .{ .common = common, .port = port, .profile = p.value("--profile"), .results = try p.results(), .url = p.value("--url"), .sign_in = sign_in, .proxies = try p.values("--proxy") };
         if (p.value("--listen")) |l| o.listen = l;
         if (p.value("--user-header")) |h| o.user_header = h;
@@ -809,6 +818,8 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
             if (o.url == null) return .{ .misuse = "serve --listen: give --url, the address people reach it at" };
         }
         if (sign_in == .forge and o.url == null) return .{ .misuse = "serve --sign-in forge: give --url, the address the forge sends people back to" };
+        o.issuer = p.value("--issuer");
+        if (sign_in == .oidc and (o.url == null or o.issuer == null)) return .{ .misuse = "serve --sign-in oidc: give --issuer, the OpenID Connect provider, and --url, the address it sends people back to" };
         return .{ .serve = o };
     }
     if (eql(name, "import")) {

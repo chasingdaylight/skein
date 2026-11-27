@@ -35,6 +35,8 @@ const edit_form = @import("../edit/form.zig");
 const files = @import("../files.zig");
 const item_form = @import("../edit/item_form.zig");
 const saving = @import("saving.zig");
+const sign_in = @import("sign_in.zig");
+const signatures = @import("../graph/signatures.zig");
 const query = @import("query.zig");
 
 pub const Method = guard.Method;
@@ -151,17 +153,32 @@ fn changeRequest(arena: Allocator, c: *Context, body: []const u8) !answer.Answer
 /// where its type names roles, saved as an edit is
 fn approveItem(arena: Allocator, c: *Context, ws: *Workspace, value: json.Value) !answer.Answer {
     const id = string(value, "id");
-    if (ws.graph.find(id) == null) return refuse(arena, try arena.print("skein: there is no item '{s}'", .{id}));
+    const item = ws.graph.find(id) orelse return refuse(arena, try arena.print("skein: there is no item '{s}'", .{id}));
     const st = try saving.state(arena, c, ws);
     if (try saving.before(arena, st)) |r| return reply(arena, .{ .@"error" = r.message, .needsChange = r.needs_change });
     const role = string(value, "as");
+    // an approval that must be signed, where the project asks for a sign-in again to give it
+    var fresh = false;
+    if (c.user) |u| {
+        const now = std.Io.Clock.real.now(c.site.io).toSeconds();
+        fresh = u.again and u.at_unix >= now - sign_in.fresh_seconds;
+        const item_type = ws.project.schema.itemType(item.type_name);
+        const needs = item_type != null and signatures.needed(item_type.?, if (role.len > 0) role else null);
+        if (needs and ws.project.workflow.approve_sign_in == .again and !fresh) {
+            return reply(arena, .{ .@"error" = "skein serve: this approval must be signed: sign in again to give it", .again = true });
+        }
+    }
     const out = try approve.run(c.site.io, arena, .{
         .common = .{ .root = c.site.options.common.root },
         .ids = &.{id},
         .by = if (c.user) |u| u.login else null,
         .as = if (role.len > 0) role else null,
+        // the electronic signature: how the approver was signed in
+        .signed_in = if (c.user) |u| .{ .provider = u.provider, .subject = u.subject, .at = u.at, .again = fresh } else null,
     });
     if (out.status != .ok) return refuse(arena, out.text);
+    // a sign-in again is for one approval
+    if (fresh) if (c.session) |token| c.people.usedAgain(token);
     const warning = try saving.after(arena, c, st, &.{".skein/approvals"}, try arena.print("Approve {s}", .{id}));
     return reply(arena, .{ .said = std.mem.trimEnd(u8, out.text, "\n"), .warning = warning });
 }

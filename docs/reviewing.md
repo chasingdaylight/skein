@@ -174,7 +174,28 @@ An entry is matched against what git reports of the signature: its key's fingerp
 
 `skein check` reports a current approval of such a type when its record is not committed yet, when the commit is not signed, when its signature is bad, expired or revoked, when git cannot check it here (it lacks the key or the certificate's chain, or the allowed signers file for SSH), or when the key is not one of the approver's in `.skein/signers.toml`. A certificate's chain is trusted as git and the system trust it, so a badge verifies where the issuing agency's roots are installed.
 
-Approvals given on the forge or in `skein serve` are not signed by the person's own key: #288 is how they are signed for.
+### Approvals given in `skein serve` or on the forge
+
+An approval clicked in `skein serve`'s pages, or given in review on the forge, is not signed with the approver's own key. An electronic signature with an audit trail does for it (emanspeaks, 2026-11-27):
+
+- **In `skein serve`**, approving needs someone signed in (`--sign-in`), and the record keeps how they were: `signed_in = { provider, subject, at, again }`. That is where they signed in (`oidc:ISSUER`, `forge:github`, `proxy`), who it says they are, when, and whether they signed in again to give this approval.
+- **On the forge**, `skein approve --from-pull-request` keeps the pull request's address (`pull`), where the forge keeps its own record of the review. On GitLab it also keeps whether the project asks a reviewer to sign in again to approve (`reauth`).
+
+Such an approval counts as signed when the commit that records it is signed by a server the project trusts to have seen it: `skein serve`'s checkout, or the CI job that runs `--from-pull-request`. Each signs with its own key (git's `commit.gpgsign` and `user.signingkey` in that checkout), and the keys are listed in `.skein/signers.toml`:
+
+```toml
+servers = ["SHA256:Qw3n0tAreAlKeyJustAnExampleOfOneXyZ0123456789"]
+```
+
+A project can also ask that the approver sign in again for each such approval (or for those of the roles that must be signed), not only once for the session:
+
+```toml
+# .skein/config.toml
+[serve]
+approve_sign_in = "again"
+```
+
+In `skein serve`, **Approve** then sends the person to sign in again first (OpenID Connect's `prompt=login`), and the sign-in counts for that one approval, within five minutes. This needs `--sign-in oidc`, a provider that can be asked for it: GitLab and most single sign-on services are OpenID Connect providers, and `skein serve` refuses to start with another. On the forge, it is GitLab's setting that asks a reviewer to sign in again to approve. `skein check` reports an approval given without it.
 
 ### From a merged pull request
 
