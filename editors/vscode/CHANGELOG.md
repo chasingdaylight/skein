@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.1 (unreleased)
+
+## 0.2.0
 
 - The `skein` program in the Windows and macOS packages is signed: `skein.exe` with an Authenticode signature, the macOS `skein` with a Developer ID and notarized by Apple.
 
