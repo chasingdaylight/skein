@@ -8,6 +8,7 @@ const std = @import("std");
 const Io = std.Io;
 
 const Template = @import("../template/Template.zig");
+const git = @import("../git.zig");
 const Workspace = @import("../commands/Workspace.zig");
 
 /// A line each, without a list marker; none when the project is set up
@@ -40,8 +41,19 @@ pub fn list(io: Io, arena: std.mem.Allocator, ws: *const Workspace) ![]const []c
     return out.items;
 }
 
-/// Whether a GitHub, GitLab or Forgejo workflow of the project runs skein
+/// Whether a GitHub, GitLab or Forgejo workflow of the project, or of the
+/// repository it is in, runs skein
 fn hasCi(io: Io, arena: std.mem.Allocator, root: Io.Dir) !bool {
+    if (try runsSkein(io, arena, root)) return true;
+    // a project in a directory git ignores is not the repository's
+    if (try git.output(io, arena, root, &.{ "check-ignore", "-q", "." }) != null) return false;
+    const top_out = try git.output(io, arena, root, &.{ "rev-parse", "--show-toplevel" }) orelse return false;
+    var top = Io.Dir.cwd().openDir(io, std.mem.trim(u8, top_out, " \r\n"), .{}) catch return false;
+    defer top.close(io);
+    return runsSkein(io, arena, top);
+}
+
+fn runsSkein(io: Io, arena: std.mem.Allocator, root: Io.Dir) !bool {
     if (root.readFileAlloc(io, ".gitlab-ci.yml", arena, .limited(1 << 22))) |text| {
         if (std.mem.find(u8, text, "skein") != null) return true;
     } else |_| {}

@@ -29,6 +29,13 @@ pages() {
   "$2" render --root "$3" --out "$rendered" > /dev/null
   cp -R "$rendered/docs/." "$4/"
   rm -rf "$rendered"
+  # each example project as a site of its own, as `skein render` makes it
+  local example
+  for example in "$3"/examples/*/; do
+    [ -d "$example.skein" ] || continue
+    "$2" render --root "$example" --format html --out "$4/examples/$(basename "$example")" > /dev/null ||
+      echo "site.sh: $example: not rendered" >&2
+  done
 }
 
 version_of() { sed -nE 's/^\s*\.version = "([^"]+)",/\1/p' "$1/build.zig.zon"; }

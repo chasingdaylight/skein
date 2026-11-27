@@ -40,10 +40,14 @@ nav:
     url: /
   - title: Quickstart
     url: /quickstart.html
+  - title: "Tutorial: NPR 7150.2D"
+    url: /tutorial-npr7150.html
   - title: "Tutorial: existing code"
     url: /tutorial-existing-code.html
   - title: "Tutorial: planning"
     url: /tutorial-planning.html
+  - title: Examples
+    url: /examples.html
   - title: Writing items
     url: /writing-items.html
   - title: Project files

@@ -32,9 +32,11 @@ skein coverage
 | Read | For |
 | --- | --- |
 | [`docs/quickstart.md`](docs/quickstart.md) | A quickstart: a project from a template, a requirement cited by a test, a site, in five minutes. |
+| [`docs/tutorial-npr7150.md`](docs/tutorial-npr7150.md) | A tutorial: a new project from the `npr7150.2d` template to its requirements review. |
+| [`docs/examples.md`](docs/examples.md) | The example projects, each rendered on the site. |
 | [`docs/tutorial-existing-code.md`](docs/tutorial-existing-code.md) | A tutorial: Skein added to a program that exists, its requirements cited by its code and tests. |
 | [`docs/tutorial-planning.md`](docs/tutorial-planning.md) | A tutorial: a project planned before its code, from needs to a schedule. |
-| [`examples/`](examples/) | Two small projects to copy from: a specification as a document, and requirements as files. |
+| [`examples/`](examples/) | Small projects to copy from: software under NPR 7150.2D and a language specification, each from its template, and requirements as files. |
 | [`docs/writing-items.md`](docs/writing-items.md) | How items, references and citations are written. |
 | [`docs/project-files.md`](docs/project-files.md) | The files in `.skein/`: item types, link types, profiles. |
 | [`docs/commands.md`](docs/commands.md) | The commands. |

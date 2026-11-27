@@ -1,7 +1,9 @@
-[project]
-name = "language-spec example"
+template = ["langspec"]
 
-# the specification: documents whose paragraphs are rules and terms
+[project]
+name = "calc"
+
+# the specification: documents whose paragraphs are rules, terms and examples
 [[sources]]
 path = "spec"
 

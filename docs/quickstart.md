@@ -140,6 +140,8 @@ Commit `.skein/`, `docs/`, `tests/`, `AGENTS.md` and `.github/`. On GitHub, the 
 
 ## Where next
 
+- [Tutorial: a new project under NPR 7150.2D](tutorial-npr7150.md): this project taken to its requirements review, step by step.
+- [Examples](examples.md): the project that tutorial ends with, a language specification, and more, each rendered.
 - [Tutorial: Skein in a project that has code](tutorial-existing-code.md): item types written by hand, for an existing program.
 - [Tutorial: planning a project before the code](tutorial-planning.md): needs, requirements, work, a schedule and a board.
 - [Templates](templates.md): every template, its options, and what NPR 7150.2D brings along.

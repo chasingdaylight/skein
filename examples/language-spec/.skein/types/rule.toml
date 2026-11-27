@@ -1,8 +1,0 @@
-description = "A rule of the language"
-categories = ["syntax", "legality", "dynamic"]
-
-# which stage of the language the rule belongs to
-[attributes.stage]
-values = ["core", "full"]
-required = true
-normative = true

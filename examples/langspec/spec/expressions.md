@@ -1,6 +1,6 @@
 # Expressions
 
-This chapter specifies the expressions of a small calculator language. Text without a marker, like this paragraph, is narrative: it explains, and is not a rule.
+This chapter specifies the expressions of calc. Text without a marker, like this paragraph, is narrative: it explains, and is not a rule.
 
 ## Terms
 
@@ -19,8 +19,20 @@ A number is one or more decimal digits, optionally followed by a point and one o
 number = digit { digit } [ "." digit { digit } ] ;
 ```
 
+```calc %example
+3.25
+```
+
+```calc %example[.no-digits-after-point rejects error="a number ends with a digit"]
+3.
+```
+
 %rule[expr.number.value dynamic stage=core]
 The %[expr.value value] of a number is the number its digits spell in base ten.
+
+```calc %example
+007
+```
 
 ## Operators
 
@@ -30,17 +42,36 @@ A binary expression is two %[expr.operand operands] with one of these operators 
 - `+` and `-`
 - `*` and `/`
 
+```calc %example
+8 - 2
+```
+
 %rule[expr.binary.precedence syntax stage=core]
 `*` and `/` bind tighter than `+` and `-`. Operators that bind equally group from the left.
+
+```calc %example
+1 + 2 * 3
+```
 
 %rule[expr.divide.zero dynamic stage=core]
 Dividing by zero stops the evaluation with an error; it has no %[expr.value].
 
+```calc %example[.by-zero rejects error="division by zero"]
+1 / (2 - 2)
+```
+
 %rule[expr.power.syntax syntax stage=full]
 A power expression is two %[expr.operand operands] with `^` between them. It binds tighter than `*` and groups from the right.
 
+%test[test.power.right verifies=expr.power.syntax]
+Carried out by hand until the full stage has a test driver: `2 ^ 3 ^ 2` evaluates to 512, not 64.
+
 %rule[expr.power.negative legality stage=full]
 The exponent of a power expression must not be a negative number written as a literal.
+
+```calc %example[.literal rejects error="negative exponent"]
+2 ^ -1
+```
 
 %rule[expr.modulo removed]
 
