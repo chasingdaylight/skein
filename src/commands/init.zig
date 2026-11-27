@@ -10,6 +10,7 @@ const Io = std.Io;
 
 const Project = @import("../Project.zig");
 const Template = @import("../template/Template.zig");
+const files = @import("../files.zig");
 const standards = @import("../template/standards.zig");
 const Workspace = @import("Workspace.zig");
 const agents = @import("agents.zig");
@@ -31,7 +32,7 @@ pub fn run(io: Io, arena: std.mem.Allocator, options: cli.Init) !Workspace.Outco
     for (options.templates, config.values) |name, values| {
         for (try Template.filesOf(arena, name, "documents/")) |f| {
             const path = try arena.print("docs/{s}", .{f.path["documents/".len..]});
-            if (try writeNew(io, root, path, try Template.substitute(arena, f.data, values))) written += 1;
+            if (try files.writeNew(io, root, path, try Template.substitute(arena, f.data, values))) written += 1;
         }
         // the standards it carries, which skein provides, kept out of git
         _ = try standards.writeFor(io, arena, root, name);
@@ -103,13 +104,6 @@ fn configuration(arena: std.mem.Allocator, templates: []const []const u8) !Confi
 }
 
 /// Writes `data` at `path` unless a file is there already; whether it did
-fn writeNew(io: Io, root: Io.Dir, path: []const u8, data: []const u8) !bool {
-    if (root.access(io, path, .{})) |_| return false else |_| {}
-    if (Io.Dir.path.dirnamePosix(path)) |d| try root.createDirPath(io, d);
-    try root.writeFile(io, .{ .sub_path = path, .data = data });
-    return true;
-}
-
 fn misuse(arena: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !Workspace.Outcome {
     return .{ .text = try arena.print("skein: " ++ fmt ++ "\n", args), .status = .misuse };
 }

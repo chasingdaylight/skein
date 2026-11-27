@@ -15,7 +15,7 @@ For each system or subsystem with software: its name, its class (NPR 7150.2D, Ap
 
 ## Safety-criticality
 
-For each, whether it is safety-critical per the criteria of NASA-STD-8739.8, how that was determined with the safety and mission assurance organization, and the hazards it is part of.
+Recorded in the [safety-critical software determination](safety-criticality.md) (SW-SCD), which NASA-STD-8739.8B's template brings for classes A to E: for each software system, whether it is safety-critical by the criteria of NASA-STD-8739.8B, section 4.2, how that was determined with the safety and mission assurance organization, and the hazards it is part of. The `safety-critical` option follows it.
 
 ## Concurrence
 

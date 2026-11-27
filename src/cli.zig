@@ -29,6 +29,9 @@ pub const usage =
     \\                    What a template declares, and its options
     \\  template eject NAME
     \\                    Write a template's files into .skein/, to change them
+    \\  template documents
+    \\                    Write the document skeletons of the templates in use that
+    \\                    are not in docs/ yet, those brought along by options too
     \\  examples --out DIR
     \\                    Write the tested examples as files, with an index, for
     \\                    the project's own test driver
@@ -190,7 +193,7 @@ pub const TemplateCommand = struct {
     what: What,
     name: ?[]const u8 = null,
 
-    pub const What = enum { list, show, eject };
+    pub const What = enum { list, show, eject, documents };
 };
 
 pub const Init = struct {
@@ -558,10 +561,10 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
     }
     if (eql(name, "template")) {
         if (try p.allow(&.{"--root"})) |problem| return .{ .misuse = problem };
-        const forms = "template: list, show NAME, or eject NAME";
+        const forms = "template: list, show NAME, eject NAME, or documents";
         if (words.len == 0) return .{ .misuse = forms };
         const what = std.meta.stringToEnum(TemplateCommand.What, words[0]) orelse return .{ .misuse = forms };
-        if ((what != .list) != (words.len == 2) or words.len > 2) return .{ .misuse = forms };
+        if ((what != .list and what != .documents) != (words.len == 2) or words.len > 2) return .{ .misuse = forms };
         return .{ .template = .{ .common = common, .what = what, .name = if (words.len == 2) words[1] else null } };
     }
     if (eql(name, "init")) {

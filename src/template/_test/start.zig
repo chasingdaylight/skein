@@ -251,6 +251,53 @@ test "systems engineering under NPR 7123.1D: its requirements and its reviews" {
     try expectContains(criteria, "- %criteria[.e1] ");
 }
 
+// req: templates.includes
+test "NPR 7150.2D brings along the standards it defers to, by its options" {
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const root = try rootOf(a, tmp);
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root, .templates = &.{"npr7150.2d"} })).status);
+    const config = try tmp.dir.readFileAlloc(testing.io, ".skein/config.toml", a, .limited(1 << 16));
+    const set = struct {
+        fn f(dir: std.Io.Dir, al: std.mem.Allocator, base: []const u8, options: []const u8) !void {
+            try dir.writeFile(testing.io, .{ .sub_path = ".skein/config.toml", .data = try std.mem.replaceOwned(u8, al, base, "# \"class\" = \"\"", options) });
+        }
+    }.f;
+
+    // class C: software assurance and the safety-critical determination come along
+    try set(tmp.dir, a, config, "\"class\" = \"C\"");
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "the template nasa-std-8739.8b, which npr7150.2d brings along, has none of its 6 documents in docs/");
+    try expectContains((try template_command.run(testing.io, a, .{ .common = .{ .root = root }, .what = .documents })).text, "6 documents of nasa-std-8739.8b, which npr7150.2d brings along");
+    _ = try tmp.dir.readFileAlloc(testing.io, "docs/safety-criticality.md", a, .limited(1 << 16));
+    _ = try tmp.dir.readFileAlloc(testing.io, "standards/nasa-std-8739.8b/tasks.md", a, .limited(1 << 20));
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+
+    // a crewed space flight project with models and simulations: all of them
+    var all = try std.mem.replaceOwned(u8, a, config, "\"program\" = \"none\"", "\"program\" = \"space-flight\"");
+    all = try std.mem.replaceOwned(u8, a, all, "\"models-and-simulations\" = \"false\"", "\"models-and-simulations\" = \"true\"");
+    all = try std.mem.replaceOwned(u8, a, all, "\"crewed\" = \"false\"", "\"crewed\" = \"true\"");
+    try set(tmp.dir, a, all, "\"class\" = \"A\"");
+    try expectContains((try template_command.run(testing.io, a, .{ .common = .{ .root = root }, .what = .documents })).text, "of npr7120.5f, which npr7150.2d brings along");
+    for ([_][]const u8{ "npr7120.5f", "npr7123.1d", "nasa-std-7009b", "human-rating" }) |t| {
+        _ = try tmp.dir.readFileAlloc(testing.io, try a.print("standards/{s}/.gitignore", .{t}), a, .limited(1 << 16));
+    }
+    try expectContains((try check_command.run(testing.io, a, .{ .root = root })).text, "no problems");
+
+    // class F (business IT) is not under NASA-STD-8739.8's tasks
+    var tmp2 = testing.tmpDir(.{});
+    defer tmp2.cleanup();
+    const root2 = try rootOf(a, tmp2);
+    try testing.expectEqual(.ok, (try init_command.run(testing.io, a, .{ .root = root2, .templates = &.{"npr7150.2d"} })).status);
+    try set(tmp2.dir, a, config, "\"class\" = \"F\"");
+    try testing.expect(std.mem.find(u8, (try check_command.run(testing.io, a, .{ .root = root2 })).text, "brings along") == null);
+
+    const shown = (try template_command.run(testing.io, a, .{ .what = .show, .name = "npr7150.2d" })).text;
+    try expectContains(shown, "Brings along:\n  nasa-std-8739.8b, when class is A or B or C or D or E: SWE-022");
+}
+
 // req: templates.standards-provided
 test "a template's standards come from skein, kept out of git, and a copy of them is told it can go" {
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);

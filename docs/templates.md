@@ -76,7 +76,22 @@ More are planned: the software products' maturity at each review, to go with `np
 name = "npr7150.2d"
 class = "C"                 # A to F (Appendix D); required
 safety-critical = false     # whether the project has safety-critical software (SWE-205)
+program = "none"            # space-flight (NPR 7120.5), it (NPR 7120.7) or none
+models-and-simulations = false  # models, simulations or tools qualify flight software (SWE-070)
+crewed = false              # part of a crewed system to be human-rated (NPR 8705.2)
 ```
+
+NPR 7150.2D defers to other standards, whose products a project under it delivers too, so the template brings their templates along, with the same options (`skein template show npr7150.2d` lists them):
+
+| Brings | When | Because |
+| --- | --- | --- |
+| `nasa-std-8739.8b` | class A to E | SWE-022 (software assurance, software safety and IV&V per NASA-STD-8739.8) and SWE-205 (the safety-critical software determination) |
+| `nasa-std-7009b` | `models-and-simulations = true` | SWE-070 and SWE-073, as the handbook reads them |
+| `npr7120.5f`, `npr7123.1d` | `program = "space-flight"` | P.4, SWE-126, SWE-141, SWE-143, SWE-153, SWE-218; NPR 7123.1 for the systems engineering |
+| `npr7120.7a` | `program = "it"` | P.4, SWE-126 |
+| `human-rating` | `crewed = true` | P.4: NPR 8705.2 |
+
+So a project of class A to E always has the safety-critical software determination (`docs/safety-criticality.md`, of NASA-STD-8739.8B's template), which says, when the software is not safety-critical, that it was found not to be and why. A template brought along by an option given after `skein init` has its documents written by `skein template documents`; `skein check` says when one has none yet.
 
 `skein init --template npr7150.2d` writes, besides the configuration:
 

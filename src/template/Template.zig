@@ -56,6 +56,29 @@ pub const Option = struct {
 pub const Info = struct {
     description: []const u8 = "",
     options: []const Option = &.{},
+    /// the templates it brings along (`[[includes]]`), as the standards it
+    /// defers to are part of what a project under it delivers
+    includes: []const Include = &.{},
+};
+
+/// A template another brings along: always, or when its option `option`
+/// has one of `values`
+pub const Include = struct {
+    template: []const u8,
+    option: ?[]const u8 = null,
+    values: []const []const u8 = &.{},
+    /// why, for `skein template show`: the requirement that defers to it
+    because: []const u8 = "",
+
+    /// Whether the options `given` bring it
+    pub fn applies(self: Include, given: []const Value) bool {
+        const name = self.option orelse return true;
+        for (given) |g| if (std.mem.eql(u8, g.name, name)) {
+            for (self.values) |v| if (std.mem.eql(u8, v, g.value)) return true;
+            return false;
+        };
+        return false;
+    }
 };
 
 /// What the template's `template.toml` says of it
@@ -102,6 +125,28 @@ pub fn info(arena: std.mem.Allocator, name: []const u8) std.mem.Allocator.Error!
             try list.append(arena, opt);
         }
         out.options = list.items;
+    };
+    if (table.get("includes")) |inc| if (inc == .array) {
+        var list: std.ArrayList(Include) = .empty;
+        for (inc.array.values()) |e| {
+            if (e != .table) continue;
+            const t = e.table.get("template") orelse continue;
+            if (t != .string) continue;
+            var one: Include = .{ .template = t.string };
+            if (e.table.get("option")) |o| if (o == .string) {
+                one.option = o.string;
+            };
+            if (e.table.get("because")) |b| if (b == .string) {
+                one.because = b.string;
+            };
+            if (e.table.get("values")) |v| if (v == .array) {
+                var values: std.ArrayList([]const u8) = .empty;
+                for (v.array.values()) |s| if (s == .string) try values.append(arena, s.string);
+                one.values = values.items;
+            };
+            try list.append(arena, one);
+        }
+        out.includes = list.items;
     };
     return out;
 }
