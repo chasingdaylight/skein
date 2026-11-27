@@ -41,6 +41,7 @@ test "skein agents: a section of CLAUDE.md, written again in place, and a skill 
     try expectContains(first, "- `rule`: A rule of the language; categories `syntax`; statuses `draft`, `approved`, `deprecated`, `removed`.\r\n");
     try expectContains(first, "- `verifies` to `rule`.\r\n");
     try expectContains(first, "- `test`: files under `tests/` ending in `.zig`, `// spec: ID, ID`.\r\n");
+    try expectContains(first, "Approvals and reviews are people's, never an agent's: do not run `skein approve`, `skein review` or `skein clear`");
     try expectContains(first, "run `skein check`");
 
     // after a change to the schema, written again in place
