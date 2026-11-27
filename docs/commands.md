@@ -323,6 +323,10 @@ Makes an item file in `DIR` of each row of a CSV file; see [importing](importing
 
 Makes an item file in `DIR` of each spec object of a ReqIF file, as DOORS and other requirements tools write them; see [importing](importing.md#from-a-reqif-file).
 
+## `skein gitlab-requirements [--profile NAME] [--dry-run]`
+
+Keeps the GitLab requirements of the project (its forge is GitLab) to its items through GitLab's API: creates the missing ones, updates those that say otherwise, archives those of removed items, and keeps `.skein/gitlab-requirements.toml`; `--dry-run` says what it would do. See [forges](forge.md#gitlabs-requirements).
+
 ## `skein import gitlab-requirements FILE`
 
 Records the GitLab requirement of each item, from the CSV GitLab exports of a project's requirements, in `.skein/gitlab-requirements.toml`; see [forges](forge.md#gitlabs-requirements).
