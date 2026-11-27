@@ -179,7 +179,13 @@ pub fn pull(io: Io, arena: std.mem.Allocator, forge: *const Forge, number: u64) 
         .missing => "{}",
         .unreachable_ => |why| return .{ .unreachable_ = why },
     };
-    return .{ .pull = parsePull(arena, json, approvals) orelse return .{ .unreachable_ = "the forge gave an answer skein cannot read" } };
+    var got = parsePull(arena, json, approvals) orelse return .{ .unreachable_ = "the forge gave an answer skein cannot read" };
+    // whether the project asks a reviewer to sign in again to approve
+    switch (try api(io, arena, forge, try arena.print("projects/{s}/approvals", .{proj}))) {
+        .body => |b| got.reauth = asksReauth(arena, b),
+        .missing, .unreachable_ => {},
+    }
+    return .{ .pull = got };
 }
 
 /// A merge request and its approvals as GitLab's API gives them
@@ -208,12 +214,35 @@ pub fn parsePull(arena: std.mem.Allocator, pull_json: []const u8, approvals_json
             return std.mem.lessThan(u8, x, y);
         }
     }.lt);
+    const url = p.object.get("web_url");
     return .{
+        .url = if (url) |u| (if (u == .string) u.string else null) else null,
         .merged_on = merged_on,
         .base = base.string,
         .merge = if (merge) |m| (if (m == .string) m.string else null) else null,
         .approvers = approvers.items,
     };
+}
+
+/// Whether a project's approval settings ask a reviewer to sign in again
+/// to approve: `require_reauthentication_to_approve`, formerly
+/// `require_password_to_approve`
+pub fn asksReauth(arena: std.mem.Allocator, settings_json: []const u8) bool {
+    const v = std.json.parseFromSliceLeaky(std.json.Value, arena, settings_json, .{}) catch return false;
+    if (v != .object) return false;
+    for ([_][]const u8{ "require_reauthentication_to_approve", "require_password_to_approve" }) |k| {
+        if (v.object.get(k)) |x| if (x == .bool and x.bool) return true;
+    }
+    return false;
+}
+
+test asksReauth {
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    try std.testing.expect(asksReauth(a, "{\"require_reauthentication_to_approve\": true}"));
+    try std.testing.expect(asksReauth(a, "{\"require_password_to_approve\": true}"));
+    try std.testing.expect(!asksReauth(a, "{\"require_password_to_approve\": false}"));
 }
 
 // req: forge.gitlab

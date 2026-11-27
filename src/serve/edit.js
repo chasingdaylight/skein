@@ -70,6 +70,10 @@
   // a save, with a change started first when the project's way of saving asks for one
   function store(path, body, problems) {
     api(path, body).then(function (r) {
+      if (r.again) {
+        if (confirm(r.error + ". Sign in again now? Then approve once more.")) location.href = "/_skein/sign-in?again=1&back=" + encodeURIComponent(location.pathname);
+        return showProblems(problems, r);
+      }
       if (r.signIn) {
         if (confirm(r.error + ". Sign in now? What you typed here is not kept.")) location.href = "/_skein/sign-in?back=" + encodeURIComponent(location.pathname);
         return showProblems(problems, r);

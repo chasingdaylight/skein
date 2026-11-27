@@ -53,7 +53,7 @@ A page remembers the file as it read it. If the file changed since (someone save
 
 ## Approving an item
 
-An item whose type asks for approvals (`approval = [...]`, see [reviewing](reviewing.md#approvals)) has **Approve** in its form, with the roles to approve in where the type names them. It records an approval of the item as it is, as `skein approve` does, by the person signed in (on this computer alone, by git's user), and is saved as any edit is: in the open change, or as a commit.
+An item whose type asks for approvals (`approval = [...]`, see [reviewing](reviewing.md#approvals)) has **Approve** in its form, with the roles to approve in where the type names them. It records an approval of the item as it is, as `skein approve` does, by the person signed in (on this computer alone, by git's user), and is saved as any edit is: in the open change, or as a commit. With people signed in, the record keeps how the approver was signed in: the electronic signature that an approval which must be signed counts by. With `[serve] approve_sign_in = "again"`, such an approval first sends the person to sign in again. See [reviewing](reviewing.md#approvals-given-in-skein-serve-or-on-the-forge).
 
 ## Who can reach it
 
@@ -73,5 +73,8 @@ skein serve --listen 0.0.0.0 --url https://reqs.example.com --sign-in proxy --pr
 | `--url URL` | The address people reach it at, behind the proxy: requests for that host are answered, and the forge sends people back to it. |
 | `--sign-in proxy` | A reverse proxy in front (one that signs people in to the organization's single sign-on, such as oauth2-proxy) names the person in a header, `X-Forwarded-User` (`--user-header`), with their email in `X-Forwarded-Email` (`--email-header`). The header is believed only from the proxy's addresses, `--proxy IP`, by default this computer's. The proxy also gives HTTPS, which `skein serve` does not. |
 | `--sign-in forge` | People sign in with the project's forge (`[forge]`): GitHub, GitLab or Forgejo, through an OAuth app made there, whose callback is `URL/_skein/oauth`. Its id and secret are in `SKEIN_OAUTH_CLIENT_ID` and `SKEIN_OAUTH_CLIENT_SECRET`. A session lasts while the server runs. |
+| `--sign-in oidc --issuer URL` | People sign in with an OpenID Connect provider: an organization's single sign-on, or GitLab. Its discovery document gives the rest, and the app's id and secret are in the same variables. It can be asked to make the person sign in again, for an approval that must be signed. |
+
+SAML single sign-on is reached through one of these rather than by `skein serve` itself: an identity service that speaks both (Keycloak, Okta, Entra ID and most others) serves `--sign-in oidc` and passes a sign-in again on to the SAML provider as its `ForceAuthn`; or a reverse proxy that speaks SAML (Shibboleth's, `mod_auth_mellon`) serves `--sign-in proxy`, without a sign-in again for approvals. Reading SAML's assertions in `skein serve` would mean verifying XML signatures itself, which these leave to software made for it.
 
 Anyone who reaches the server reads the pages; changing or approving anything needs someone signed in (emanspeaks, 2026-11-27), and the pages offer to sign in when nobody is. Each person has their own open change, in its own worktree, and their commits and approvals carry their name: the forge's login, or the proxy's header. Whose approval counts is the type's `approvers`, by those names. The checkout the server serves from is its own: clone the repository for it, and let the server's pushes and pulls keep it and its upstream together.

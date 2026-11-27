@@ -54,6 +54,7 @@ type = "srs"
 | `planning.span` | `true` in a planning repository: its schedule and its Gantt charts, boards, roadmap and time reports include the work of the repositories it declares, as `repository:ID`, and its work can precede theirs (`precedes=compiler:t.parse`). |
 | `serve.save` | How a save from `skein serve` reaches git: `"pull-request"` (the default with a `forge`), `"branch"` (the default without one) or `"commit"`. See [the web interface](web.md#how-a-save-reaches-git). |
 | `serve.branch` | The branch changes go to; by default the branch checked out when `skein serve` started. |
+| `serve.approve_sign_in` | `"session"` (the default) or `"again"`: an approval that must be signed, given in `skein serve` or on the forge, needs the approver to have signed in again to give it. See [reviewing](reviewing.md#approvals-given-in-skein-serve-or-on-the-forge). |
 | `serve.editors` | With `save = "commit"`: who commits, by git's name; `check` warns of commits to the sources by anyone else. |
 | `schedule.also` | The formats `skein schedule` writes the schedule in besides `.skein/schedule.toml`: `["json", "csv"]` for `.skein/schedule.json` and `.skein/schedule.csv`. |
 

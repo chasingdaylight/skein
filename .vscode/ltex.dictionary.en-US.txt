@@ -110,3 +110,4 @@ Wyhash
 reqs
 smimesign
 gpgsm
+reauthentication

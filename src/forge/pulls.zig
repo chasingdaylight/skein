@@ -22,6 +22,10 @@ pub const Pull = struct {
     merge: ?[]const u8,
     /// the reviewers whose last review approved it, in order
     approvers: []const []const u8,
+    /// its web address, where the forge keeps the record of its review
+    url: ?[]const u8 = null,
+    /// whether the forge asks a reviewer to sign in again to approve (GitLab's setting)
+    reauth: bool = false,
 };
 
 pub const Got = union(enum) {
@@ -95,7 +99,9 @@ pub fn parse(arena: std.mem.Allocator, pull_json: []const u8, reviews_json: []co
             return std.mem.lessThan(u8, a, b);
         }
     }.lt);
+    const url = p.object.get("html_url");
     return .{
+        .url = if (url) |u| (if (u == .string) u.string else null) else null,
         .merged_on = merged_on,
         .base = base_sha.string,
         .merge = if (merge) |m| (if (m == .string) m.string else null) else null,

@@ -163,6 +163,9 @@ None of the ways of saving can be enforced in a checkout, so `skein check` shall
 %req[serve.sign-in]
 `skein serve --listen ADDR` on an address other than this computer's own shall be refused without `--sign-in` and `--url`. With `--sign-in proxy`, the person is the one a header names (`X-Forwarded-User`, `X-Forwarded-Email`), believed only from the proxy's addresses (`--proxy`, this computer's by default). With `--sign-in forge`, people sign in with the project's forge through OAuth's authorization code flow, the OAuth app's id and secret taken from the environment, a `state` that only a sign-in begun there is accepted with, and a session kept in an HTTP-only cookie. Anyone shall read the pages; a request that changes or approves anything shall be refused unless someone is signed in (emanspeaks, 2026-11-27, #288). (Issue #281.)
 
+%req[serve.approve-sign-in]
+`skein serve --sign-in oidc --issuer URL` shall sign people in with an OpenID Connect provider found by its discovery document, reading who they are and when they signed in from the ID token the token endpoint gives. With `[serve] approve_sign_in = "again"`, approving an item whose approval must be signed shall send the person to sign in again (`prompt=login`, `max_age=0`) unless they did in the last five minutes for no other approval; a sign-in the provider says is older is refused. `skein serve` shall refuse to start with that setting and a sign-in that cannot be asked for again. (Issue #288.)
+
 %req[serve.local]
 `skein serve` shall answer only requests addressed to `127.0.0.1` or `localhost` at its port, or to the host of its `--url`, and change a file only for a request that carries its own header (`x-skein`), which a page of another site cannot send without the browser asking first, which it refuses. (Issues #278, #279.)
 

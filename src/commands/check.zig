@@ -74,7 +74,7 @@ pub fn all(io: Io, arena: std.mem.Allocator, ws: *Workspace) !void {
     const reviews = try Reviews.load(io, arena, ws.root, &ws.report);
     const approvals = try Graph.Approvals.load(io, arena, ws.root, &ws.report);
     try approvals.check(arena, &ws.project.schema, &ws.graph, &ws.report);
-    try signatures.check(io, arena, ws.root, &ws.project.schema, &ws.graph, &approvals, &ws.report);
+    try signatures.check(io, arena, ws.root, &ws.project, &ws.graph, &approvals, &ws.report);
     try reviews.check(arena, &ws.project.schema, &ws.graph, &ws.report);
     try reviews.checkCitations(arena, &ws.project, &ws.graph, &ws.citations, &ws.report);
     try maturity.check(io, arena, ws.root, &ws.project, &ws.graph, &ws.report);

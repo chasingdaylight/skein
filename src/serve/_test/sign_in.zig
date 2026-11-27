@@ -53,7 +53,7 @@ test "through the forge: the authorize page, the way back, the session" {
     const before = oauth.call;
     defer oauth.call = before;
     oauth.call = recorded;
-    const setup: sign_in.Setup = .{ .mode = .forge, .url = "https://reqs.example.com", .forge = .{ .kind = .github, .repository = "example/spec" }, .app = .{ .id = "abc", .secret = "s" } };
+    const setup: sign_in.Setup = .{ .mode = .forge, .url = "https://reqs.example.com", .provider = try oauth.ofForge(a, &.{ .kind = .github, .repository = "example/spec" }), .app = .{ .id = "abc", .secret = "s" } };
 
     // nobody signed in: a change is refused, and says to sign in
     try testing.expect(std.mem.find(u8, (try sign_in.gate(testing.io, a, setup, &people, .{ .path = "/_skein/save", .change = true }, null)).?.body, "\"signIn\":true") != null);
@@ -88,4 +88,48 @@ test "listening beyond this computer needs a sign-in and the address people use"
     const ok = (try cli.parse(a, &.{ "serve", "--listen", "0.0.0.0", "--sign-in", "proxy", "--url", "https://reqs.example.com", "--proxy", "10.0.0.2" })).serve;
     try testing.expectEqual(.proxy, ok.sign_in);
     try testing.expectEqualStrings("10.0.0.2", ok.proxies[0]);
+}
+
+var now_for_test: i64 = 0;
+
+fn freshToken(_: Io, a: std.mem.Allocator, r: oauth.Request) anyerror!github.Reply {
+    if (!std.mem.endsWith(u8, r.url, "/token")) return .{ .missing = {} };
+    const claims = try a.print("{{\"sub\":\"00u1\",\"preferred_username\":\"ada\",\"name\":\"Ada\",\"email\":\"ada@example.gov\",\"auth_time\":{d}}}", .{now_for_test});
+    const e = std.base64.url_safe_no_pad.Encoder;
+    const enc = try a.alloc(u8, e.calcSize(claims.len));
+    return .{ .body = try a.print("{{\"access_token\":\"t\",\"id_token\":\"x.{s}.y\"}}", .{e.encode(enc, claims)}) };
+}
+
+test "signing in again: asked of the provider, and taken only when it was just now" {
+    var people: People = .init(testing.allocator);
+    defer people.deinit();
+    var arena: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const before = oauth.call;
+    defer oauth.call = before;
+    oauth.call = freshToken;
+    const provider: oauth.Provider = .{ .name = "oidc:https://sso.example.gov", .authorize = "https://sso.example.gov/authorize", .token = "https://sso.example.gov/token", .user = "", .scope = "openid", .host = "sso.example.gov", .reauth = true };
+    const setup: sign_in.Setup = .{ .mode = .oidc, .url = "http://127.0.0.1:8080", .provider = provider, .app = .{ .id = "abc", .secret = "s" } };
+    const now = Io.Clock.real.now(testing.io).toSeconds();
+
+    const go = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.sign_in_path, .query = "again=1&back=%2Fspec%2Fa.html" }, null)).?;
+    try testing.expect(std.mem.find(u8, go.location.?, "&prompt=login&max_age=0") != null);
+    const state = go.location.?[std.mem.find(u8, go.location.?, "state=").? + 6 ..][0..64];
+    now_for_test = now;
+    const back = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.back_path, .query = try a.print("code=c&state={s}", .{state}) }, null)).?;
+    const token = back.set_cookie.?["skein-session=".len..][0..64];
+    const u = people.session(token).?;
+    try testing.expect(u.again);
+    try testing.expectEqualStrings("00u1", u.subject);
+    people.usedAgain(token);
+    try testing.expect(!people.session(token).?.again);
+
+    // the provider's sign-in is an hour old: it did not ask
+    const go2 = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.sign_in_path, .query = "again=1" }, null)).?;
+    const state2 = go2.location.?[std.mem.find(u8, go2.location.?, "state=").? + 6 ..][0..64];
+    now_for_test = now - 3600;
+    const stale = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.back_path, .query = try a.print("code=c&state={s}", .{state2}) }, null)).?;
+    try testing.expectEqual(.unauthorized, stale.status);
+    try testing.expect(std.mem.find(u8, stale.body, "did not ask you to sign in again") != null);
 }

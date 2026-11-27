@@ -13,6 +13,14 @@ pub const User = struct {
     login: []const u8,
     name: []const u8,
     email: []const u8,
+    /// where they signed in (`forge:github`, `oidc:ISSUER`, `proxy`), who
+    /// it says they are, and when, as RFC 3339 and in seconds
+    provider: []const u8 = "",
+    subject: []const u8 = "",
+    at: []const u8 = "",
+    at_unix: i64 = 0,
+    /// whether that sign-in was asked for again, to approve
+    again: bool = false,
 
     /// As git writes an author: `Name <email>`
     pub fn author(u: User, a: std.mem.Allocator) ![]const u8 {
@@ -23,10 +31,12 @@ pub const User = struct {
 arena: std.heap.ArenaAllocator,
 /// by the session's token
 sessions: std.StringHashMapUnmanaged(User) = .empty,
-/// the `state` of each sign-in under way, and the page it began on
-pending: std.StringHashMapUnmanaged([]const u8) = .empty,
+/// the `state` of each sign-in under way
+pending: std.StringHashMapUnmanaged(Pending) = .empty,
 /// the change each has open, by login
 open: std.StringHashMapUnmanaged([]const u8) = .empty,
+
+pub const Pending = struct { page: []const u8, again: bool };
 
 pub fn init(gpa: std.mem.Allocator) People {
     return .{ .arena = .init(gpa) };
@@ -40,7 +50,9 @@ pub fn deinit(p: *People) void {
 pub fn signIn(p: *People, io: Io, user: User) ![]const u8 {
     const a = p.arena.allocator();
     const token = try newToken(io, a);
-    try p.sessions.put(a, token, .{ .login = try a.dupe(u8, user.login), .name = try a.dupe(u8, user.name), .email = try a.dupe(u8, user.email) });
+    var u = user;
+    inline for (.{ "login", "name", "email", "provider", "subject", "at" }) |f| @field(u, f) = try a.dupe(u8, @field(user, f));
+    try p.sessions.put(a, token, u);
     return token;
 }
 
@@ -48,18 +60,24 @@ pub fn session(p: *const People, token: []const u8) ?User {
     return p.sessions.get(token);
 }
 
-/// A sign-in begun from `page`; the `state` that comes back with it
-pub fn begin(p: *People, io: Io, page: []const u8) ![]const u8 {
+/// A sign-in begun from `page`, asked for again to approve or not; the
+/// `state` that comes back with it
+pub fn begin(p: *People, io: Io, page: []const u8, again: bool) ![]const u8 {
     const a = p.arena.allocator();
     const state = try newToken(io, a);
-    try p.pending.put(a, state, try a.dupe(u8, page));
+    try p.pending.put(a, state, .{ .page = try a.dupe(u8, page), .again = again });
     return state;
 }
 
-/// The page a sign-in began on, which ends it; null for a `state` not given
-pub fn finish(p: *People, state: []const u8) ?[]const u8 {
+/// The sign-in a `state` began, which ends it; null for a `state` not given
+pub fn finish(p: *People, state: []const u8) ?Pending {
     const kv = p.pending.fetchRemove(state) orelse return null;
     return kv.value;
+}
+
+/// The sign-in again of `token`'s session is used: the next approval asks again
+pub fn usedAgain(p: *People, token: []const u8) void {
+    if (p.sessions.getPtr(token)) |u| u.again = false;
 }
 
 /// The change `login` has open
@@ -101,8 +119,10 @@ test "sessions, sign-ins under way, and open changes" {
     try std.testing.expectEqual(64, token.len);
     try std.testing.expectEqualStrings("Ada", p.session(token).?.name);
     try std.testing.expect(p.session("nope") == null);
-    const state = try p.begin(io, "/spec/a.html");
-    try std.testing.expectEqualStrings("/spec/a.html", p.finish(state).?);
+    const state = try p.begin(io, "/spec/a.html", true);
+    const f = p.finish(state).?;
+    try std.testing.expectEqualStrings("/spec/a.html", f.page);
+    try std.testing.expect(f.again);
     try std.testing.expect(p.finish(state) == null);
     try p.setChange("ada", "fix-a");
     try p.setChange("bob", "fix-a");

@@ -2,7 +2,7 @@
 //! test, signed with an SSH key made for it (skipped where `ssh-keygen`
 //! is not to be had).
 
-// req: approval.signed, approval.in-order
+// req: approval.signed, approval.in-order, approval.e-signature
 const std = @import("std");
 const testing = std.testing;
 
@@ -117,4 +117,35 @@ test "signed names roles of the type" {
     const out = (try check.run(testing.io, a, .{ .root = repo.root })).text;
     try has(out, "'pm' is not one of the roles");
     try has(out, "the roles approve in order: name two or more");
+}
+
+test "an approval given in skein serve counts when a server the project trusts signed its commit" {
+    var repo: Repo = undefined;
+    try repo.init();
+    defer repo.deinit();
+    const a = repo.arena.allocator();
+    // the key the test signs with is the server's
+    const server_key = try signing(&repo) orelse return error.SkipZigTest;
+    try repo.write(".skein/types/rule.toml", "[approval]\nstatuses = [\"approved\"]\nsigned = true\n");
+    try repo.write("spec/lex.md", "%rule[lex.a approved] A.\n\n%rule[lex.b] B.\n");
+    try repo.write(".skein/signers.toml", try a.print("servers = [\"{s}\"]\n", .{server_key}));
+    try repo.write(".skein/config.toml", "[project]\nname = \"example\"\n[[sources]]\npath = \"spec\"\n[serve]\napprove_sign_in = \"again\"\n");
+    try repo.commit("approvals in skein serve");
+
+    // with the session's sign-in, where the project asks for one again
+    const session: @import("../Approvals.zig").SignedIn = .{ .provider = "oidc:https://sso.example.gov", .subject = "00u1", .at = "2027-03-01T10:00:00Z" };
+    _ = try approve.run(testing.io, a, .{ .common = .{ .root = repo.root }, .ids = &.{"lex.a"}, .by = "ada", .signed_in = session, .sign = true });
+    try has(try repo.tmp.dir.readFileAlloc(testing.io, ".skein/approvals/spec/lex.md.toml", a, .limited(1 << 20)), "signed_in = { provider = \"oidc:https://sso.example.gov\", subject = \"00u1\", at = \"2027-03-01T10:00:00Z\", again = false }");
+    try has((try check.run(testing.io, a, .{ .root = repo.root })).text, "it was given with the session's sign-in, and the project asks for a sign-in again to approve");
+
+    // signed in again: it counts, ada having no key of her own
+    var again = session;
+    again.again = true;
+    _ = try approve.run(testing.io, a, .{ .common = .{ .root = repo.root }, .ids = &.{"lex.a"}, .by = "ada", .on = "2099-01-01", .signed_in = again, .sign = true });
+    try lacks((try check.run(testing.io, a, .{ .root = repo.root })).text, "must be signed");
+
+    // a server the project does not list
+    try repo.write(".skein/signers.toml", "servers = [\"SHA256:some-other-server-entirely\"]\n");
+    try repo.commit("another server");
+    try has((try check.run(testing.io, a, .{ .root = repo.root })).text, "which is none of the servers in .skein/signers.toml");
 }

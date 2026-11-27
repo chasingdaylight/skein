@@ -42,6 +42,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, ws: *Workspace, number: u64) !Works
     const count = ws.report.problems.items.len;
     var approvals = try Approvals.load(io, arena, ws.root, &ws.report);
     if (ws.report.problems.items.len > count) return ws.problems();
+    // where the forge keeps its record of the approvals, and whether it asked for a sign-in again
+    const evidence: Approvals.Evidence = .{ .pull = pull.url, .reauth = pull.reauth };
     var files: std.ArrayList([]const u8) = .empty;
     var approved: usize = 0;
     // reviewers whose approval some item's type does not accept
@@ -54,8 +56,8 @@ pub fn run(io: Io, arena: std.mem.Allocator, ws: *Workspace, number: u64) !Works
         var recorded = false;
         for (pull.approvers) |by| {
             switch (Approvals.basisOf(item_type, by)) {
-                .plain => try approvals.put(arena, &after.graph, &after.project.schema, item, by, on, null),
-                .role => |role| try approvals.put(arena, &after.graph, &after.project.schema, item, by, on, role),
+                .plain => try approvals.put(arena, &after.graph, &after.project.schema, item, by, on, null, evidence),
+                .role => |role| try approvals.put(arena, &after.graph, &after.project.schema, item, by, on, role, evidence),
                 .none => {
                     if (!Schema.names.contains(left_out.items, by)) try left_out.append(arena, by);
                     continue;

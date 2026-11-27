@@ -18,8 +18,10 @@ site: *Site,
 user: ?People.User,
 people: *People,
 sites: *Sites,
-/// where to sign in, when people sign in through the forge and this one has not
+/// where to sign in, when people sign in through a provider and this one has not
 sign_in: ?[]const u8 = null,
+/// the session's token, when signed in through a provider
+session: ?[]const u8 = null,
 
 /// What the person is known by; "" on this computer alone
 pub fn login(c: *const Context) []const u8 {

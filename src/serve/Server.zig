@@ -85,7 +85,8 @@ fn connection(self: *Server, arena: std.mem.Allocator, stream: Io.net.Stream) !v
         const user = sign_in.who(self.setup, &self.people, seen);
         if (try sign_in.gate(io, arena, self.setup, &self.people, seen, user)) |g| break :blk g;
         var c = try Context.of(arena, self.main, &self.people, &self.sites, user);
-        if (self.setup.mode == .forge and user == null) c.sign_in = sign_in.sign_in_path;
+        if ((self.setup.mode == .forge or self.setup.mode == .oidc) and user == null) c.sign_in = sign_in.sign_in_path;
+        if (seen.cookie) |cookie| c.session = sign_in.cookieValue(cookie);
         if (allowed.api) break :blk try edit_api.handle(arena, &c, allowed.method, path[guard.api_prefix.len..], seen.query, body);
         break :blk try answer.get(arena, c.site, target);
     };
