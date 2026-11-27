@@ -1,5 +1,0 @@
-description = "A verification shows requirements are met"
-from = ["verification"]
-to = ["system", "software"]
-# every system and software requirement is verified
-expected = true
