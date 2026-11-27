@@ -38,6 +38,8 @@ defaults:
 nav:
   - title: Overview
     url: /
+  - title: Quickstart
+    url: /quickstart.html
   - title: "Tutorial: existing code"
     url: /tutorial-existing-code.html
   - title: "Tutorial: planning"
