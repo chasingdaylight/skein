@@ -68,7 +68,28 @@ skein: the pages edit 52 files, with skein for WebAssembly
 
 The site then carries, under `_skein/`, the WebAssembly module, the project's text files that `check` reads, and the scripts that run skein over them in the page. Each page offers the same **Edit this file**, **edit** by each item, and **New item** as `skein serve`'s. The problems are checked as you type, by skein in the page.
 
-A save is kept in the browser, not on the server that serves the files. A box at the bottom left lists the changed files, each a link to download it, and **Discard them** forgets them. The pages are not rendered again, so a page shows the files as they were rendered. Where the project names its forge, the changes can also be saved there (#283).
+A save is kept in the browser, not on the server that serves the files. A box at the bottom left lists the changed files, each a link to download it, and **Discard them** forgets them. The pages are not rendered again, so a page shows the files as they were rendered.
+
+### Saving through the forge
+
+Where the project names its forge (`[forge]`), the box also offers to save the changes there, through the forge's API, as the person editing:
+
+| `[serve] save` | The changes go |
+| --- | --- |
+| `pull-request` (the default), `branch` | into a change, a branch `edit/NAME` from the branch changes go to, proposed in a pull request (a merge request on GitLab) |
+| `commit` | in a commit on the branch changes go to |
+
+The branch changes go to is `[serve] branch`, else the branch checked out when the site was rendered, else the repository's default. A project below the repository's top is saved at its place in it.
+
+The page asks for a token the first time, and keeps it for the browser's session only:
+
+| Forge | Token |
+| --- | --- |
+| GitHub | A fine-grained personal access token for the repository, with Contents and Pull requests, read and write. GitHub's sign-in cannot be done from a page alone: its token endpoints answer no other site. |
+| GitLab | A personal access token with the `api` scope. |
+| Forgejo | An access token with `write:repository`. |
+
+Once saved, the changes are forgotten in the browser, and the page offers to open the pull request or the commit.
 
 The module is about 9 MB (under 3 MB compressed, as web servers send it). The project's files are as large as they are.
 

@@ -19,13 +19,15 @@ pub const Done = union(enum) {
 /// no git, or git ignores the project's directory (the repository is
 /// another's, as a test's directory in a build cache)
 pub fn current(io: Io, a: Allocator, root: Io.Dir) Allocator.Error!?[]const u8 {
-    switch (try git.run(io, a, root, &.{ "check-ignore", "-q", "." })) {
-        .ok => return null,
-        .failed => {},
-    }
+    if (try ignored(io, a, root)) return null;
     const out = try git.output(io, a, root, &.{ "symbolic-ref", "--quiet", "--short", "HEAD" }) orelse return null;
     const name = std.mem.trim(u8, out, " \r\n");
     return if (name.len > 0) name else null;
+}
+
+/// Whether git ignores the directory `root`: its repository is another's
+pub fn ignored(io: Io, a: Allocator, root: Io.Dir) Allocator.Error!bool {
+    return try git.run(io, a, root, &.{ "check-ignore", "-q", "." }) == .ok;
 }
 
 /// The name of the change checked out, when one is

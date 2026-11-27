@@ -85,6 +85,7 @@
   }
   window.skeinChanged = showChanged;
   window.skeinEdits = saved;
+  window.skeinDiscard = function () { localStorage.removeItem(key); };
   document.addEventListener("DOMContentLoaded", showChanged);
   if (document.readyState !== "loading") showChanged();
 })();
