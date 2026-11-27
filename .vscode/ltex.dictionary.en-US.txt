@@ -94,3 +94,5 @@ reqifz
 Jama
 HRCP
 hrcp
+llms
+gitea

@@ -494,6 +494,8 @@ or a `.mcp.json` in the project:
 
 ## `skein agents`
 
+With it goes a list of what is still to do in setting the project up (template options not given, no citation sets or milestone, documents still the template's skeletons, templates brought along without their documents, no CI job), which `skein init` also ends with; an agent starting a project works through it. The documentation site's `llms.txt` says how an agent starts a project.
+
 Writes what a coding agent should know of the project's Skein documents into its agent instructions: `AGENTS.md`, or `CLAUDE.md` where there is one and no `AGENTS.md`, or `--file PATH`. It says how markers and references are written, the project's item types, link types and citations, and to run `skein check` after editing. The section sits between two HTML comments, so running it again after a change to `.skein/` replaces it in place. `--skill` writes it as a skill file, `.claude/skills/skein/SKILL.md`, for agents that read skills. `skein init` writes the section too.
 
 ## `skein help`, `skein version`
