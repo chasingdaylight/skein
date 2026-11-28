@@ -1,0 +1,62 @@
+# Builds the documentation site (tools/site.sh, with Zine: #322) and uploads
+# it as the Pages artifact. Called by pages.yml here, and by the mirror's
+# workflow (emanspeaks/skein-docs), so that both sites are built the same
+# way from one definition; a change to the build is made here alone.
+name: Build the documentation site
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Branch, tag or commit of chasingdaylight/skein to build
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  ZIG_VERSION: 0.17.1
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      # the history and the tags: each page's date, and the earlier releases' editions
+      - uses: actions/checkout@v7
+        with:
+          repository: chasingdaylight/skein
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - uses: randyos-org/setup-zig@node24  # v2.2.1 on Node.js 24, until upstream releases it
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Build skein
+        run: zig build
+
+      - name: Test the site's generator
+        working-directory: site
+        run: zig build test
+
+      - name: Build the site
+        run: bash tools/site.sh .site/public
+
+      # the site is served under more than one domain: no page may name one
+      - name: No page names a domain of the site
+        run: |
+          if grep -rIl -e 'chasingdaylight\.dev' -e 'randyeckman\.com' -e 'skein\.invalid' .site/public; then
+            echo "::error::these pages name a domain the site is served under"
+            exit 1
+          fi
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: .site/public
