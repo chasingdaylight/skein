@@ -31,3 +31,13 @@ export function labelOf(projects: ProjectInfo[], p: ProjectInfo): string {
   const folder = decodeURIComponent(p.uri).replace(/\/+$/, "").split("/").pop() ?? p.uri;
   return `${p.name} (${folder})`;
 }
+
+/** The templates `skein template list` prints: a name, two spaces, a description */
+export function parseTemplates(listed: string): { name: string; description: string }[] {
+  const out: { name: string; description: string }[] = [];
+  for (const line of listed.split(/\r?\n/)) {
+    const m = /^(\S+)\s{2,}(.*)$/.exec(line.trimEnd());
+    if (m) out.push({ name: m[1], description: m[2] });
+  }
+  return out;
+}

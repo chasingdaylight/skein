@@ -54,4 +54,7 @@ test("describe and coverageText", () => {
   assert.equal(coverageText(2, 3).text, "$(checklist) 66%");
   assert.equal(coverageText(2, 3).tooltip, "skein: 2 of 3 expected links and citations are there");
   assert.equal(coverageText(0, 0).tooltip, "skein: nothing is expected");
+  // with several projects, the name of the current one
+  assert.equal(coverageText(2, 3, "inner").text, "$(checklist) inner 66%");
+  assert.equal(coverageText(0, 0, "inner").text, "$(checklist) inner");
 });

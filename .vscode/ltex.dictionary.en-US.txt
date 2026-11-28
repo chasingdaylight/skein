@@ -112,3 +112,4 @@ smimesign
 gpgsm
 reauthentication
 wasi
+vscodeignore

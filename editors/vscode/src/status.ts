@@ -1,5 +1,5 @@
-// The coverage of the project in the status bar, which opens the coverage
-// view (skein.statusBar.coverage).
+// The coverage of the project in the status bar (skein.statusBar.coverage),
+// which opens the list of Skein's commands, Show Coverage first.
 
 import * as vscode from "vscode";
 import { Server } from "./client";
@@ -10,8 +10,11 @@ export class Status {
 
   constructor(private readonly server: Server) {
     this.item.name = "Skein Coverage";
-    this.item.command = "skein.showCoverage";
+    this.item.command = "skein.showCommands";
   }
+
+  /** The project's name, shown where the workspace has several */
+  project: string | undefined;
 
   dispose(): void {
     this.item.dispose();
@@ -27,9 +30,9 @@ export class Status {
       this.item.hide();
       return;
     }
-    const { text, tooltip } = coverageText(result.covered, result.total);
+    const { text, tooltip } = coverageText(result.covered, result.total, this.project);
     this.item.text = text;
-    this.item.tooltip = tooltip;
+    this.item.tooltip = `${tooltip}. Click for Skein's commands.`;
     this.item.show();
   }
 }

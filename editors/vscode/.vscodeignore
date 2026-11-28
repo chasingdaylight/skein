@@ -6,6 +6,9 @@
 !dist/graph.js
 !dist/form.js
 !media/preview.css
+!media/skein.svg
+!media/skein-dark.svg
+!media/walkthrough/**
 !icon.png
 !bin/**
 !syntaxes/skein.injection.tmLanguage.json

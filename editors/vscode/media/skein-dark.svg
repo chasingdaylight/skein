@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="82 38 356 356" fill="none" stroke="#c5c5c5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- the skein of docs/assets/logo.svg, in its coordinates: tilted, wound, banded, its thread out to a pin -->
+  <defs>
+    <path id="s" d="M-140,0 C-140,-44 -112,-66 -78,-66 C-48,-66 -30,-52 0,-52 C30,-52 48,-66 78,-66 C112,-66 140,-44 140,0 C140,44 112,66 78,66 C48,66 30,52 0,52 C-30,52 -48,66 -78,66 C-112,66 -140,44 -140,0 Z"/>
+    <mask id="wound" maskUnits="userSpaceOnUse" x="-160" y="-90" width="320" height="180">
+      <use href="#s" fill="#fff" stroke="none"/>
+      <rect x="-40" y="-70" width="80" height="140" fill="#000" stroke="none"/>
+    </mask>
+  </defs>
+  <path d="M370,190 C428,176 434,116 387.6,68.7" stroke-width="28"/>
+  <circle cx="387.6" cy="68.7" r="26" fill="#c5c5c5" stroke="none"/>
+  <g transform="translate(256,262) rotate(-32)">
+    <use href="#s" stroke-width="28"/>
+    <g mask="url(#wound)" stroke-width="20">
+      <path d="M-150,30 C-60,-6 70,-2 150,36"/>
+      <path d="M-150,-56 C-60,-30 40,10 150,44"/>
+      <path d="M-150,20 C-50,40 60,-20 150,-50"/>
+    </g>
+    <rect x="-26" y="-56" width="52" height="112" rx="5" stroke-width="26"/>
+  </g>
+</svg>

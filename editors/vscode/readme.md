@@ -10,17 +10,33 @@
 
 This extension brings the `skein` program and its language server into VS Code: the problems of `skein check` as you save, go to definition, references, completion and rename of IDs, the items in a tree, an item's trace, and the project's coverage. Installing the extension is all a project's contributors need.
 
+## Where to find it
+
+| To | Use |
+| --- | --- |
+| Start a project | **Skein: Initialize a Project...** in the Command Palette: `skein init` in a folder, with a template you choose |
+| Learn the extension | **Skein: Get Started**, a walkthrough of the steps below |
+| See the items | the Skein icon in the activity bar: the **Items** view |
+| Make an item | **New Item** (`+`) on the Items view's title bar; **New Item in This Document...** on the **Skein** menu of a Markdown editor's title bar and its context menu |
+| Change an item | **Edit Item...** on the editor's context menu, the Items view's item menu, or the **Skein** menu |
+| Trace an item | **Trace** above the item (a code lens), on the editor's context menu, on an item of the Items view, or the **Skein** menu |
+| Go to an item by ID | **Go to Item...** (the magnifier) on the Items view's title bar, or the **Skein** menu |
+| Coverage, plan, graph | the buttons of the Items view's title bar, or the **Skein** menu |
+| See an item rendered | VS Code's **Open Preview to the Side** on a Markdown editor |
+| Every command | the coverage in the status bar opens a list of them; or type `Skein` in the Command Palette |
+| Another project | **Skein: Choose Project...**, where the workspace has several |
+
 ## What it does
 
 - **The language server:** in a workspace any of whose folders is in a Skein project (`.skein/config.toml`) or has one inside it, the extension starts `skein lsp`, which serves each file from its own project. With several projects, the views follow the project of the active editor, and **Skein: Choose Project...** picks one. The problems of `skein check` are in the Problems panel, updated when a file is saved, with quick fixes where Skein knows what was meant: the ID an item has now for a former one, and the word closest to a misspelled ID, category, status, attribute or link type. Go to definition, find references, hover, completion and rename (which does what `skein move` does) work on IDs wherever they are written.
 - **Code lenses:** above each item, its links (those it has and those that point to it), which offer the items they lead to, and **Trace**.
-- **Skein Items:** a tree in the Explorer of every item, by source and file, with its type, category and status, and its parts under it. Choosing one opens it at its marker; **Trace** and **Copy ID** are on its context menu.
+- **Skein Items:** a tree in the Skein view of the activity bar of every item, by source and file, with its type, category and status, and its parts under it. Choosing one opens it at its marker; **Trace** and **Copy ID** are on its context menu.
 - **Trace:** an item's trace in a view beside the editor: its links both ways, what it refers to and what refers to it, citations, approvals, test results, and all above and below it. Its links open the items and places in the editor. Open it from a code lens, the tree, the editor's context menu, or **Skein: Trace** in the Command Palette (the item under the cursor, or one you choose).
 - **Forms:** **Skein: New Item...** and **Edit Item...** (on the editor's and the tree's context menus) open a form of the item's category, status, attributes and links, as its type allows, with the items a link may point to offered. Saving writes the item's marker or front matter; a new item gets its own file, or goes at the end of the document chosen.
 - **Graph:** **Skein: Show Graph** draws the network of items and their links, each item above those that link to it, with suspect links and links never reviewed marked. Drag to pan, and zoom with the wheel, a pinch, the buttons at the top right (zoom in, zoom out, fit, 100%) or the keys `+`, `-`, `f` and `0`; search, and filter by item type, link type, profile and source. Choosing an item shows its trace beside the graph; it and the item's context menu have Open, Trace, Copy ID, Review its links and Approve.
 - **Plan:** for a project with work items (item types with `[planning]`), **Skein: Show Plan** opens a Gantt chart of the schedule and a board by status. Drag a bar to move an item, its right end to change its length, or a card to another status: the change is written into the item's marker or front matter, and the stored schedule (`.skein/schedule.toml`) follows. A float item moved by hand becomes fixed.
 - **AI agents:** VS Code's agents (Copilot's agent mode and others) get Skein's tools through `skein mcp`, which the extension offers to VS Code's MCP support: finding and tracing items, `check`, `coverage`, `impact`, and the editing commands. In chat, `#skeinItem` brings in the item under the cursor with everything linked to it. **Skein: Write Agent Instructions** writes what agents should know of the project's Skein documents into `AGENTS.md` (or `CLAUDE.md`).
-- **Coverage:** the coverage page, in a view, and the share of what is expected that is covered in the status bar, which opens the view.
+- **Coverage:** the coverage page, in a view, and the share of what is expected that is covered in the status bar, which opens a list of Skein's commands, **Show Coverage** first.
 - **The `skein` program:** the extension carries it for Windows, Linux, Alpine and macOS (x86_64 and arm64) and puts it on the `PATH` of new terminals in VS Code, so `skein check` works there with nothing else installed. Open a new terminal after installing.
 - **Markdown preview:** VS Code's preview of a saved document shows it as `skein render` writes it: markers as the item's ID with its category and status, references as links to the items, unresolved references marked, and generated pages (lists, matrices, coverage, Gantt charts) in place. While a document has unsaved changes, the preview shows it as written.
 - **Highlighting:** in Markdown, markers (`%type[id words key=value]`) and references (`%[id]`, `%[id words]`) stand out from the prose; nothing inside a code span or a code block is highlighted, as Skein reads nothing there, except the marker of a tested example on the line of its fence (`` ```cesium %example[.ok accepts] ``). A marker is highlighted only at the start of a line, of a list entry or of a quote, where Skein reads one; an example's code is shown as code, without its language's own highlighting.
@@ -29,7 +45,7 @@ The colors and fonts of the views come from your color theme. To change those of
 
 ## Commands
 
-In the Command Palette, under **Skein**: **Trace**, **Show Coverage**, **Show Plan**, **Show Graph**, **New Item...**, **Edit Item...**, **Write Agent Instructions**, **Go to Item...**, **Refresh Items**, **Restart the Language Server** and **Show Version**.
+In the Command Palette, under **Skein**: **Trace**, **Show Coverage**, **Show Plan**, **Show Graph**, **New Item...**, **New Item in This Document...**, **Edit Item...**, **Go to Item...**, **Initialize a Project...**, **Choose Project...**, **Write Agent Instructions**, **Get Started**, **Open the Documentation**, **Show All Commands...**, **Refresh Items**, **Restart the Language Server** and **Show Version**.
 
 ## Settings
 

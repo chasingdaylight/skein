@@ -115,3 +115,9 @@ export function toSave(form: Form, v: Values): Record<string, unknown> {
     document: form.item ? "" : v.document,
   };
 }
+
+/** The form with `file` (from the project's root) first among the documents, where it is one of them */
+export function preferDocument(form: Form, file: string | undefined): Form {
+  if (!file || !form.documents.includes(file)) return form;
+  return { ...form, documents: [file, ...form.documents.filter((d) => d !== file)] };
+}
