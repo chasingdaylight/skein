@@ -113,3 +113,4 @@ gpgsm
 reauthentication
 wasi
 vscodeignore
+magick
