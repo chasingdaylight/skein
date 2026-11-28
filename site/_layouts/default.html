@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% if page.title and page.url != "/" %}{{ page.title | strip_html }} · {% endif %}{{ site.title }}</title>
   <meta name="description" content="{{ site.description }}">
-  <link rel="icon" href="{{ '/assets/logo.svg' | relative_url }}">
+  <!-- the logo's icons: tools/favicon.sh writes them -->
+  <link rel="icon" href="{{ '/favicon.ico' | relative_url }}" sizes="48x48">
+  <link rel="icon" href="{{ '/assets/logo.svg' | relative_url }}" type="image/svg+xml">
+  <link rel="icon" href="{{ '/icon-192.png' | relative_url }}" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="{{ '/apple-touch-icon.png' | relative_url }}">
   <link rel="stylesheet" href="{{ '/assets/site.css' | relative_url }}">
   <script>
     // the theme before the page paints: the one chosen, else the system's
