@@ -850,6 +850,16 @@ jobs:
           prerelease: false
           make_latest: true
 
+      # The Marketplace lists the action's release only when it is edited
+      # on GitHub with its box ticked: GitHub has no API for it
+      - name: What is left to do by hand
+        run: |
+          {
+            echo "### List the action in the GitHub Marketplace"
+            echo
+            echo "Edit [v$VERSION]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/edit/v$VERSION), tick **Publish this Action to the GitHub Marketplace**, and update it."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # The next version is begun on dev: main keeps the version it released. A
   # separate job, so that a push dev refuses does not stop the publishing.
   begin-next-version:
