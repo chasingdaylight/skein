@@ -173,7 +173,7 @@ a { color: var(--accent); text-underline-offset: 0.18em; }
 #toc a:hover, #toc a.here { color: var(--accent); }
 
 #breadcrumbs { margin-bottom: 0.75rem; color: var(--muted); font-size: 0.88rem; }
-#breadcrumbs span + span::before { content: " \203A "; }
+#breadcrumbs span + span::before { content: " \203A\00a0"; }
 #breadcrumbs a { color: var(--muted); }
 
 /* the article */

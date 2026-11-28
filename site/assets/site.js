@@ -115,7 +115,14 @@
   var results = document.getElementById("search-results");
   var pages = null;
   function load() {
-    if (!pages) pages = fetch(input.dataset.index).then(function (r) { return r.json(); }).catch(function () { return []; });
+    if (!pages) {
+      // the index's text keeps HTML's entities (&lt;): read as the page shows them
+      var decode = function (t) { return new DOMParser().parseFromString(t, "text/html").documentElement.textContent; };
+      pages = fetch(input.dataset.index).then(function (r) { return r.json(); }).then(function (all) {
+        all.forEach(function (p) { p.title = decode(p.title); p.headings = decode(p.headings); p.text = decode(p.text); });
+        return all;
+      }).catch(function () { return []; });
+    }
     return pages;
   }
   function show() {
