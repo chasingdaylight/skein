@@ -16,6 +16,7 @@ import { GraphView } from "./graphview";
 import { Preview } from "./preview";
 import { Projects } from "./projects";
 import { MarkdownIt } from "./previewplugin";
+import { initProject } from "./init";
 import { findProgram } from "./program";
 import { setRoot } from "./run";
 import { Status } from "./status";
@@ -63,6 +64,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Api> {
     // another project: the views show it
     projects.onDidChange(() => {
       treeView.description = projects.label;
+      status.project = projects.label;
       views.closeTrace();
       refresh();
     }),
@@ -71,6 +73,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<Api> {
   const forms = new FormView(context, server, refresh);
   context.subscriptions.push(
     vscode.commands.registerCommand("skein.newItem", () => forms.show()),
+    // from the editor: the new item goes into its document
+    vscode.commands.registerCommand("skein.newItemHere", () => forms.show(undefined, undefined, fileOfEditor(projects.root()))),
+    vscode.commands.registerCommand("skein.initProject", async () => {
+      if (!(await initProject(context))) return;
+      await vscode.commands.executeCommand("setContext", "skein.project", true);
+      await server.restart();
+    }),
+    vscode.commands.registerCommand("skein.showCommands", () => showCommands(context, projects.list.length > 1)),
+    vscode.commands.registerCommand("skein.gettingStarted", () =>
+      vscode.commands.executeCommand("workbench.action.openWalkthrough", `${context.extension.id}#skein.start`, false),
+    ),
+    vscode.commands.registerCommand("skein.openDocs", () => vscode.env.openExternal(vscode.Uri.parse(docs))),
     // from the tree: its item; from the editor: the item under the cursor
     vscode.commands.registerCommand("skein.editItem", async (node?: { item?: { id: string } }) => {
       const id = node?.item?.id ?? (await commands.itemAtCursor(server));
@@ -113,6 +127,32 @@ export async function activate(context: vscode.ExtensionContext): Promise<Api> {
 }
 
 let running: Server | undefined;
+
+/** Skein's documentation site */
+const docs = "https://skein.chasingdaylight.dev/";
+
+/** The commands left out of the list of all commands: those that need an argument, and the list itself */
+const unlisted = new Set(["skein.copyId", "skein.pickLinked", "skein.showCommands"]);
+
+/** A list of Skein's commands, Show Coverage first, to run one; Choose Project only where there are several */
+async function showCommands(context: vscode.ExtensionContext, several: boolean): Promise<void> {
+  const all = (context.extension.packageJSON.contributes.commands as { command: string; title: string }[]).filter((c) => !unlisted.has(c.command) && (several || c.command !== "skein.chooseProject"));
+  all.sort((a, b) => (a.command === "skein.showCoverage" ? -1 : b.command === "skein.showCoverage" ? 1 : a.title.localeCompare(b.title)));
+  const picked = await vscode.window.showQuickPick(
+    all.map((c) => ({ label: c.title, command: c.command })),
+    { placeHolder: "Skein" },
+  );
+  if (picked) await vscode.commands.executeCommand(picked.command);
+}
+
+/** The active editor's file, from the project's root, with forward slashes */
+function fileOfEditor(root: vscode.Uri | undefined): string | undefined {
+  const doc = vscode.window.activeTextEditor?.document;
+  if (!root || !doc || doc.uri.scheme !== "file") return undefined;
+  const base = root.path.replace(/\/+$/, "") + "/";
+  const path = doc.uri.path;
+  return path.toLowerCase().startsWith(base.toLowerCase()) ? path.slice(base.length) : undefined;
+}
 
 export async function deactivate(): Promise<void> {
   await running?.stop();

@@ -65,6 +65,7 @@ export class Server {
   private async stopNow(): Promise<void> {
     const c = this.client;
     this.client = undefined;
+    void vscode.commands.executeCommand("setContext", "skein.running", false);
     if (!c) return;
     try {
       await c.stop();
@@ -110,6 +111,7 @@ export class Server {
     try {
       await c.start();
       this.client = c;
+      await vscode.commands.executeCommand("setContext", "skein.running", true);
     } catch (err) {
       this.output.error(`starting ${command}: ${String(err)}`);
       void vscode.window.showErrorMessage(`skein: the language server failed to start: ${String(err)}`);

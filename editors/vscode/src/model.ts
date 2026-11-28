@@ -81,9 +81,10 @@ export function describe(item: ItemInfo): string {
   return `${kind}, ${item.status}`;
 }
 
-/** The share of what is expected that is covered, for the status bar */
-export function coverageText(covered: number, total: number): { text: string; tooltip: string } {
-  if (total === 0) return { text: "$(checklist) Skein", tooltip: "skein: nothing is expected" };
+/** The share of what is expected that is covered, for the status bar; with the project's name where there are several */
+export function coverageText(covered: number, total: number, project?: string): { text: string; tooltip: string } {
+  const name = project ? ` ${project}` : "";
+  if (total === 0) return { text: `$(checklist)${name || " Skein"}`, tooltip: "skein: nothing is expected" };
   const percent = Math.floor((covered * 100) / total);
-  return { text: `$(checklist) ${percent}%`, tooltip: `skein: ${covered} of ${total} expected links and citations are there` };
+  return { text: `$(checklist)${name} ${percent}%`, tooltip: `skein: ${covered} of ${total} expected links and citations are there` };
 }

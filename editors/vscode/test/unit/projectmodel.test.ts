@@ -3,7 +3,7 @@
 // req: vscode.projects
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
-import { labelOf, ProjectInfo, projectOf } from "../../src/projectmodel";
+import { labelOf, parseTemplates, ProjectInfo, projectOf } from "../../src/projectmodel";
 
 const projects: ProjectInfo[] = [
   { name: "outer", uri: "file:///C:/work" },
@@ -31,4 +31,13 @@ test("two projects of one name are told apart by their folders", () => {
   ];
   assert.equal(labelOf(two, two[0]), "spec (one)");
   assert.equal(labelOf(two, two[2]), "other");
+});
+
+// req: vscode.discoverable
+test("the templates skein lists, for Initialize a Project", () => {
+  const listed = "langspec  The specification of a programming language\nnpr7150.2d  Software work under NPR 7150.2D, as the handbook reads it\n\n";
+  assert.deepEqual(parseTemplates(listed), [
+    { name: "langspec", description: "The specification of a programming language" },
+    { name: "npr7150.2d", description: "Software work under NPR 7150.2D, as the handbook reads it" },
+  ]);
 });

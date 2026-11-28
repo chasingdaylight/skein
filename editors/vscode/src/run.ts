@@ -16,10 +16,10 @@ export function setRoot(root: () => vscode.Uri | undefined): void {
   rootOf = root;
 }
 
-/** Runs skein in the current project; what it printed, or an error with it */
-export function run(context: vscode.ExtensionContext, args: string[]): Promise<string> {
+/** Runs skein in `cwd`, else the current project; what it printed, or an error with it */
+export function run(context: vscode.ExtensionContext, args: string[], cwd?: vscode.Uri): Promise<string> {
   const program = programOf(context);
-  const root = rootOf();
+  const root = cwd ?? rootOf();
   if (!program || !root) return Promise.reject(new Error("skein: no skein program, or no folder open"));
   return new Promise((resolve, reject) => {
     execFile(program, args, { cwd: root.fsPath, timeout: 60_000, maxBuffer: 16 << 20 }, (error, stdout, stderr) => {

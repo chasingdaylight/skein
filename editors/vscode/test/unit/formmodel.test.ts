@@ -3,7 +3,7 @@
 // req: vscode.forms
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
-import { Form, ids, initial, problems, toSave } from "../../src/formmodel";
+import { Form, ids, initial, preferDocument, problems, toSave } from "../../src/formmodel";
 
 const type = {
   name: "rule",
@@ -59,4 +59,11 @@ test("what is wrong before sending: a required attribute, a new item with no ID 
   nv.attributes.stage = "s1";
   assert.deepEqual(problems(fresh, nv), ["choose the document the item goes in", "give the item an ID"]);
   assert.equal(toSave(fresh, nv).new, true);
+});
+
+test("New Item in This Document: the editor's document first, where a new item may go", () => {
+  const form: Form = { ...editing, item: null, documents: ["spec/a.md", "spec/lex.md"] };
+  assert.equal(initial(preferDocument(form, "spec/lex.md")).document, "spec/lex.md");
+  assert.equal(initial(preferDocument(form, "notes/other.md")).document, "spec/a.md");
+  assert.equal(initial(preferDocument(form, undefined)).document, "spec/a.md");
 });
