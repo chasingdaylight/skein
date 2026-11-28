@@ -57,7 +57,7 @@ fn connection(self: *Server, arena: std.mem.Allocator, stream: Io.net.Stream) !v
     var request = try http.receiveHead();
     const target = try arena.dupe(u8, request.head.target);
     const path = target[0 .. std.mem.findScalar(u8, target, '?') orelse target.len];
-    var seen: sign_in.Seen = .{ .peer = stream.socket.address, .path = path, .query = if (std.mem.findScalar(u8, target, '?')) |at| target[at + 1 ..] else "" };
+    var seen: sign_in.Seen = .{ .peer = stream.socket.address, .path = path, .query = if (std.mem.findScalar(u8, target, '?')) |at| target[at + 1 ..] else "", .now = Io.Clock.real.now(io).toSeconds() };
     var host: ?[]const u8 = null;
     var skein_header = false;
     var it = request.iterateHeaders();

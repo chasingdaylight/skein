@@ -17,19 +17,22 @@ const Served = @This();
 site: Site,
 people: People,
 sites: Sites,
+/// what the test keeps for as long as it serves
+arena: std.heap.ArenaAllocator,
 
 /// The project at `root` (its path, and the directory), on the branch checked out
 pub fn init(self: *Served, root: []const u8, dir: std.Io.Dir) !void {
-    self.* = .{ .site = .init(testing.allocator, testing.io, .{ .common = .{ .root = root } }, dir), .people = .init(testing.allocator), .sites = .init(testing.allocator, testing.io) };
+    self.* = .{ .site = .init(testing.allocator, testing.io, .{ .common = .{ .root = root } }, dir), .people = .init(testing.allocator), .sites = .init(testing.allocator, testing.io), .arena = .init(testing.allocator) };
     var arena: std.heap.ArenaAllocator = .init(testing.allocator);
     defer arena.deinit();
-    if (try changes.current(testing.io, arena.allocator(), dir)) |b| self.site.start_branch = try self.people.arena.allocator().dupe(u8, b);
+    if (try changes.current(testing.io, arena.allocator(), dir)) |b| self.site.start_branch = try self.arena.allocator().dupe(u8, b);
 }
 
 pub fn deinit(self: *Served) void {
     self.sites.deinit();
     self.people.deinit();
     self.site.deinit();
+    self.arena.deinit();
 }
 
 /// The answer's body, to `user` (null: on this computer alone)

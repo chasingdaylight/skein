@@ -113,23 +113,23 @@ test "signing in again: asked of the provider, and taken only when it was just n
     const setup: sign_in.Setup = .{ .mode = .oidc, .url = "http://127.0.0.1:8080", .provider = provider, .app = .{ .id = "abc", .secret = "s" } };
     const now = Io.Clock.real.now(testing.io).toSeconds();
 
-    const go = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.sign_in_path, .query = "again=1&back=%2Fspec%2Fa.html" }, null)).?;
+    const go = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.sign_in_path, .query = "again=1&back=%2Fspec%2Fa.html", .now = now }, null)).?;
     try testing.expect(std.mem.find(u8, go.location.?, "&prompt=login&max_age=0") != null);
     const state = go.location.?[std.mem.find(u8, go.location.?, "state=").? + 6 ..][0..64];
     now_for_test = now;
-    const back = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.back_path, .query = try a.print("code=c&state={s}", .{state}) }, null)).?;
+    const back = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.back_path, .query = try a.print("code=c&state={s}", .{state}), .now = now }, null)).?;
     const token = back.set_cookie.?["skein-session=".len..][0..64];
-    const u = people.session(token).?;
+    const u = people.session(token, now).?;
     try testing.expect(u.again);
     try testing.expectEqualStrings("00u1", u.subject);
     people.usedAgain(token);
-    try testing.expect(!people.session(token).?.again);
+    try testing.expect(!people.session(token, now).?.again);
 
     // the provider's sign-in is an hour old: it did not ask
-    const go2 = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.sign_in_path, .query = "again=1" }, null)).?;
+    const go2 = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.sign_in_path, .query = "again=1", .now = now }, null)).?;
     const state2 = go2.location.?[std.mem.find(u8, go2.location.?, "state=").? + 6 ..][0..64];
     now_for_test = now - 3600;
-    const stale = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.back_path, .query = try a.print("code=c&state={s}", .{state2}) }, null)).?;
+    const stale = (try sign_in.gate(testing.io, a, setup, &people, .{ .path = sign_in.back_path, .query = try a.print("code=c&state={s}", .{state2}), .now = now }, null)).?;
     try testing.expectEqual(.unauthorized, stale.status);
     try testing.expect(std.mem.find(u8, stale.body, "did not ask you to sign in again") != null);
 }
