@@ -846,8 +846,9 @@ jobs:
           name: skein v${{ needs.version.outputs.version }}
           files: dist/*
           generate_release_notes: true
-          # 0.x: everything may still change
-          prerelease: ${{ startsWith(needs.version.outputs.version, '0.') }}
+          # a full release, the latest, 0.x included (emanspeaks, 2026-11-27)
+          prerelease: false
+          make_latest: true
 
   # The next version is begun on dev: main keeps the version it released. A
   # separate job, so that a push dev refuses does not stop the publishing.
