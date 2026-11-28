@@ -39,8 +39,8 @@ const Edge = struct {
     state: []const u8 = "",
 };
 
-pub fn graph(s: *Server, a: Allocator, id: json.Value) Server.Error!void {
-    var ws = s.open(a) orelse return s.respond(a, id, null);
+pub fn graph(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server.Error!void {
+    var ws = s.open(a, params) orelse return s.respond(a, id, null);
     defer ws.close();
     if (!ws.items_read) return s.respond(a, id, null);
     const schema = &ws.project.schema;

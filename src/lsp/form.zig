@@ -14,7 +14,7 @@ const item_form = @import("../edit/item_form.zig");
 const protocol = @import("protocol.zig");
 
 pub fn form(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server.Error!void {
-    var ws = s.open(a) orelse return s.respond(a, id, null);
+    var ws = s.open(a, params) orelse return s.respond(a, id, null);
     defer ws.close();
     const want_id = Server.field(params, "id");
     const want_type = Server.field(params, "type");
@@ -26,7 +26,7 @@ pub fn form(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server
 
 pub fn save(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server.Error!void {
     const p = Server.parse(edit_form.Save, a, params) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein/saveItem: no type");
-    var ws = s.open(a) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
+    var ws = s.open(a, params) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
     defer ws.close();
     if (!ws.items_read) return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: the project has problems that stop it being read");
     switch (try item_form.write(s.io, a, &ws, p)) {

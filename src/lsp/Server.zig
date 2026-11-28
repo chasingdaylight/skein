@@ -12,8 +12,13 @@
 //! - skein's own requests for the editor's views (views.zig) and its
 //!   planning views (planning.zig)
 //!
-//! The project is read again for each of these; nothing is kept between
-//! messages but the text of the open documents.
+//! A request is about the project of the document it names, the nearest
+//! `.skein/` above it, or the project it names (`project`, a URI of its
+//! root); else the first project found in the editor's folders
+//! (projects.zig). Diagnostics are published for every project found.
+//! `skein/projects` lists them. The project is read again for each
+//! message; nothing is kept between messages but the text of the open
+//! documents and the roots of the projects.
 
 const std = @import("std");
 const sysinfo = @import("builtin");
@@ -34,6 +39,7 @@ const lens = @import("lens.zig");
 const move = @import("../commands/move.zig");
 const network = @import("network.zig");
 const planning = @import("planning.zig");
+const discovery = @import("projects.zig");
 const views = @import("views.zig");
 const Schema = @import("../schema/Schema.zig");
 const jsonrpc = @import("jsonrpc.zig");
@@ -50,12 +56,16 @@ io: Io,
 out: *Io.Writer,
 version: []const u8,
 style: uri_paths.Style = if (sysinfo.target.os.tag == .windows) .windows else .posix,
-/// the directory the editor has open, owned by `gpa`
-root: ?[]u8 = null,
+/// the roots of the projects found in the editor's folders and of the
+/// documents opened since, owned by `gpa`; the first is the one a request
+/// that names none is about
+projects: std.ArrayList([]u8) = .empty,
+/// the directories the editor has open, owned by `gpa`
+folders: std.ArrayList([]u8) = .empty,
 /// the text of the open documents by URI (keys and values owned by `gpa`)
 docs: std.StringHashMapUnmanaged([]u8) = .empty,
-/// the files (paths from the project's root) with diagnostics published,
-/// which a later check clears (keys owned by `gpa`)
+/// the URIs of the files with diagnostics published, which a later check
+/// clears (keys owned by `gpa`)
 published: std.StringHashMapUnmanaged(void) = .empty,
 state: enum { uninitialized, running, shut_down } = .uninitialized,
 /// false once `exit` has come
@@ -71,7 +81,10 @@ pub fn deinit(s: *Server) void {
     var published = s.published.keyIterator();
     while (published.next()) |k| s.gpa.free(k.*);
     s.published.deinit(s.gpa);
-    if (s.root) |r| s.gpa.free(r);
+    for (s.projects.items) |r| s.gpa.free(r);
+    s.projects.deinit(s.gpa);
+    for (s.folders.items) |f| s.gpa.free(f);
+    s.folders.deinit(s.gpa);
 }
 
 /// The exit code once the client has gone: 0 after `shutdown`
@@ -111,15 +124,16 @@ fn request(s: *Server, a: Allocator, id: json.Value, method: []const u8, params:
     if (std.mem.eql(u8, method, "textDocument/rename")) return s.rename(a, id, params);
     if (std.mem.eql(u8, method, "textDocument/codeLens")) return lens.codeLens(s, a, id, params);
     if (std.mem.eql(u8, method, "textDocument/codeAction")) return fixes.codeAction(s, a, id, params);
-    if (std.mem.eql(u8, method, "skein/items")) return views.items(s, a, id);
+    if (std.mem.eql(u8, method, "skein/projects")) return s.listProjects(a, id);
+    if (std.mem.eql(u8, method, "skein/items")) return views.items(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/itemAt")) return views.itemAt(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/trace")) return views.trace(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/coverage")) return views.coverage(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/render")) return views.render(s, a, id, params);
-    if (std.mem.eql(u8, method, "skein/graph")) return network.graph(s, a, id);
+    if (std.mem.eql(u8, method, "skein/graph")) return network.graph(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/form")) return form.form(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/saveItem")) return form.save(s, a, id, params);
-    if (std.mem.eql(u8, method, "skein/schedule")) return planning.scheduleOf(s, a, id);
+    if (std.mem.eql(u8, method, "skein/schedule")) return planning.scheduleOf(s, a, id, params);
     if (std.mem.eql(u8, method, "skein/plan")) return planning.plan(s, a, id, params);
     return s.respondError(a, id, protocol.error_codes.method_not_found, method);
 }
@@ -134,6 +148,7 @@ fn notification(s: *Server, a: Allocator, method: []const u8, params: json.Value
     if (std.mem.eql(u8, method, "textDocument/didOpen")) {
         const p = parse(protocol.DidOpenParams, a, params) orelse return;
         try s.setText(p.textDocument.uri, p.textDocument.text);
+        try s.adopt(a, p.textDocument.uri);
         return s.publish(a);
     }
     if (std.mem.eql(u8, method, "textDocument/didChange")) {
@@ -143,6 +158,18 @@ fn notification(s: *Server, a: Allocator, method: []const u8, params: json.Value
     }
     if (std.mem.eql(u8, method, "textDocument/didSave")) return s.publish(a);
     if (std.mem.eql(u8, method, "workspace/didChangeWatchedFiles")) return s.publish(a);
+    if (std.mem.eql(u8, method, "workspace/didChangeWorkspaceFolders")) {
+        const event = field(params, "event");
+        for (try s.folderPaths(a, field(event, "removed"))) |gone| {
+            var i: usize = 0;
+            while (i < s.folders.items.len) {
+                if (uri_paths.samePath(s.style, s.folders.items[i], gone)) s.gpa.free(s.folders.orderedRemove(i)) else i += 1;
+            }
+        }
+        try s.addFolders(try s.folderPaths(a, field(event, "added")));
+        try s.findProjects(a);
+        return s.publish(a);
+    }
     if (std.mem.eql(u8, method, "textDocument/didClose")) {
         const p = parse(protocol.TextDocumentParams, a, params) orelse return;
         if (s.docs.fetchRemove(p.textDocument.uri)) |kv| {
@@ -154,22 +181,73 @@ fn notification(s: *Server, a: Allocator, method: []const u8, params: json.Value
 
 fn initialize(s: *Server, a: Allocator, id: json.Value, params: json.Value) Error!void {
     if (s.state != .uninitialized) return s.respondError(a, id, protocol.error_codes.invalid_request, "initialized already");
-    s.root = try s.rootOf(params);
+    try s.addFolders(try s.foldersOf(a, params));
+    try s.findProjects(a);
     s.state = .running;
     try s.respond(a, id, protocol.InitializeResult{ .serverInfo = .{ .name = "skein", .version = s.version } });
 }
 
-/// The directory the editor has open: `rootUri`, else the first of
-/// `workspaceFolders`, else `rootPath`; owned by `gpa`
-fn rootOf(s: *Server, params: json.Value) Allocator.Error!?[]u8 {
-    if (field(params, "rootUri") == .string) return uri_paths.toPath(s.gpa, field(params, "rootUri").string, s.style);
-    const folders = field(params, "workspaceFolders");
-    if (folders == .array and folders.array.items.len > 0) {
-        const u = field(folders.array.items[0], "uri");
-        if (u == .string) return uri_paths.toPath(s.gpa, u.string, s.style);
+/// The directories the editor has open: every one of `workspaceFolders`,
+/// else `rootUri`, else `rootPath`
+fn foldersOf(s: *Server, a: Allocator, params: json.Value) Allocator.Error![]const []const u8 {
+    const folders = try s.folderPaths(a, field(params, "workspaceFolders"));
+    if (folders.len > 0) return folders;
+    if (field(params, "rootUri") == .string) {
+        if (try uri_paths.toPath(a, field(params, "rootUri").string, s.style)) |path| return a.dupe([]const u8, &.{path});
     }
-    if (field(params, "rootPath") == .string) return try s.gpa.dupe(u8, field(params, "rootPath").string);
-    return null;
+    if (field(params, "rootPath") == .string) return a.dupe([]const u8, &.{field(params, "rootPath").string});
+    return &.{};
+}
+
+/// The paths of a list of workspace folders (`{ "uri": URI }`)
+fn folderPaths(s: *Server, a: Allocator, list: json.Value) Allocator.Error![]const []const u8 {
+    var out: std.ArrayList([]const u8) = .empty;
+    if (list != .array) return out.items;
+    for (list.array.items) |f| {
+        const u = field(f, "uri");
+        if (u != .string) continue;
+        if (try uri_paths.toPath(a, u.string, s.style)) |path| try out.append(a, path);
+    }
+    return out.items;
+}
+
+fn addFolders(s: *Server, paths: []const []const u8) Allocator.Error!void {
+    for (paths) |path| {
+        const copy = try s.gpa.dupe(u8, path);
+        errdefer s.gpa.free(copy);
+        try s.folders.append(s.gpa, copy);
+    }
+}
+
+/// The projects again: those of the folders, then those of the open
+/// documents
+fn findProjects(s: *Server, a: Allocator) Allocator.Error!void {
+    for (s.projects.items) |r| s.gpa.free(r);
+    s.projects.clearRetainingCapacity();
+    const folders: []const []const u8 = @ptrCast(s.folders.items);
+    try discovery.discover(s.io, s.gpa, folders, &s.projects);
+    var docs = s.docs.keyIterator();
+    while (docs.next()) |uri| try s.adopt(a, uri.*);
+}
+
+/// Remembers the project of the document `uri`, when it is in one, so
+/// that its problems are published
+fn adopt(s: *Server, a: Allocator, uri: []const u8) Allocator.Error!void {
+    const path = try uri_paths.toPath(a, uri, s.style) orelse return;
+    const root = discovery.rootOf(s.io, a, path) orelse return;
+    try discovery.add(s.gpa, &s.projects, root);
+}
+
+/// `skein/projects`: the name and root of each project
+fn listProjects(s: *Server, a: Allocator, id: json.Value) Error!void {
+    const Entry = struct { name: []const u8, uri: []const u8 };
+    var out: std.ArrayList(Entry) = .empty;
+    for (s.projects.items) |root| {
+        var ws = s.openAt(a, root) orelse continue;
+        defer ws.close();
+        try out.append(a, .{ .name = ws.project.name, .uri = try uri_paths.fromPath(a, ws.root_path, s.style) });
+    }
+    try s.respond(a, id, out.items);
 }
 
 fn setText(s: *Server, uri: []const u8, text: []const u8) Allocator.Error!void {
@@ -185,11 +263,28 @@ fn setText(s: *Server, uri: []const u8, text: []const u8) Allocator.Error!void {
     try s.docs.put(s.gpa, key, copy);
 }
 
-/// The project the editor has open, read from its files; null when the
-/// editor has no directory open or there is no project in it
-pub fn open(s: *Server, a: Allocator) ?Workspace {
-    const root = s.root orelse return null;
-    const opened = Workspace.open(s.io, a, .{ .root = root }) catch return null;
+/// The project a request is about, read from its files: the one `params`
+/// names (`project`, a URI of its root or of a place in it), else that of
+/// the document it names (`textDocument.uri` or `uri`), else the first
+/// project found; null when there is none
+pub fn open(s: *Server, a: Allocator, params: json.Value) ?Workspace {
+    const start = (s.startOf(a, params) catch return null) orelse return null;
+    return s.openAt(a, start);
+}
+
+fn startOf(s: *Server, a: Allocator, params: json.Value) Allocator.Error!?[]const u8 {
+    const named = field(params, "project");
+    if (named == .string) return uri_paths.toPath(a, named.string, s.style);
+    const doc = field(field(params, "textDocument"), "uri");
+    const u = if (doc == .string) doc else field(params, "uri");
+    if (u == .string) return uri_paths.toPath(a, u.string, s.style);
+    if (s.projects.items.len > 0) return s.projects.items[0];
+    return null;
+}
+
+/// The project at `start` or above it
+fn openAt(s: *Server, a: Allocator, start: []const u8) ?Workspace {
+    const opened = Workspace.open(s.io, a, .{ .root = start }) catch return null;
     return switch (opened) {
         .ok => |ws| ws,
         .failed => null,
@@ -225,20 +320,20 @@ pub fn publishAll(s: *Server, a: Allocator) Error!void {
     return s.publish(a);
 }
 
-/// Checks the project and publishes its problems, file by file; a file
+/// Checks every project and publishes its problems, file by file; a file
 /// that had problems and has none now is told so
 fn publish(s: *Server, a: Allocator) Error!void {
     var by_file: std.array_hash_map.String(std.ArrayList(protocol.Diagnostic)) = .empty;
-    var ws_or_null = s.open(a);
-    if (ws_or_null) |*ws| {
+    for (s.projects.items) |root| {
+        var ws = s.openAt(a, root) orelse continue;
         defer ws.close();
-        try check.all(s.io, a, ws);
+        try check.all(s.io, a, &ws);
         // LSP severities: 1 an error, 2 a warning
         for ([_]struct { list: []const Report.Problem, severity: u8 }{
             .{ .list = ws.report.problems.items, .severity = 1 },
             .{ .list = ws.report.warnings.items, .severity = 2 },
         }) |kind| for (kind.list) |p| {
-            const entry = try by_file.getOrPut(a, p.file);
+            const entry = try by_file.getOrPut(a, try s.uriOf(a, &ws, p.file));
             if (!entry.found_existing) entry.value_ptr.* = .empty;
             const line: usize = if (p.line > 0) p.line - 1 else 0;
             const column: usize = if (p.column > 0) p.column - 1 else 0;
@@ -250,15 +345,15 @@ fn publish(s: *Server, a: Allocator) Error!void {
                 .data = if (p.fix) |f| .{ .old = f.old, .new = f.new } else null,
             });
         };
-        // the files that had problems and have none now
-        var old = s.published.keyIterator();
-        while (old.next()) |file| {
-            if (by_file.contains(file.*)) continue;
-            try s.notify(a, "textDocument/publishDiagnostics", protocol.PublishDiagnosticsParams{ .uri = try s.uriOf(a, ws, file.*), .diagnostics = &.{} });
-        }
-        for (by_file.keys(), by_file.values()) |file, list| {
-            try s.notify(a, "textDocument/publishDiagnostics", protocol.PublishDiagnosticsParams{ .uri = try s.uriOf(a, ws, file), .diagnostics = list.items });
-        }
+    }
+    // the files that had problems and have none now
+    var old = s.published.keyIterator();
+    while (old.next()) |uri| {
+        if (by_file.contains(uri.*)) continue;
+        try s.notify(a, "textDocument/publishDiagnostics", protocol.PublishDiagnosticsParams{ .uri = uri.*, .diagnostics = &.{} });
+    }
+    for (by_file.keys(), by_file.values()) |uri, list| {
+        try s.notify(a, "textDocument/publishDiagnostics", protocol.PublishDiagnosticsParams{ .uri = uri, .diagnostics = list.items });
     }
     // remember which files have problems now
     var keys = s.published.keyIterator();
@@ -276,7 +371,7 @@ pub const Found = struct { ws: Workspace, item: *const Item };
 
 pub fn find(s: *Server, a: Allocator, params: json.Value) Allocator.Error!?Found {
     const p = parse(protocol.PositionParams, a, params) orelse return null;
-    var ws = s.open(a) orelse return null;
+    var ws = s.open(a, params) orelse return null;
     if (!ws.items_read) {
         ws.close();
         return null;
@@ -302,7 +397,7 @@ pub fn find(s: *Server, a: Allocator, params: json.Value) Allocator.Error!?Found
 /// item, or its repository has no checkout on disk
 fn otherDefinition(s: *Server, a: Allocator, params: json.Value) Allocator.Error!?protocol.Location {
     const p = parse(protocol.PositionParams, a, params) orelse return null;
-    var ws = s.open(a) orelse return null;
+    var ws = s.open(a, params) orelse return null;
     defer ws.close();
     const file = try s.fileOf(a, &ws, p.textDocument.uri) orelse return null;
     const text = s.docs.get(p.textDocument.uri) orelse ws.root.readFileAlloc(s.io, file, a, .limited(1 << 26)) catch return null;
@@ -363,7 +458,7 @@ fn references(s: *Server, a: Allocator, id: json.Value, params: json.Value) Erro
 /// word or value of a marker
 fn completion(s: *Server, a: Allocator, id: json.Value, params: json.Value) Error!void {
     const p = parse(protocol.PositionParams, a, params) orelse return s.respond(a, id, null);
-    var ws = s.open(a) orelse return s.respond(a, id, null);
+    var ws = s.open(a, params) orelse return s.respond(a, id, null);
     defer ws.close();
     if (!ws.items_read) return s.respond(a, id, null);
     const file = try s.fileOf(a, &ws, p.textDocument.uri) orelse return s.respond(a, id, null);
@@ -469,7 +564,7 @@ fn prepareRename(s: *Server, a: Allocator, id: json.Value, params: json.Value) E
 /// the files, and the editor shows them again from there.
 fn rename(s: *Server, a: Allocator, id: json.Value, params: json.Value) Error!void {
     const p = parse(protocol.RenameParams, a, params) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "rename: no new name");
-    var ws = s.open(a) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
+    var ws = s.open(a, params) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
     defer ws.close();
     var docs = s.docs.iterator();
     while (docs.next()) |doc| {
@@ -543,6 +638,7 @@ test {
     _ = query;
     _ = uri_paths;
     _ = complete;
+    _ = discovery;
     _ = Graph;
     _ = @import("_test/server.zig");
     _ = @import("_test/views.zig");

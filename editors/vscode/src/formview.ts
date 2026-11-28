@@ -64,7 +64,7 @@ export class FormView {
     const c = this.server.running;
     if (!c) return "skein: the language server is not running";
     try {
-      return await c.sendRequest<{ uri: string; line: number }>("skein/saveItem", save);
+      return await c.sendRequest<{ uri: string; line: number }>("skein/saveItem", this.server.withProject(save));
     } catch (err) {
       return err && typeof err === "object" && "message" in err ? String((err as { message: unknown }).message) : String(err);
     }

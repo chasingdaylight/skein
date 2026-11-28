@@ -1,7 +1,7 @@
-// The language client: starts `skein lsp` for the project the workspace
-// has open, and stops and restarts it. Everything the server can do
-// (diagnostics, definition, references, hover, completion, rename, code
-// lenses, quick fixes) comes through it.
+// The language client: starts `skein lsp` for the projects of the
+// workspace's folders, and stops and restarts it. Everything the server
+// can do (diagnostics, definition, references, hover, completion, rename,
+// code lenses, quick fixes) comes through it.
 
 import * as vscode from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node";
@@ -14,6 +14,8 @@ export class Server {
   private readonly changed = new vscode.EventEmitter<void>();
   /** fires once the server has started, and once it has stopped */
   readonly onDidChange = this.changed.event;
+  /** the URI of the project the views are about (projects.ts) */
+  projectOf: () => string | undefined = () => undefined;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -31,12 +33,19 @@ export class Server {
     const c = this.client;
     if (!c) return undefined;
     try {
-      return await c.sendRequest<T>(method, params);
+      return await c.sendRequest<T>(method, this.withProject(params));
     } catch (err) {
       this.output.warn(`${method}: ${String(err)}`);
       void vscode.window.showWarningMessage(errorMessage(err));
       return undefined;
     }
+  }
+
+  /** `params` naming the current project, unless they name a document or a project */
+  withProject(params: object): object {
+    if ("project" in params || "uri" in params || "textDocument" in params) return params;
+    const project = this.projectOf();
+    return project ? { ...params, project } : params;
   }
 
   restart(): Promise<void> {
@@ -89,7 +98,7 @@ export class Server {
       // server leaves alone what is not of the project
       documentSelector: [{ scheme: "file" }],
       synchronize: {
-        fileEvents: vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, "**/*.{md,toml,yaml,yml,json}")),
+        fileEvents: vscode.workspace.createFileSystemWatcher("**/*.{md,toml,yaml,yml,json}"),
       },
       middleware: {
         provideCodeLenses: (document, token, next) =>
