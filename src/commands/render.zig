@@ -54,7 +54,7 @@ fn renderInto(io: Io, arena: std.mem.Allocator, ws: *Workspace, options: cli.Ren
         const wasm = options.wasm orelse return .{ .text = said };
         const html = try files.list(io, arena, out, ".", &.{".html"});
         return switch (try edit_mode.write(io, arena, ws, out, wasm, html)) {
-            .ok => |n| .{ .text = try arena.print("{s}skein: the pages edit {d} file{s}, with skein for WebAssembly\n", .{ said, n, if (n == 1) "" else "s" }) },
+            .ok => |c| .{ .text = try arena.print("{s}skein: the pages edit {d} file{s} ({s}, in _skein/files.json), with skein for WebAssembly\n", .{ said, c.count, if (c.count == 1) "" else "s", try sizeOf(arena, c.bytes) }) },
             .failed => |why| .{ .text = try arena.print("skein: {s}\n", .{why}), .status = .misuse },
         };
     }
@@ -79,6 +79,13 @@ fn renderInto(io: Io, arena: std.mem.Allocator, ws: *Workspace, options: cli.Ren
     return .{
         .text = try arena.print("skein: {d} file{s} rendered to {s}\n", .{ count, if (count == 1) "" else "s", out_path }),
     };
+}
+
+/// A size for people: bytes, KB or MB
+fn sizeOf(arena: std.mem.Allocator, bytes: usize) ![]const u8 {
+    if (bytes < 1024) return arena.print("{d} bytes", .{bytes});
+    if (bytes < 1024 * 1024) return arena.print("{d:.1} KB", .{@as(f64, @floatFromInt(bytes)) / 1024});
+    return arena.print("{d:.1} MB", .{@as(f64, @floatFromInt(bytes)) / (1024 * 1024)});
 }
 
 /// What the pages of `ws` are rendered with: the profile named, the

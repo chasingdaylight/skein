@@ -63,10 +63,10 @@ The site `skein render --format html` writes can edit too, with no server at all
 $ zig build wasm                     # or take skein-vVERSION-wasm32-wasi.wasm from a release
 $ skein render --format html --edit --wasm zig-out/web/skein.wasm --out site
 skein: 40 pages rendered to site
-skein: the pages edit 52 files, with skein for WebAssembly
+skein: the pages edit 39 files (649.7 KB, in _skein/files.json), with skein for WebAssembly
 ```
 
-The site then carries, under `_skein/`, the WebAssembly module, the project's text files that `check` reads, and the scripts that run skein over them in the page. Each page offers the same **Edit this file**, **edit** by each item, and **New item** as `skein serve`'s. The problems are checked as you type, by skein in the page.
+The site then carries, under `_skein/`, the WebAssembly module, the project's text files that `check` reads (its configuration, its documents' Markdown, the files its citation sets read, its results; not the rest of the repository), and the scripts that run skein over them in the page. Each page offers the same **Edit this file**, **edit** by each item, and **New item** as `skein serve`'s. The problems are checked as you type, by skein in the page.
 
 A save is kept in the browser, not on the server that serves the files. A box at the bottom left lists the changed files, each a link to download it, and **Discard them** forgets them. The pages are not rendered again, so a page shows the files as they were rendered.
 

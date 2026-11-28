@@ -32,10 +32,13 @@ test "the site's pages carry skein for WebAssembly and the project's files" {
     var tmp = testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     const dir = tmp.dir;
-    try write(dir, ".skein/config.toml", "[project]\nname = \"Example\"\n[[sources]]\npath = \"spec\"\n");
+    try write(dir, ".skein/config.toml", "[project]\nname = \"Example\"\n[[sources]]\npath = \"spec\"\n[[citations]]\nname = \"test\"\npath = \".\"\nfiles = [\".zig\"]\nmarker = \"// req:\"\n");
     try write(dir, ".skein/types/rule.toml", "");
     try write(dir, "spec/lex/comments.md", "# Comments\n\n%rule[lex.comment] A comment.\n");
     try write(dir, "spec/lex/pic.png", "\x89PNG\x00\xff");
+    try write(dir, "spec/lex/notes.txt", "not a document");
+    try write(dir, "tests/a.zig", "// req: lex.comment\n");
+    try write(dir, "tests/fixture.txt", "not read by the citations");
     // a module's header is all render looks at
     try write(dir, "skein.wasm", "\x00asm\x01\x00\x00\x00");
     try write(dir, "not.wasm", "text");
@@ -45,14 +48,19 @@ test "the site's pages carry skein for WebAssembly and the project's files" {
 
     const outcome = try render.run(testing.io, a, .{ .common = .{ .root = root }, .out = out_dir, .format = .html, .wasm = wasm });
     try testing.expectEqual(.ok, outcome.status);
-    try has(outcome.text, "the pages edit 3 files, with skein for WebAssembly");
+    try has(outcome.text, "the pages edit 4 files (");
+    try has(outcome.text, " bytes, in _skein/files.json), with skein for WebAssembly");
     try testing.expectEqualStrings("\x00asm\x01\x00\x00\x00", try read(a, dir, "site/_skein/skein.wasm"));
     for ([_][]const u8{ "wasi.js", "static.js", "edit.js" }) |f| _ = try read(a, dir, try a.print("site/_skein/{s}", .{f}));
     const carried = try read(a, dir, "site/_skein/files.json");
     try has(carried, "\".skein/config.toml\":\"[project]\\nname = \\\"Example\\\"");
     try has(carried, "\"spec/lex/comments.md\":\"# Comments");
-    // what is not text is left out
+    try has(carried, "\"tests/a.zig\":\"// req: lex.comment");
+    // what is not text, and what the project does not read, is left out
     try testing.expect(std.mem.find(u8, carried, "pic.png") == null);
+    try testing.expect(std.mem.find(u8, carried, "notes.txt") == null);
+    try testing.expect(std.mem.find(u8, carried, "fixture.txt") == null);
+    try testing.expect(std.mem.find(u8, carried, "skein.wasm") == null);
     try has(try read(a, dir, "site/spec/lex/comments.html"), "<script src=\"../../_skein/edit.js\"></script>\n</body>");
     try has(try read(a, dir, "site/index.html"), "<script src=\"_skein/static.js\"></script>");
 
