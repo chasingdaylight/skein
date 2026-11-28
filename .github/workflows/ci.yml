@@ -787,6 +787,8 @@ jobs:
       # the attestations of the release files
       id-token: write
       attestations: write
+      # to close the release's milestone
+      issues: write
     env:
       VERSION: ${{ needs.version.outputs.version }}
       SHA: ${{ needs.version.outputs.sha }}
@@ -849,6 +851,18 @@ jobs:
           # a full release, the latest, 0.x included (emanspeaks, 2026-11-27)
           prerelease: false
           make_latest: true
+
+      # The release's milestone is done with it
+      - name: Close the milestone v${{ env.VERSION }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          number=$(gh api "repos/$GITHUB_REPOSITORY/milestones?state=open&per_page=100" --jq ".[] | select(.title == \"v$VERSION\") | .number")
+          if [ -n "$number" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/milestones/$number" -f state=closed > /dev/null
+          else
+            echo "no open milestone v$VERSION"
+          fi
 
       # The Marketplace lists the action's release only when it is edited
       # on GitHub with its box ticked: GitHub has no API for it
