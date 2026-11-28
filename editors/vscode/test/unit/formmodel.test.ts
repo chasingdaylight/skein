@@ -3,7 +3,7 @@
 // req: vscode.forms
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
-import { Form, ids, initial, preferDocument, problems, toSave } from "../../src/formmodel";
+import { Form, ids, initial, preferDocument, problems, toSave, typeOfDocument } from "../../src/formmodel";
 
 const type = {
   name: "rule",
@@ -66,4 +66,16 @@ test("New Item in This Document: the editor's document first, where a new item m
   assert.equal(initial(preferDocument(form, "spec/lex.md")).document, "spec/lex.md");
   assert.equal(initial(preferDocument(form, "notes/other.md")).document, "spec/a.md");
   assert.equal(initial(preferDocument(form, undefined)).document, "spec/a.md");
+});
+
+test("New Item in This Document: the type most of the document's items are of", () => {
+  const items = [
+    { file: "docs/srs.md", type: "requirement" },
+    { file: "docs/srs.md", type: "requirement" },
+    { file: "docs/srs.md", type: "note" },
+    { file: "docs/other.md", type: "note" },
+  ];
+  assert.equal(typeOfDocument(items, "docs/srs.md"), "requirement");
+  assert.equal(typeOfDocument(items, "docs/empty.md"), undefined);
+  assert.equal(typeOfDocument(items, undefined), undefined);
 });

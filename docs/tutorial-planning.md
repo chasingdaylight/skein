@@ -277,6 +277,18 @@ skein: 5 pages rendered to site
 
 `site/docs/plan.html` has the Gantt chart, with the critical path marked, the milestone and the holiday left out of the working days, and the board with a column for each person. `site/` is best kept out of git and built in CI (see [in continuous integration](commands.md#in-continuous-integration)). The same requests take other forms: `board` by status (`todo`, `doing`, `done`), `gantt by=assignee`, `roadmap`, and `burndown` and `burnup` of a milestone; see [generated pages](commands.md#generated-pages).
 
+**In VS Code:** **Skein: Show Plan** (on the Items view's title bar, or the **Skein** menu) opens the same Gantt chart and a board by status. Dragging a bar moves a task, or by its right end changes its length; dragging a card to another column changes its status; each change is written into the task's marker and the schedule follows.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/vscode/plan-dark.png">
+  <img src="img/vscode/plan-light.png" alt="The Gantt chart of the station's plan in VS Code: t.sensors and t.radio from March 1, then t.firmware, on the critical path in red.">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/vscode/board-dark.png">
+  <img src="img/vscode/board-light.png" alt="The board of the station's plan in VS Code: the five tasks under Todo, with their dates and who does them.">
+</picture>
+
 When the plan is agreed, commit it and make it a baseline, which is an annotated git tag:
 
 ```text

@@ -17,6 +17,7 @@ import { Preview } from "./preview";
 import { Projects } from "./projects";
 import { MarkdownIt } from "./previewplugin";
 import { initProject } from "./init";
+import { typeOfDocument } from "./formmodel";
 import { findProgram } from "./program";
 import { setRoot } from "./run";
 import { Status } from "./status";
@@ -74,7 +75,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<Api> {
   context.subscriptions.push(
     vscode.commands.registerCommand("skein.newItem", () => forms.show()),
     // from the editor: the new item goes into its document
-    vscode.commands.registerCommand("skein.newItemHere", () => forms.show(undefined, undefined, fileOfEditor(projects.root()))),
+    vscode.commands.registerCommand("skein.newItemHere", () => {
+      const here = fileOfEditor(projects.root());
+      return forms.show(undefined, typeOfDocument(tree.all(), here), here);
+    }),
     vscode.commands.registerCommand("skein.initProject", async () => {
       if (!(await initProject(context))) return;
       await vscode.commands.executeCommand("setContext", "skein.project", true);
