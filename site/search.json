@@ -1,0 +1,23 @@
+---
+layout: null
+---
+{%- comment -%}
+  What the search of the header looks through (assets/site.js): each page of
+  the latest edition with its title, headings and the start of its text.
+  Earlier editions (vX.Y.Z/) are left out.
+{%- endcomment -%}
+[
+{%- assign first = true -%}
+{%- for p in site.pages -%}
+  {%- unless p.url contains ".json" or p.url contains ".txt" or p.url contains ".css" or p.url contains ".js" -%}
+  {%- assign top = p.url | split: '/' | slice: 1 | first -%}
+  {%- assign edition = site.data.editions | where: "dir", top | first -%}
+  {%- unless edition -%}
+  {%- assign html = p.content | markdownify -%}
+  {%- capture heads -%}{%- assign parts = html | split: '<h' -%}{%- for part in parts offset: 1 -%}{%- assign level = part | slice: 0 -%}{%- if level == '2' or level == '3' -%}{{ part | split: '</h' | first | split: '>' | shift | join: '>' | strip_html }} {% endif -%}{%- endfor -%}{%- endcapture -%}
+  {%- unless first -%},{%- endunless -%}{%- assign first = false %}
+  {"url": {{ p.url | relative_url | jsonify }}, "title": {{ p.title | default: p.name | strip_html | jsonify }}, "headings": {{ heads | strip | jsonify }}, "text": {{ html | strip_html | normalize_whitespace | truncatewords: 400, "" | jsonify }}}
+  {%- endunless -%}
+  {%- endunless -%}
+{%- endfor %}
+]

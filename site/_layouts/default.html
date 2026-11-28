@@ -5,107 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% if page.title and page.url != "/" %}{{ page.title | strip_html }} · {% endif %}{{ site.title }}</title>
   <meta name="description" content="{{ site.description }}">
-  <style>
-    :root {
-      --bg: #fbfaf8;
-      --panel: #f3f0ea;
-      --fg: #1f1d1a;
-      --muted: #6a645b;
-      --accent: #9a3412;
-      --rule: #e2dcd1;
-      --code-bg: #efebe3;
-      --id-bg: #f6e9dc;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #161514;
-        --panel: #1d1b19;
-        --fg: #ece7df;
-        --muted: #a39b8f;
-        --accent: #fdba74;
-        --rule: #302c28;
-        --code-bg: #24211e;
-        --id-bg: #33261b;
-      }
-    }
-    * { box-sizing: border-box; }
-    html { scroll-padding-top: 1rem; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--fg);
-      font: 1rem/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    }
-    .page { display: grid; grid-template-columns: 15rem minmax(0, 1fr); min-height: 100vh; }
-    nav {
-      background: var(--panel);
-      border-right: 1px solid var(--rule);
-      padding: 1.5rem 1.25rem;
-    }
-    nav .brand { display: block; margin-bottom: 1.25rem; font-size: 1.35rem; font-weight: 700; color: var(--fg); text-decoration: none; }
-    nav ul { list-style: none; margin: 0; padding: 0; }
-    nav .editions { margin: -0.75rem 0 1.25rem; font-size: 0.9rem; color: var(--muted); }
-    nav .editions summary { cursor: pointer; }
-    nav .editions ul { margin: 0.25rem 0 0 0.75rem; }
-    nav .editions a[aria-current] { font-weight: 700; }
-    nav li a { display: block; padding: 0.3rem 0.6rem; margin: 0 -0.6rem; border-radius: 0.35rem; color: var(--fg); text-decoration: none; }
-    nav li a:hover { background: var(--rule); }
-    nav li a[aria-current="page"] { color: var(--accent); font-weight: 600; }
-    main { padding: 2rem 1.5rem 4rem; }
-    article { max-width: 46rem; margin: 0 auto; }
-    h1, h2, h3 { line-height: 1.25; }
-    h1 { font-size: 2rem; margin: 0 0 1rem; }
-    h2 { font-size: 1.35rem; margin: 2.25rem 0 0.75rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); }
-    h3 { font-size: 1.1rem; margin: 1.75rem 0 0.5rem; }
-    a { color: var(--accent); text-underline-offset: 0.18em; }
-    code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; font-size: 0.9em; }
-    code { background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 0.25rem; }
-    pre { background: var(--code-bg); padding: 0.9rem 1rem; border-radius: 0.4rem; overflow-x: auto; line-height: 1.5; }
-    pre code { background: none; padding: 0; font-size: 1em; }
-    .table { overflow-x: auto; }
-    table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
-    th, td { text-align: left; vertical-align: top; padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--rule); }
-    th { font-weight: 600; color: var(--muted); }
-    blockquote { margin: 1rem 0; padding: 0.1rem 1rem; border-left: 3px solid var(--rule); color: var(--muted); }
-    /* an item's ID, as skein render writes it: an anchor, then the ID linked to itself */
-    a[id] + strong > a {
-      font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace;
-      font-size: 0.85em;
-      font-weight: 600;
-      background: var(--id-bg);
-      padding: 0.1em 0.4em;
-      border-radius: 0.25rem;
-      text-decoration: none;
-    }
-    a[id] + strong + em { color: var(--muted); font-size: 0.9em; }
-    footer { max-width: 46rem; margin: 3rem auto 0; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.9rem; }
-    @media (max-width: 52rem) {
-      .page { display: block; }
-      nav { border-right: 0; border-bottom: 1px solid var(--rule); padding: 1rem; }
-      nav .brand { margin-bottom: 0.5rem; }
-      nav ul { display: flex; flex-wrap: wrap; gap: 0 0.5rem; }
-      nav li a { margin: 0; }
-      main { padding: 1.5rem 1rem 3rem; }
-    }
-  </style>
+  <link rel="icon" href="{{ '/assets/logo.svg' | relative_url }}">
+  <link rel="stylesheet" href="{{ '/assets/site.css' | relative_url }}">
+  <script>
+    // the theme before the page paints: the one chosen, else the system's
+    (function () {
+      var theme = null;
+      try { theme = localStorage.getItem("theme"); } catch (e) {}
+      document.documentElement.dataset.theme = theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    })();
+  </script>
 </head>
 <body>
+  {%- comment -%}
+    The edition the page is of: an earlier release's pages are under its
+    directory (vX.Y.Z/, tools/site.sh), the latest release's at the root.
+  {%- endcomment -%}
+  {%- assign first = page.path | split: '/' | first -%}
+  {%- assign edition = site.data.editions | where: "dir", first | first -%}
+  {%- if edition -%}
+    {%- assign prefix = '/' | append: edition.dir -%}
+  {%- else -%}
+    {%- assign edition = site.data.editions | first -%}
+    {%- assign prefix = '' -%}
+  {%- endif -%}
+  {%- assign within = page.url | remove_first: prefix -%}
+  <header id="topbar">
+    <button id="menu-toggle" type="button" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <a class="brand" href="{{ prefix | append: '/' | relative_url }}">
+      <img src="{{ '/assets/logo.svg' | relative_url }}" alt="">
+      <span>{{ site.title }}</span>
+    </a>
+    <div id="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input id="search-input" type="search" placeholder="Search" autocomplete="off" aria-label="Search" data-index="{{ '/search.json' | relative_url }}">
+      <div id="search-results" hidden></div>
+    </div>
+    <span class="spacer"></span>
+    <a class="repo" href="{{ site.repository_url }}" aria-label="Source on GitHub">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    </a>
+    <button id="theme-toggle" type="button" aria-label="Light or dark">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 14.5A9 9 0 0 1 9.5 3a9 9 0 1 0 11.5 11.5z"/></svg>
+    </button>
+  </header>
+  <div id="menu-backdrop"></div>
   <div class="page">
-    {%- comment -%}
-      The edition the page is of: an earlier release's pages are under its
-      directory (vX.Y.Z/, tools/site.sh), the latest release's at the root.
-    {%- endcomment -%}
-    {%- assign first = page.path | split: '/' | first -%}
-    {%- assign edition = site.data.editions | where: "dir", first | first -%}
-    {%- if edition -%}
-      {%- assign prefix = '/' | append: edition.dir -%}
-    {%- else -%}
-      {%- assign edition = site.data.editions | first -%}
-      {%- assign prefix = '' -%}
-    {%- endif -%}
-    {%- assign within = page.url | remove_first: prefix -%}
-    <nav aria-label="Documentation">
-      <a class="brand" href="{{ prefix | append: '/' | relative_url }}">{{ site.title }}</a>
+    <aside class="sidebar left" id="menu">
+      <nav id="explorer" aria-label="Pages">
+        {%- include nav.html entries=site.nav prefix=prefix top=true %}
+      </nav>
       <details class="editions">
         <summary>Version {{ edition.version }}{% if edition.dir == "" %} (the latest){% endif %}</summary>
         <ul>
@@ -114,23 +66,13 @@
           {%- assign target = base | append: within -%}
           {%- assign found = site.pages | where: "url", target | first -%}
           {%- unless found -%}{%- assign target = base | append: '/' -%}{%- endunless %}
-          <li><a href="{{ target | relative_url }}"{% if e.dir == edition.dir %} aria-current="page"{% endif %}>{{ e.version }}{% if forloop.first %} (latest){% endif %}</a></li>
+          <li><a href="{{ target | relative_url }}"{% if e.dir == edition.dir %} aria-current="true"{% endif %}>{{ e.version }}{% if forloop.first %} (latest){% endif %}</a></li>
           {%- endfor %}
         </ul>
       </details>
-      <ul>
-        {%- for item in site.nav %}
-        {%- assign here = false -%}
-        {%- if item.url == "/" -%}
-          {%- if within == "/" -%}{%- assign here = true -%}{%- endif -%}
-        {%- elsif within contains item.url -%}
-          {%- assign here = true -%}
-        {%- endif %}
-        <li><a href="{{ prefix | append: item.url | relative_url }}"{% if here %} aria-current="page"{% endif %}>{{ item.title }}</a></li>
-        {%- endfor %}
-      </ul>
-    </nav>
+    </aside>
     <main>
+      <nav id="breadcrumbs" aria-label="Breadcrumbs"></nav>
       <article>
         {{ content }}
       </article>
@@ -138,33 +80,10 @@
         Skein is open source: <a href="{{ site.repository_url }}">source, issues and releases</a>.
       </footer>
     </main>
+    <aside class="sidebar right">
+      <nav id="toc" aria-label="On this page"></nav>
+    </aside>
   </div>
-  <script>
-    // Mermaid blocks drawn by the copy of mermaid.js Skein vendors
-    // (vendor/mermaid, copied by tools/site.sh), loaded only where there is one
-    const diagrams = document.querySelectorAll('pre > code.language-mermaid');
-    if (diagrams.length) {
-      const script = document.createElement('script');
-      script.src = '{{ "/assets/mermaid.min.js" | relative_url }}';
-      script.onload = () => {
-        for (const code of diagrams) {
-          const div = document.createElement('div');
-          div.className = 'mermaid';
-          div.textContent = code.textContent;
-          code.parentElement.replaceWith(div);
-        }
-        mermaid.initialize({ startOnLoad: false, theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default' });
-        mermaid.run();
-      };
-      document.head.append(script);
-    }
-    // wide tables scroll inside themselves, not the page
-    for (const table of document.querySelectorAll('article > table')) {
-      const wrap = document.createElement('div');
-      wrap.className = 'table';
-      table.replaceWith(wrap);
-      wrap.append(table);
-    }
-  </script>
+  <script src="{{ '/assets/site.js' | relative_url }}" data-mermaid="{{ '/assets/mermaid.min.js' | relative_url }}"></script>
 </body>
 </html>
