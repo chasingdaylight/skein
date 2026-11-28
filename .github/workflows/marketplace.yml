@@ -9,8 +9,8 @@
 # hand (Actions > Publish to the Marketplace > Run workflow, on main) to
 # publish, or finish publishing, any released version.
 #
-# Until the language server is in the extension, every version is a
-# pre-release: `--pre-release`, which the package was made with.
+# From v0.2.1 every version is a release, not a pre-release (emanspeaks,
+# 2026-11-27), as the package was made.
 name: Publish to the Marketplace
 
 on:
@@ -68,7 +68,7 @@ jobs:
         run: |
           failed=0
           for vsix in dist/*.vsix; do
-            npx --yes "@vscode/vsce@$VSCE_VERSION" publish --oidc --pre-release --skip-duplicate \
+            npx --yes "@vscode/vsce@$VSCE_VERSION" publish --oidc --skip-duplicate \
               --packagePath "$vsix" || { echo "::error::publishing $vsix failed"; failed=1; }
           done
           exit "$failed"
