@@ -56,6 +56,8 @@ pub fn serve(io: Io, gpa: std.mem.Allocator, options: cli.Serve) !u8 {
         .public_host = if (options.url) |u| hostOf(u) else null,
     };
     defer server.people.deinit();
+    server.people.limits.idle = @as(i64, options.session_hours) * 3600;
+    server.people.limits.longest = @as(i64, options.session_days) * 24 * 3600;
     defer server.sites.deinit();
 
     const address = try Io.net.IpAddress.parse(options.listen, options.port);

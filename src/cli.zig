@@ -156,6 +156,9 @@ pub const usage =
     \\                    (default X-Forwarded-User, X-Forwarded-Email)
     \\  --proxy IP        serve --sign-in proxy: an address the proxy connects from
     \\                    (default this computer's); may be given more than once
+    \\  --session-hours N, --session-days N
+    \\                    serve --sign-in forge|oidc: a session ends when not used
+    \\                    for N hours (default 12), and after N days (default 7)
     \\  --out DIR         render, examples: where the files go
     \\  --format NAME     render: markdown for a site generator (the default),
     \\                    html: the site itself, or document: one file per document;
@@ -493,6 +496,10 @@ pub const Serve = struct {
     proxies: []const []const u8 = &.{},
     /// with `oidc`: the OpenID Connect provider
     issuer: ?[]const u8 = null,
+    /// with `forge` and `oidc`: a session ends when not used for this many
+    /// hours, and this many days after its sign-in (#303)
+    session_hours: u32 = 12,
+    session_days: u32 = 7,
 
     pub const default_port = 8080;
 
@@ -632,6 +639,8 @@ const options = [_]struct { name: []const u8, takes_value: bool }{
     .{ .name = "--url", .takes_value = true },
     .{ .name = "--port", .takes_value = true },
     .{ .name = "--issuer", .takes_value = true },
+    .{ .name = "--session-hours", .takes_value = true },
+    .{ .name = "--session-days", .takes_value = true },
     .{ .name = "--proxy", .takes_value = true },
     .{ .name = "--email-header", .takes_value = true },
     .{ .name = "--user-header", .takes_value = true },
@@ -841,7 +850,7 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         return .{ .api = .{ .common = common, .method = method, .path = words[1], .query = if (words.len == 3) words[2] else "" } };
     }
     if (eql(name, "serve")) {
-        if (try p.allow(&.{ "--root", "--port", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--listen", "--url", "--sign-in", "--user-header", "--email-header", "--proxy", "--issuer" })) |problem| return .{ .misuse = problem };
+        if (try p.allow(&.{ "--root", "--port", "--profile", "--current", "--working", "--offline", "--results", "--implementation", "--implementation-version", "--listen", "--url", "--sign-in", "--user-header", "--email-header", "--proxy", "--issuer", "--session-hours", "--session-days" })) |problem| return .{ .misuse = problem };
         if (words.len > 0) return .{ .misuse = "serve takes no items" };
         const port = if (p.value("--port")) |n| std.fmt.parseInt(u16, n, 10) catch return .{ .misuse = "serve --port: a port's number, as 8080" } else Serve.default_port;
         const sign_in: Serve.SignIn = if (p.value("--sign-in")) |s| std.meta.stringToEnum(Serve.SignIn, s) orelse return .{ .misuse = "serve --sign-in: proxy, forge or oidc" } else .none;
@@ -857,6 +866,9 @@ pub fn parse(arena: std.mem.Allocator, args: []const []const u8) std.mem.Allocat
         if (sign_in == .forge and o.url == null) return .{ .misuse = "serve --sign-in forge: give --url, the address the forge sends people back to" };
         o.issuer = p.value("--issuer");
         if (sign_in == .oidc and (o.url == null or o.issuer == null)) return .{ .misuse = "serve --sign-in oidc: give --issuer, the OpenID Connect provider, and --url, the address it sends people back to" };
+        if (p.value("--session-hours")) |n| o.session_hours = std.fmt.parseInt(u32, n, 10) catch 0;
+        if (p.value("--session-days")) |n| o.session_days = std.fmt.parseInt(u32, n, 10) catch 0;
+        if (o.session_hours == 0 or o.session_days == 0) return .{ .misuse = "serve --session-hours, --session-days: a whole number above 0, as 12" };
         return .{ .serve = o };
     }
     if (eql(name, "import")) {
