@@ -2,10 +2,9 @@
   "name": "skein",
   "displayName": "Skein",
   "description": "Requirements and traceability in Markdown: Skein's language server, the items in a tree, trace and coverage views, and the skein program.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "chasingdaylight",
   "license": "MIT",
-  "preview": true,
   "icon": "icon.png",
   "repository": {
     "type": "git",
@@ -22,7 +21,7 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onStartupFinished",
-    "workspaceContains:.skein/config.toml"
+    "workspaceContains:**/.skein/config.toml"
   ],
   "categories": [
     "Programming Languages",
@@ -86,11 +85,13 @@
       }
     ],
     "views": {
-      "explorer": [
+      "skein": [
         {
           "id": "skein.items",
-          "name": "Skein Items",
-          "when": "skein.project"
+          "name": "Items",
+          "when": "skein.project",
+          "icon": "media/skein.svg",
+          "contextualTitle": "Skein"
         }
       ]
     },
@@ -114,7 +115,8 @@
       {
         "command": "skein.openItem",
         "title": "Go to Item...",
-        "category": "Skein"
+        "category": "Skein",
+        "icon": "$(search)"
       },
       {
         "command": "skein.trace",
@@ -163,8 +165,40 @@
         "category": "Skein"
       },
       {
+        "command": "skein.chooseProject",
+        "title": "Choose Project...",
+        "category": "Skein",
+        "icon": "$(folder-library)"
+      },
+      {
         "command": "skein.pickLinked",
         "title": "Go to a Linked Item...",
+        "category": "Skein"
+      },
+      {
+        "command": "skein.newItemHere",
+        "title": "New Item in This Document...",
+        "category": "Skein",
+        "icon": "$(add)"
+      },
+      {
+        "command": "skein.initProject",
+        "title": "Initialize a Project...",
+        "category": "Skein"
+      },
+      {
+        "command": "skein.showCommands",
+        "title": "Show All Commands...",
+        "category": "Skein"
+      },
+      {
+        "command": "skein.gettingStarted",
+        "title": "Get Started",
+        "category": "Skein"
+      },
+      {
+        "command": "skein.openDocs",
+        "title": "Open the Documentation",
         "category": "Skein"
       }
     ],
@@ -211,8 +245,20 @@
           "when": "false"
         },
         {
+          "command": "skein.chooseProject",
+          "when": "skein.projects"
+        },
+        {
           "command": "skein.pickLinked",
           "when": "false"
+        },
+        {
+          "command": "skein.newItemHere",
+          "when": "skein.project && resourceLangId == markdown"
+        },
+        {
+          "command": "skein.initProject",
+          "when": "workspaceFolderCount > 0"
         }
       ],
       "editor/context": [
@@ -225,11 +271,21 @@
           "command": "skein.editItem",
           "when": "skein.project && resourceScheme == file",
           "group": "navigation@91"
+        },
+        {
+          "command": "skein.newItemHere",
+          "when": "skein.project && resourceLangId == markdown && resourceScheme == file",
+          "group": "navigation@92"
         }
       ],
       "view/title": [
         {
           "command": "skein.newItem",
+          "when": "view == skein.items",
+          "group": "navigation@0"
+        },
+        {
+          "command": "skein.openItem",
           "when": "view == skein.items",
           "group": "navigation@0"
         },
@@ -252,6 +308,11 @@
           "command": "skein.showGraph",
           "when": "view == skein.items",
           "group": "navigation@4"
+        },
+        {
+          "command": "skein.chooseProject",
+          "when": "view == skein.items && skein.projects",
+          "group": "navigation@5"
         }
       ],
       "view/item/context": [
@@ -274,6 +335,52 @@
           "command": "skein.editItem",
           "when": "view == skein.items && viewItem == item",
           "group": "1_skein@3"
+        },
+        {
+          "command": "skein.openItem",
+          "when": "view == skein.items && viewItem == item",
+          "group": "1_skein@0"
+        }
+      ],
+      "editor/title": [
+        {
+          "submenu": "skein.editor",
+          "when": "skein.project && resourceLangId == markdown && resourceScheme == file",
+          "group": "navigation@90"
+        }
+      ],
+      "skein.editor": [
+        {
+          "command": "skein.newItemHere",
+          "group": "1_item@1"
+        },
+        {
+          "command": "skein.editItem",
+          "group": "1_item@2"
+        },
+        {
+          "command": "skein.trace",
+          "group": "1_item@3"
+        },
+        {
+          "command": "skein.openItem",
+          "group": "1_item@4"
+        },
+        {
+          "command": "skein.showCoverage",
+          "group": "2_views@1"
+        },
+        {
+          "command": "skein.showPlan",
+          "group": "2_views@2"
+        },
+        {
+          "command": "skein.showGraph",
+          "group": "2_views@3"
+        },
+        {
+          "command": "skein.showCommands",
+          "group": "3_more@1"
         }
       ]
     },
@@ -324,7 +431,112 @@
           "markdownDescription": "Log the messages between VS Code and the language server in the output channel **Skein Language Server**: none, each message, or each with its content."
         }
       }
-    }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "skein",
+          "title": "Skein",
+          "icon": "media/skein.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "skein.items",
+        "when": "skein.project && !skein.running",
+        "contents": "The Skein language server is not running.\n[Restart the Language Server](command:skein.restartServer)\nIts log is in the output channel Skein Language Server."
+      },
+      {
+        "view": "skein.items",
+        "when": "skein.project && skein.running",
+        "contents": "This project has no items yet. An item is a paragraph of a Markdown document that starts with a marker, such as `%req[ID]`.\n[New Item](command:skein.newItem)\n[Get Started](command:skein.gettingStarted)"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "skein.editor",
+        "label": "Skein",
+        "icon": {
+          "light": "media/skein.svg",
+          "dark": "media/skein-dark.svg"
+        }
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "skein.start",
+        "title": "Get Started with Skein",
+        "description": "Requirements and their traceability in Markdown: write items, see them rendered, trace them, and check their coverage.",
+        "steps": [
+          {
+            "id": "project",
+            "title": "Open or start a project",
+            "description": "A Skein project is a directory with a .skein directory in it. Open one, or start one with a template.\n[Initialize a Project](command:skein.initProject)",
+            "media": {
+              "markdown": "media/walkthrough/project.md"
+            },
+            "completionEvents": [
+              "onContext:skein.project"
+            ]
+          },
+          {
+            "id": "items",
+            "title": "Write an item",
+            "description": "An item is a paragraph or list entry that starts with a marker, such as %req[ID]; %[ID] refers to it.\n[Open the Guide to Writing Items](command:skein.openDocs)",
+            "media": {
+              "markdown": "media/walkthrough/items.md"
+            }
+          },
+          {
+            "id": "preview",
+            "title": "See it rendered",
+            "description": "The Markdown preview shows each item with its ID and status, and references as links.\n[Open the Preview to the Side](command:markdown.showPreviewToSide)",
+            "media": {
+              "markdown": "media/walkthrough/preview.md"
+            },
+            "completionEvents": [
+              "onCommand:markdown.showPreviewToSide"
+            ]
+          },
+          {
+            "id": "itemsView",
+            "title": "Browse the items",
+            "description": "The Skein icon in the activity bar opens the Items view.\n[Show the Items](command:workbench.view.extension.skein)",
+            "media": {
+              "markdown": "media/walkthrough/items-view.md"
+            },
+            "completionEvents": [
+              "onView:skein.items"
+            ]
+          },
+          {
+            "id": "forms",
+            "title": "New and edit items with forms",
+            "description": "A form of the item type's fields, written into the file.\n[New Item](command:skein.newItem)",
+            "media": {
+              "markdown": "media/walkthrough/forms.md"
+            },
+            "completionEvents": [
+              "onCommand:skein.newItem",
+              "onCommand:skein.editItem"
+            ]
+          },
+          {
+            "id": "trace",
+            "title": "Trace, coverage, plan and graph",
+            "description": "What is above and below an item, what is not yet covered, the schedule and the network.\n[Trace an Item](command:skein.trace)\n[Show Coverage](command:skein.showCoverage)",
+            "media": {
+              "markdown": "media/walkthrough/trace.md"
+            },
+            "completionEvents": [
+              "onCommand:skein.trace",
+              "onCommand:skein.showCoverage"
+            ]
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run build",

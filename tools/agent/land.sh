@@ -25,12 +25,12 @@ gh label list --limit 100 --json name -q '.[].name' < /dev/null | grep -qx -- "$
 
 # every place that states the version agrees, as CI checks
 bash .github/workflows/version.sh > /dev/null
-"$Z" fmt --check build build.zig src templates tools
+"$Z" fmt --check build build.zig src templates tools site/gen site/build.zig
 "$Z" build
 "$Z" build test
 ./zig-out/bin/skein check
 npx --no-install markdownlint-cli2 "**/*.md" 2>&1 | tail -1
-npx --no-install cspell --no-progress "**/*.md" ".github/**" "src/**" "build/**" "templates/**" "tools/**" "editors/vscode/src/**" "editors/vscode/test/**" 2>&1 | tail -1
+npx --no-install cspell --no-progress "**/*.md" ".github/**" "src/**" "build/**" "templates/**" "tools/**" "site/gen/**" "site/build.zig" "site/assets/editions.js" "site/assets/explorer.js" "site/assets/skein.js" "site/assets/theme.js" "site/layouts/**" "editors/vscode/src/**" "editors/vscode/test/**" 2>&1 | tail -1
 # the VS Code extension's checks, when it is among what lands
 for path in "$@"; do
   case "$path" in

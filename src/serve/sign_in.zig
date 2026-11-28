@@ -54,10 +54,13 @@ pub const Seen = struct {
     query: []const u8 = "",
     /// whether it would change something (a POST)
     change: bool = false,
+    /// when it came, in seconds: sessions and sign-ins under way end (#303)
+    now: i64 = 0,
 };
 
-/// Who sent the request; null when nobody signed in, or nobody signs in
-pub fn who(setup: Setup, people: *const People, seen: Seen) ?People.User {
+/// Who sent the request; null when nobody signed in, or nobody signs in,
+/// or their session has ended
+pub fn who(setup: Setup, people: *People, seen: Seen) ?People.User {
     switch (setup.mode) {
         .none => return null,
         .proxy => {
@@ -67,7 +70,7 @@ pub fn who(setup: Setup, people: *const People, seen: Seen) ?People.User {
             if (login.len == 0) return null;
             return .{ .login = login, .name = login, .email = if (seen.email) |e| std.mem.trim(u8, e, " ") else login, .provider = "proxy", .subject = login };
         },
-        .forge, .oidc => return people.session(cookieValue(seen.cookie orelse return null) orelse return null),
+        .forge, .oidc => return people.session(cookieValue(seen.cookie orelse return null) orelse return null, seen.now),
     }
 }
 
@@ -79,7 +82,7 @@ pub fn gate(io: Io, arena: std.mem.Allocator, setup: Setup, people: *People, see
         if (std.mem.eql(u8, seen.path, sign_in_path)) {
             const back = try query.param(arena, seen.query, "back") orelse "/";
             const again = std.mem.eql(u8, try query.param(arena, seen.query, "again") orelse "", "1");
-            const state = try people.begin(io, if (std.mem.startsWith(u8, back, "/") and !std.mem.startsWith(u8, back, "//")) back else "/", again);
+            const state = try people.begin(io, if (std.mem.startsWith(u8, back, "/") and !std.mem.startsWith(u8, back, "//")) back else "/", again, seen.now);
             return .{ .status = .found, .body = "", .location = try oauth.authorizeUrl(arena, setup.provider.?, setup.app.?, try backUrl(arena, setup), state, again) };
         }
         if (std.mem.eql(u8, seen.path, back_path)) return try comeBack(io, arena, setup, people, seen);
@@ -96,9 +99,9 @@ pub fn gate(io: Io, arena: std.mem.Allocator, setup: Setup, people: *People, see
 /// and the page they began on
 fn comeBack(io: Io, arena: std.mem.Allocator, setup: Setup, people: *People, seen: Seen) !answer.Answer {
     const state = try query.param(arena, seen.query, "state") orelse "";
-    const pending = people.finish(state) orelse return failed(arena, "this sign-in was not begun here, or was used already; sign in again");
+    const pending = try people.finish(arena, state, seen.now) orelse return failed(arena, "this sign-in was not begun here, was used already, or was begun more than ten minutes ago; sign in again");
     const code = try query.param(arena, seen.query, "code") orelse return failed(arena, "the provider gave no code (was access refused?)");
-    const now = Io.Clock.real.now(io).toSeconds();
+    const now = seen.now;
     return switch (try oauth.exchange(io, arena, setup.provider.?, setup.app.?, try backUrl(arena, setup), code, now)) {
         .failed => |why| failed(arena, why),
         .user => |signed| blk: {
@@ -112,7 +115,7 @@ fn comeBack(io: Io, arena: std.mem.Allocator, setup: Setup, people: *People, see
                 .status = .found,
                 .body = "",
                 .location = pending.page,
-                .set_cookie = try arena.print("{s}={s}; Path=/; HttpOnly; SameSite=Lax{s}", .{ cookie_name, try people.signIn(io, u), if (std.mem.startsWith(u8, setup.url, "https:")) "; Secure" else "" }),
+                .set_cookie = try arena.print("{s}={s}; Path=/; HttpOnly; SameSite=Lax{s}", .{ cookie_name, try people.signIn(io, u, now), if (std.mem.startsWith(u8, setup.url, "https:")) "; Secure" else "" }),
             };
         },
     };

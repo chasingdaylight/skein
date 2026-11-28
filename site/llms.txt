@@ -18,16 +18,27 @@
 ## Documentation
 
 - [Overview](index.md): what Skein is, getting it, where to start
+
+Guides, to learn by doing:
+
 - [Quickstart](quickstart.md): a project from a template, a requirement, a test that cites it, a site, in five minutes
+- [Tutorial: NPR 7150.2D](tutorial-npr7150.md): a new project from the template to its requirements review, step by step
+- [Tutorial: existing code](tutorial-existing-code.md), [Tutorial: planning](tutorial-planning.md)
+- [Examples](examples.md): projects from the `npr7150.2d` and `langspec` templates, and requirements as files, each rendered
+
+Reference, each feature in full:
+
 - [Writing items](writing-items.md): markers, parts, item files, references, citations
-- [The web interface](web.md): skein serve, the site in a browser, editing files and items there
 - [Project files](project-files.md): `.skein/config.toml`, item types, link types, profiles
 - [Commands](commands.md): every command, and the CI job
+- [VS Code](vscode.md): the extension: the Items view, forms, trace, coverage, the plan and the graph, and where to find each
+- [Reviewing and approvals](reviewing.md), [The web interface](web.md) (skein serve, editing in a browser), [The forge](forge.md), [Other repositories](repositories.md), [Test results](results.md)
 - [Templates](templates.md): the built-in templates, their options, what they bring along
-- [Test results](results.md), [Reviewing](reviewing.md), [The forge](forge.md), [Importing](importing.md)
-- [Tutorial: NPR 7150.2D](tutorial-npr7150.md): a new project from the template to its requirements review, step by step
-- [Examples](examples.md): projects from the `npr7150.2d` and `langspec` templates, and requirements as files, each rendered
-- [Tutorial: existing code](tutorial-existing-code.md), [Tutorial: planning](tutorial-planning.md)
+- [Importing](importing.md)
+
+Skein itself:
+
+- [Design](design.md): how Skein is built, and why
 - [Requirements](requirements/): Skein's own requirements, kept with Skein
 
 ## Tools for agents

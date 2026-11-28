@@ -53,6 +53,11 @@ test "the site's pages, rendered again when the files change" {
     const before = try answer.get(a, &s, answer.stamp_path);
     try testing.expectEqualStrings(&s.stamp, before.body);
     try write(dir, "spec/lex/comments.md", "# Comments\n\n%rule[lex.comment] A comment, changed.\n");
+    // the asks of one second share one look at the files
+    s.checked_at = std.Io.Clock.real.now(testing.io).toSeconds();
+    try testing.expectEqualStrings(before.body, (try answer.get(a, &s, answer.stamp_path)).body);
+    // and the next second looks again
+    s.checked_at -= 1;
     const after = try answer.get(a, &s, answer.stamp_path);
     try testing.expect(!std.mem.eql(u8, before.body, after.body));
     try has((try answer.get(a, &s, "/spec/lex/comments.html")).body, "A comment, changed.");

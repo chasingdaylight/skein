@@ -1,5 +1,5 @@
 // The tree of items in the side bar (the Explorer's "Skein Items"), from
-// the server's `skein/items`.
+// the server's `skein/items`, of the current project (projects.ts).
 
 import * as vscode from "vscode";
 import { Server } from "./client";

@@ -2,6 +2,8 @@
 
 From nothing to a checked project with a requirement, a test that cites it and a site of its documents, in about five minutes. The example is software under NASA's NPR 7150.2D, from Skein's `npr7150.2d` template; the same steps work for any [template](templates.md), or none. Every command was run as shown; your paths and fingerprints will differ.
 
+Each step is shown on the command line, and then in VS Code (**In VS Code**), with the extension; use either, or both. [VS Code](vscode.md) has everything the extension does.
+
 ## 1. Get Skein
 
 Download the package for your system from the [releases](https://github.com/chasingdaylight/skein/releases): `skein` is one program with nothing else to install. Put it on your `PATH`, then:
@@ -11,7 +13,7 @@ $ skein version
 0.2.0
 ```
 
-In VS Code, the extension `chasingdaylight.skein` brings the program with it, on the `PATH` of its terminals, and highlights markers and references in Markdown.
+**In VS Code:** install the extension **Skein** (`chasingdaylight.skein`) from the Extensions view. It brings the program with it, on the `PATH` of VS Code's terminals, so every command below also works there.
 
 ## 2. Start a project
 
@@ -37,6 +39,8 @@ What it wrote:
 
 For a programming language's specification, `skein init --template langspec` starts one instead: a charter, a first chapter, a glossary and a coverage page.
 
+**In VS Code:** open the repository's folder and run **Skein: Initialize a Project...** from the Command Palette (`Ctrl+Shift+P`), and choose `npr7150.2d` from the list of templates; it runs `skein init --template npr7150.2d` and shows what it wrote. To give options as you start, as `--option class=C` above, run the command in VS Code's terminal instead. The Skein icon then appears in the activity bar, and **Skein: Get Started** walks through what follows.
+
 ## 3. Check it
 
 ```text
@@ -45,6 +49,13 @@ skein: rover: no problems (848 items of 16 types, 11 link types, 2 profiles, 0 c
 ```
 
 Most of those items are the standards' requirements, read-only. Run `skein check` after every change; it names the file and line of each problem.
+
+**In VS Code:** there is nothing to run. Each time a file is saved, the Problems panel shows what `skein check` reports, on its line; here a reference to an item there is not:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/vscode/problems-dark.png">
+  <img src="img/vscode/problems-light.png" alt="A reference to SRS-099, which does not exist, underlined in docs/srs.md and listed in the Problems panel.">
+</picture>
 
 ## 4. Write a requirement
 
@@ -57,6 +68,27 @@ Requirements are paragraphs of Markdown that start with a marker. In `docs/srs.m
 ```
 
 The rest of the document is narrative, which explains. [Writing items](writing-items.md) has everything a marker can say.
+
+**In VS Code:** open `docs/srs.md` from the Skein view (the Skein icon in the activity bar) and type the markers: the editor completes the item types, categories, statuses and link types as you go.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/vscode/completion-dark.png">
+  <img src="img/vscode/completion-light.png" alt="Completion after %requirement[SRS-003: the link types, categories and statuses a requirement may have.">
+</picture>
+
+Or use the **Skein** menu on the editor's title bar, **New Item in This Document...**: a form of the requirement's fields, with the next free ID, which writes the marker for you.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/vscode/form-new-dark.png">
+  <img src="img/vscode/form-new-light.png" alt="The New item form beside docs/srs.md: type requirement, document docs/srs.md, ID the next free number.">
+</picture>
+
+Save, and **Open Preview to the Side** (the button at the top right of the editor) shows the document as Skein renders it, each requirement with its ID and category:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/vscode/preview-dark.png">
+  <img src="img/vscode/preview-light.png" alt="docs/srs.md beside its preview, SRS-001 and SRS-002 shown with their IDs and categories.">
+</picture>
 
 ## 5. Cite it from a test
 
@@ -98,6 +130,13 @@ Below (all that rests on it): TST-001
 
 (`TST-001` is the example procedure in `docs/test-procedures.md`, to replace in turn.)
 
+**In VS Code:** above each requirement, a code lens lists its links (`verifies from TST-001`) and **Trace**, which opens the same trace beside the editor; its links open the items and the test.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/vscode/trace-dark.png">
+  <img src="img/vscode/trace-light.png" alt="The trace of SRS-001 beside docs/srs.md: verified by TST-001, cited by tests/test_drive.c line 3.">
+</picture>
+
 ## 6. See what is missing
 
 ```text
@@ -127,6 +166,13 @@ verified as their method requires:
 
 (The lists of items without a link are cut here.) A class C project accounts for 88 of the NPR's requirements in its mapping matrix, and its software assurance for as many tasks; `SRS-002` has no test yet, and no requirement has a passing test result. Each line is work to do, and `skein coverage` counts it down. [Test results](results.md) says how the results of a test run come in.
 
+**In VS Code:** the status bar shows the share covered; **Show Coverage**, on the Items view's title bar or the **Skein** menu, opens the page, whose IDs open the items.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/vscode/coverage-dark.png">
+  <img src="img/vscode/coverage-light.png" alt="The coverage of rover: verifies links to requirements, 1 of 2; the SWE and SA items without links listed.">
+</picture>
+
 ## 7. Publish it
 
 ```text
@@ -140,6 +186,7 @@ Commit `.skein/`, `docs/`, `tests/`, `AGENTS.md` and `.github/`. On GitHub, the 
 
 ## Where next
 
+- [VS Code](vscode.md): every feature of the extension, and where to find it.
 - [Tutorial: a new project under NPR 7150.2D](tutorial-npr7150.md): this project taken to its requirements review, step by step.
 - [Examples](examples.md): the project that tutorial ends with, a language specification, and more, each rendered.
 - [Tutorial: Skein in a project that has code](tutorial-existing-code.md): item types written by hand, for an existing program.

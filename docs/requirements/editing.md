@@ -56,10 +56,13 @@ For an item file, the link shall be added to its front matter: to the key's arra
 ## The language server
 
 %req[lsp.lifecycle]
-`skein lsp` shall serve the Language Server Protocol on standard input and output: it answers `initialize` with what it can do, refuses requests before that, answers a request it does not know with an error and no more, and ends with status 0 after `shutdown` and `exit`. The project is the one in the directory the editor has open.
+`skein lsp` shall serve the Language Server Protocol on standard input and output: it answers `initialize` with what it can do, refuses requests before that, answers a request it does not know with an error and no more, and ends with status 0 after `shutdown` and `exit`. The projects it serves are those of %[lsp.projects].
+
+%req[lsp.projects]
+The server shall serve every project of the editor's folders: the project a folder is in, and the projects inside it, four levels down (not entering directories whose names start with a dot, nor build outputs); and the project of each document opened, the nearest `.skein/` above it, from then on. A request about a document is about the document's project; one that names no document is about the project it names (`project`, the URI of its root), else the first project found. `skein/projects` shall give each project's name and the URI of its root. When the editor adds or removes folders, the projects are found again. (emanspeaks, 2026-11-27, #307.)
 
 %req[lsp.diagnostics]
-The server shall publish the problems that `skein check` reports as diagnostics, each on its file and line, its warnings as warnings: when it starts, and whenever a document is opened or saved or the editor says files have changed. When a file that had problems has none, its diagnostics are published as empty. The project is read from the files, so a change counts once it is saved.
+The server shall publish the problems that `skein check` reports as diagnostics, for every project it serves, each on its file and line, its warnings as warnings: when it starts, and whenever a document is opened or saved or the editor says files have changed. When a file that had problems has none, its diagnostics are published as empty. The project is read from the files, so a change counts once it is saved.
 
 %req[lsp.definition]
 On the ID of an item, wherever it is written (a reference, a link, a citation in code or tests, or plain text), "go to definition" shall lead to the marker or the file that declares the item. On a marker that names a part by a leading dot, it leads to that part. On `name:id`, it leads into the checkout of that repository, when it has one on disk.
@@ -108,14 +111,17 @@ A VS Code extension on the language server shall be Skein's graphical interface,
 %req[vscode.server]
 The VS Code extension shall start `skein lsp` itself, the program it carries or the one `skein.path` names, and restart it when that setting changes or on the command; diagnostics, go to definition, references, hover, completion and rename then work with nothing to configure.
 
+%req[vscode.projects]
+The extension shall work in a workspace any of whose folders is in a project or has one inside it, not only one whose first folder is a project. Where the workspace has several projects, the views, the status bar and the commands are about the project of the active editor's file, else the one last chosen with **Skein: Choose Project...** (the command palette, the Items view's title bar), and the Items view names it. (emanspeaks, 2026-11-27, #307.)
+
 %req[vscode.tree]
-The extension shall show the items in a tree in the sidebar, by source and file, with each item's ID, type and status and its parts under it; choosing an item opens it at its marker. The tree is read again when a file of the project is saved, created or deleted.
+The extension shall show the items in a tree in a Skein view of the activity bar, by source and file, with each item's ID, type and status and its parts under it; choosing an item opens it at its marker. The tree is read again when a file of the project is saved, created or deleted.
 
 %req[vscode.views]
 "Trace" on an item (a code lens, the editor's or the tree's context menu, or the command palette) shall open its trace in a view; "Show Coverage" opens the coverage page. The views take their colors and fonts from VS Code's theme, and their links open the items and places in the editor.
 
 %req[vscode.status]
-The status bar shall show how much of what is expected is covered, and open the coverage view when it is clicked.
+The status bar shall show how much of what is expected is covered, with the project's name where the workspace has several, and open a list of the extension's commands, **Show Coverage** first, when it is clicked. (emanspeaks, 2026-11-27, #308.)
 
 %req[vscode.planning]
 "Show Plan" shall open the planning view: a Gantt chart of the schedule, with the critical path, the links between items, the milestones and the days off, whose bars are dragged to move an item or, by their right end, to change its length; and a board with a column for each status, whose cards are dragged from one to another. Each drag is written into the item's file (`lsp.planning`), and the view shows the schedule that follows; a change that is refused is said, and the view shows what is there. (Design, sections 9 and 10.3.)
@@ -128,6 +134,9 @@ VS Code's Markdown preview shall show a saved document of the project as `skein 
 
 %req[vscode.forms]
 "New Item" (the command palette, the Items view's title bar) and "Edit Item" (the editor's and the tree's context menus) shall open a form of an item's type, ID (for a new one; empty for the next number of a numbered type), category, status, verification method, attributes (a choice where the attribute has values, a number, a date) and links (with the items they may point to offered), and, for a new item, the document it goes in and its text. A required attribute left empty, and a new item with no ID or place, are said before anything is sent; saving writes the form (`lsp.forms`), says why when it is refused, and opens the item.
+
+%req[vscode.discoverable]
+The extension's features shall be found without knowing their commands (emanspeaks, 2026-11-27, #308): the Items view in a view container of its own in the activity bar, with **New Item**, **Go to Item**, **Show Coverage**, **Show Plan**, **Show Graph** and **Refresh Items** on its title bar, and while it is empty, what to do; a **Skein** menu on the title bar of a Markdown editor in a project, with **New Item in This Document** (a form whose document is the editor's, of the type most of its items are of), **Edit Item**, **Trace**, **Go to Item**, the views and the list of all commands; **Initialize a Project**, which runs `skein init` in a folder of the workspace with a template chosen from those `skein template list` gives, or none; and a Getting Started walkthrough of starting a project, writing an item, the preview, the Items view, the forms and the views.
 
 %req[vscode.commands]
 Every action of the extension shall be a command in the command palette, and on the context menus where it belongs; its settings are under `skein.*`, each with a description.

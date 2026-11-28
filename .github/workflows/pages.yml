@@ -1,14 +1,13 @@
 # Publishes the documentation site with GitHub Pages, at
 # skein.chasingdaylight.dev: docs/, with skein's own requirements rendered by
-# skein (tools/site.sh), turned into pages by GitHub Pages' Jekyll until skein
-# renders HTML itself.
+# skein, built with Zine by site.yml (tools/site.sh; #322).
 #
 # The site has an edition of each earlier release under vX.Y.Z/, built from
 # its tag, and lists them on every page (#260; tools/site.sh).
 #
 # Runs on every push to main, and by hand (Actions > Documentation site > Run
 # workflow). A mirror with its own domain builds the same site from this
-# repository with the same script; see docs/design.md, section 8.
+# repository with the same workflow (site.yml); see docs/design.md, section 8.
 name: Documentation site
 
 on:
@@ -34,44 +33,12 @@ defaults:
   run:
     shell: bash
 
-env:
-  ZIG_VERSION: 0.17.1
-
 jobs:
   build:
     name: Build the site
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: randyos-org/setup-zig@node24  # v2.2.1 on Node.js 24, until upstream releases it
-        with:
-          version: ${{ env.ZIG_VERSION }}
-
-      - name: Build skein
-        run: zig build
-
-      - name: Put the site's source together
-        run: bash tools/site.sh .site/src
-
-      - name: Build the pages
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: .site/src
-          destination: ./_site
-
-      # the site is served under more than one domain: no page may name one
-      - name: No page names a domain of the site
-        run: |
-          if grep -rIl -e 'chasingdaylight\.dev' -e 'randyeckman\.com' _site; then
-            echo "::error::these pages name a domain the site is served under"
-            exit 1
-          fi
-
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: ./_site
+    uses: ./.github/workflows/site.yml
+    with:
+      ref: ${{ github.sha }}
 
   deploy:
     name: Publish

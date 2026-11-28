@@ -16,7 +16,7 @@ const shown = 3;
 
 pub fn codeLens(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server.Error!void {
     const p = Server.parse(protocol.TextDocumentParams, a, params) orelse return s.respond(a, id, null);
-    var ws = s.open(a) orelse return s.respond(a, id, null);
+    var ws = s.open(a, params) orelse return s.respond(a, id, null);
     defer ws.close();
     if (!ws.items_read) return s.respond(a, id, null);
     const file = try s.fileOf(a, &ws, p.textDocument.uri) orelse return s.respond(a, id, null);

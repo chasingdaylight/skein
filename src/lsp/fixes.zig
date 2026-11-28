@@ -20,7 +20,7 @@ pub fn codeAction(s: *Server, a: Allocator, id: json.Value, params: json.Value) 
     const uri = Server.field(Server.field(params, "textDocument"), "uri");
     const diagnostics = Server.field(Server.field(params, "context"), "diagnostics");
     if (uri != .string or diagnostics != .array) return s.respond(a, id, null);
-    var ws = s.open(a) orelse return s.respond(a, id, null);
+    var ws = s.open(a, params) orelse return s.respond(a, id, null);
     defer ws.close();
     const file = try s.fileOf(a, &ws, uri.string) orelse return s.respond(a, id, null);
     const text = s.textOf(a, &ws, uri.string, file) orelse return s.respond(a, id, null);

@@ -115,3 +115,18 @@ export function toSave(form: Form, v: Values): Record<string, unknown> {
     document: form.item ? "" : v.document,
   };
 }
+
+/** The type most of the items in `file` (from the project's root) are of, for a new item there */
+export function typeOfDocument(items: { file: string; type: string }[], file: string | undefined): string | undefined {
+  const count = new Map<string, number>();
+  for (const i of items) if (i.file === file) count.set(i.type, (count.get(i.type) ?? 0) + 1);
+  let best: string | undefined;
+  for (const [type, n] of count) if (!best || n > count.get(best)!) best = type;
+  return best;
+}
+
+/** The form with `file` (from the project's root) first among the documents, where it is one of them */
+export function preferDocument(form: Form, file: string | undefined): Form {
+  if (!file || !form.documents.includes(file)) return form;
+  return { ...form, documents: [file, ...form.documents.filter((d) => d !== file)] };
+}

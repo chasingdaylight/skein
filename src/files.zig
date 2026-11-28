@@ -33,7 +33,9 @@ pub fn list(io: Io, arena: std.mem.Allocator, root: Io.Dir, dir: []const u8, suf
     return out.items;
 }
 
-fn skip(name: []const u8) bool {
+/// Whether a directory named `name` is left out: a build output, a cache, or
+/// hidden
+pub fn skip(name: []const u8) bool {
     if (name.len > 0 and name[0] == '.') return true;
     for (skipped) |s| {
         if (std.mem.eql(u8, name, s)) return true;

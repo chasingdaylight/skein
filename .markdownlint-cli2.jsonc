@@ -3,6 +3,10 @@
     ".site/**",
     "**/node_modules/**",
     "zig-pkg/**",
+    "site/zig-pkg/**",
+    "site/.zig-cache/**",
+    "site/content/**",
+    "site/assets/mermaid.min.js",
     ".zig-cache/**",
     "zig-out/**",
   ]

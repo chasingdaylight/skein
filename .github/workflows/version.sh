@@ -12,7 +12,10 @@ zon=build.zig.zon
 pkg=editors/vscode/package.json
 lock=editors/vscode/package-lock.json
 log=editors/vscode/CHANGELOG.md
-count=5
+# the action's examples of its use, at the version released
+action=action.yml
+ci_doc=docs/commands.md
+count=7
 
 # places: one "FILE: VERSION" line for each place that states the version
 places() {
@@ -22,6 +25,8 @@ places() {
   sed -nE '/^ {2,6}"name": "skein",$/{n;s/^ +"version": "([^"]+)",$/\1/p}' "$lock" | sed "s|^|$lock: |"
   # the first section: the version being made, or on main the one released
   sed -nE '/^## /{s/^## ([^ ]+)( \(unreleased\))?$/\1/p;q}' "$log" | sed "s|^|$log: |"
+  sed -nE 's|^#   - uses: chasingdaylight/skein@v([^ ]+)$|\1|p' "$action" | sed "s|^|$action: |"
+  sed -nE 's|^      - uses: chasingdaylight/skein@v([^ ]+)$|\1|p' "$ci_doc" | sed "s|^|$ci_doc: |"
 }
 
 check() {
@@ -43,6 +48,8 @@ set_version() {
   sed -i -E "s/^(    \.version = \")[^\"]+(\",)$/\1$next\2/" "$zon"
   sed -i -E "s/^(  \"version\": \")[^\"]+(\",)$/\1$next\2/" "$pkg"
   sed -i -E "/^ {2,6}\"name\": \"skein\",$/{n;s/^( +\"version\": \")[^\"]+(\",)$/\1$next\2/}" "$lock"
+  sed -i -E "s|^(#   - uses: chasingdaylight/skein@v)[^ ]+$|\1$next|" "$action"
+  sed -i -E "s|^(      - uses: chasingdaylight/skein@v)[^ ]+$|\1$next|" "$ci_doc"
   # a section for NEXT above the others, which are then released
   if [ "$(grep -m1 '^## ' "$log")" != "## $next (unreleased)" ]; then
     { printf '# Changelog\n\n## %s (unreleased)\n\n' "$next"; tail -n +3 "$log" | sed -E 's/^(## .*) \(unreleased\)$/\1/'; } > "$log.new"

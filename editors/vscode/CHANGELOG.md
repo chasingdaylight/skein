@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.1 (unreleased)
+
+- A release, no longer a pre-release or a preview: the Marketplace and Open VSX offer it to everyone (emanspeaks, 2026-11-27).
+- In a workspace of several folders, or with a project inside a folder rather than at its top, the extension starts and serves every project: each file from its own project (the Markdown preview, the problems, hover and the rest), and the views from the project of the active editor; **Skein: Choose Project...** picks another (#307).
+- The features are easier to find (#308): the Items view is in a Skein view of the activity bar of its own, with **Go to Item** on its title bar and a note on what to do while it is empty; a **Skein** menu on the title bar of a Markdown editor (New Item in This Document, Edit Item, Trace, Go to Item, Coverage, Plan, Graph); the status bar's coverage opens a list of all of Skein's commands; **Skein: Initialize a Project...** runs `skein init` with a template chosen from a list; and **Skein: Get Started** is a walkthrough.
+- **New Item in This Document** starts on the type of the items already in the document, and the ID field of a type that is not numbered no longer suggests `lex.comment.line` (#310).
+
+## 0.2.0
 
 - The `skein` program in the Windows and macOS packages is signed: `skein.exe` with an Authenticode signature, the macOS `skein` with a Developer ID and notarized by Apple.
 

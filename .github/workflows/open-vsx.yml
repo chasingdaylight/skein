@@ -10,10 +10,9 @@
 # release; it can also be run by hand (Actions > Publish to Open VSX > Run
 # workflow, on main) to publish, or finish publishing, any released version.
 #
-# Until the language server is in the extension, every version is a
-# pre-release. The package is marked so when it is made (`vsce package
-# --pre-release`), which is what Open VSX reads: ovsx ignores `--pre-release`
-# for a packaged VSIX, so it is not passed.
+# From v0.2.1 every version is a release, not a pre-release (emanspeaks,
+# 2026-11-27). Open VSX reads that from the package as it was made (`vsce
+# package`, without `--pre-release`).
 name: Publish to Open VSX
 
 on:

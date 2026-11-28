@@ -229,7 +229,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
 
       - name: zig fmt
-        run: zig fmt --check build build.zig src templates tools
+        run: zig fmt --check build build.zig src templates tools site/gen site/build.zig
 
       - name: Markdown
         run: npx --yes markdownlint-cli2@0.24.2 "**/*.md"
@@ -691,8 +691,8 @@ jobs:
       # One package per platform, each with the skein built for it in bin/,
       # and the universal one, without a program, for the platforms that
       # have none. Alpine takes the Linux program, which is static. They are
-      # pre-releases; the mark is set here, since the registries read it
-      # from the package. The extension's code is bundled into
+      # releases, not pre-releases, from v0.2.1 (emanspeaks, 2026-11-27): the
+      # registries read that from the package. The extension's code is bundled into
       # dist/extension.js (vscode:prepublish), so no node_modules go in.
       - name: The VS Code extension
         working-directory: editors/vscode
@@ -704,7 +704,7 @@ jobs:
             mkdir bin
             cp "$GITHUB_WORKSPACE/out/skein-v$VERSION-$target/bin/"skein* bin/
             rm -f bin/*.pdb
-            vsce package --pre-release --target "$platform" \
+            vsce package --target "$platform" \
               --out "$GITHUB_WORKSPACE/dist/skein-vscode-v$VERSION-$platform.vsix"
           done << 'EOF'
           win32-x64 x86_64-windows
@@ -717,7 +717,7 @@ jobs:
           darwin-arm64 aarch64-macos
           EOF
           rm -rf bin
-          vsce package --pre-release \
+          vsce package \
             --out "$GITHUB_WORKSPACE/dist/skein-vscode-v$VERSION-universal.vsix"
           ls -l "$GITHUB_WORKSPACE"/dist/*.vsix
 
@@ -787,6 +787,8 @@ jobs:
       # the attestations of the release files
       id-token: write
       attestations: write
+      # to close the release's milestone
+      issues: write
     env:
       VERSION: ${{ needs.version.outputs.version }}
       SHA: ${{ needs.version.outputs.sha }}
@@ -846,8 +848,31 @@ jobs:
           name: skein v${{ needs.version.outputs.version }}
           files: dist/*
           generate_release_notes: true
-          # 0.x: everything may still change
-          prerelease: ${{ startsWith(needs.version.outputs.version, '0.') }}
+          # a full release, the latest, 0.x included (emanspeaks, 2026-11-27)
+          prerelease: false
+          make_latest: true
+
+      # The release's milestone is done with it
+      - name: Close the milestone v${{ env.VERSION }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          number=$(gh api "repos/$GITHUB_REPOSITORY/milestones?state=open&per_page=100" --jq ".[] | select(.title == \"v$VERSION\") | .number")
+          if [ -n "$number" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/milestones/$number" -f state=closed > /dev/null
+          else
+            echo "no open milestone v$VERSION"
+          fi
+
+      # The Marketplace lists the action's release only when it is edited
+      # on GitHub with its box ticked: GitHub has no API for it
+      - name: What is left to do by hand
+        run: |
+          {
+            echo "### List the action in the GitHub Marketplace"
+            echo
+            echo "Edit [v$VERSION]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/edit/v$VERSION), tick **Publish this Action to the GitHub Marketplace**, and update it."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # The next version is begun on dev: main keeps the version it released. A
   # separate job, so that a push dev refuses does not stop the publishing.

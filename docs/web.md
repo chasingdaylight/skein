@@ -63,10 +63,10 @@ The site `skein render --format html` writes can edit too, with no server at all
 $ zig build wasm                     # or take skein-vVERSION-wasm32-wasi.wasm from a release
 $ skein render --format html --edit --wasm zig-out/web/skein.wasm --out site
 skein: 40 pages rendered to site
-skein: the pages edit 52 files, with skein for WebAssembly
+skein: the pages edit 39 files (649.7 KB, in _skein/files.json), with skein for WebAssembly
 ```
 
-The site then carries, under `_skein/`, the WebAssembly module, the project's text files that `check` reads, and the scripts that run skein over them in the page. Each page offers the same **Edit this file**, **edit** by each item, and **New item** as `skein serve`'s. The problems are checked as you type, by skein in the page.
+The site then carries, under `_skein/`, the WebAssembly module, the project's text files that `check` reads (its configuration, its documents' Markdown, the files its citation sets read, its results; not the rest of the repository), and the scripts that run skein over them in the page. Each page offers the same **Edit this file**, **edit** by each item, and **New item** as `skein serve`'s. The problems are checked as you type, by skein in the page.
 
 A save is kept in the browser, not on the server that serves the files. A box at the bottom left lists the changed files, each a link to download it, and **Discard them** forgets them. The pages are not rendered again, so a page shows the files as they were rendered.
 
@@ -110,8 +110,8 @@ skein serve --listen 0.0.0.0 --url https://reqs.example.com --sign-in proxy --pr
 | `--listen ADDR` | The address it listens on; one other than this computer's own needs `--sign-in` and `--url`. |
 | `--url URL` | The address people reach it at, behind the proxy: requests for that host are answered, and the forge sends people back to it. |
 | `--sign-in proxy` | A reverse proxy in front (one that signs people in to the organization's single sign-on, such as oauth2-proxy) names the person in a header, `X-Forwarded-User` (`--user-header`), with their email in `X-Forwarded-Email` (`--email-header`). The header is believed only from the proxy's addresses, `--proxy IP`, by default this computer's. The proxy also gives HTTPS, which `skein serve` does not. |
-| `--sign-in forge` | People sign in with the project's forge (`[forge]`): GitHub, GitLab or Forgejo, through an OAuth app made there, whose callback is `URL/_skein/oauth`. Its id and secret are in `SKEIN_OAUTH_CLIENT_ID` and `SKEIN_OAUTH_CLIENT_SECRET`. A session lasts while the server runs. |
-| `--sign-in oidc --issuer URL` | People sign in with an OpenID Connect provider: an organization's single sign-on, or GitLab. Its discovery document gives the rest, and the app's id and secret are in the same variables. It can be asked to make the person sign in again, for an approval that must be signed. |
+| `--sign-in forge` | People sign in with the project's forge (`[forge]`): GitHub, GitLab or Forgejo, through an OAuth app made there, whose callback is `URL/_skein/oauth`. Its id and secret are in `SKEIN_OAUTH_CLIENT_ID` and `SKEIN_OAUTH_CLIENT_SECRET`. A session ends when it has not been used for 12 hours, and 7 days after its sign-in (`--session-hours N` and `--session-days N` give others); then the person signs in again. |
+| `--sign-in oidc --issuer URL` | People sign in with an OpenID Connect provider: an organization's single sign-on, or GitLab. Its discovery document gives the rest, and the app's id and secret are in the same variables. It can be asked to make the person sign in again, for an approval that must be signed. Its sessions end as those of `--sign-in forge` do. |
 
 SAML single sign-on is reached through one of these rather than by `skein serve` itself: an identity service that speaks both (Keycloak, Okta, Entra ID and most others) serves `--sign-in oidc` and passes a sign-in again on to the SAML provider as its `ForceAuthn`; or a reverse proxy that speaks SAML (Shibboleth's, `mod_auth_mellon`) serves `--sign-in proxy`, without a sign-in again for approvals. Reading SAML's assertions in `skein serve` would mean verifying XML signatures itself, which these leave to software made for it.
 

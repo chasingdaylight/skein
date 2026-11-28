@@ -54,8 +54,8 @@ fn calendarOf(s: *Server, a: Allocator, ws: *const Workspace) Allocator.Error!*c
     return c;
 }
 
-pub fn scheduleOf(s: *Server, a: Allocator, id: json.Value) Server.Error!void {
-    var ws = s.open(a) orelse return s.respond(a, id, null);
+pub fn scheduleOf(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server.Error!void {
+    var ws = s.open(a, params) orelse return s.respond(a, id, null);
     defer ws.close();
     if (!ws.items_read) return s.respond(a, id, null);
     const calendar = try calendarOf(s, a, &ws);
@@ -111,7 +111,7 @@ const PlanParams = struct {
 
 pub fn plan(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server.Error!void {
     const p = Server.parse(PlanParams, a, params) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein/plan: no id");
-    var ws = s.open(a) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
+    var ws = s.open(a, params) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
     defer ws.close();
     if (!ws.items_read) return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: the project has problems that stop it being read");
     const item = ws.graph.find(p.id) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, try a.print("skein: there is no item '{s}'", .{p.id}));

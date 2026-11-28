@@ -9,22 +9,29 @@ import * as vscode from "vscode";
 import { Server } from "./client";
 import * as commands from "./commands";
 import { agentsArgs } from "./program";
+import { ProjectInfo } from "./projectmodel";
 import { programOf, run } from "./run";
 
-export function register(context: vscode.ExtensionContext, server: Server): void {
+/** Registers the agents' tools; `projects` gives the projects of the workspace, and `projectsChanged` fires when they change */
+export function register(context: vscode.ExtensionContext, server: Server, projects: () => ProjectInfo[], projectsChanged: vscode.Event<void>): void {
   const changed = new vscode.EventEmitter<void>();
+  context.subscriptions.push(projectsChanged(() => changed.fire()));
   context.subscriptions.push(
     changed,
     vscode.lm.registerMcpServerDefinitionProvider("skein.mcp", {
       onDidChangeMcpServerDefinitions: changed.event,
       provideMcpServerDefinitions: () => {
         const settings = vscode.workspace.getConfiguration("skein");
-        const folder = vscode.workspace.workspaceFolders?.[0];
         const program = programOf(context);
-        if (!settings.get<boolean>("mcp.enabled", true) || !vscode.workspace.isTrusted || !folder || !program) return [];
-        const definition = new vscode.McpStdioServerDefinition("Skein", program, ["mcp"], {}, context.extension.packageJSON.version as string);
-        definition.cwd = folder.uri;
-        return [definition];
+        if (!settings.get<boolean>("mcp.enabled", true) || !vscode.workspace.isTrusted || !program) return [];
+        // one for each project, else one in the first folder
+        const roots = projects().length > 0 ? projects() : (vscode.workspace.workspaceFolders ?? []).slice(0, 1).map((f) => ({ name: "", uri: f.uri.toString() }));
+        return roots.map((p) => {
+          const label = roots.length > 1 && p.name ? `Skein: ${p.name}` : "Skein";
+          const definition = new vscode.McpStdioServerDefinition(label, program, ["mcp"], {}, context.extension.packageJSON.version as string);
+          definition.cwd = vscode.Uri.parse(p.uri);
+          return definition;
+        });
       },
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {

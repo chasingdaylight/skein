@@ -4,6 +4,7 @@
 
 import * as vscode from "vscode";
 import { Server } from "./client";
+import { Form, preferDocument } from "./formmodel";
 import { formPage, nonce } from "./page";
 
 type Message = { kind: string; type?: string; save?: Record<string, unknown> };
@@ -15,10 +16,11 @@ export class FormView {
     private readonly saved: () => void,
   ) {}
 
-  /** A form for the item `id`, or for a new item of `type` (the first type when none) */
-  async show(id?: string, type?: string): Promise<void> {
-    const first = await this.server.request<object | null>("skein/form", id ? { id } : type ? { type } : {});
-    if (!first) return;
+  /** A form for the item `id`, or for a new item of `type` (the first type when none), in the document `here` when it is one of the project's */
+  async show(id?: string, type?: string, here?: string): Promise<void> {
+    const asked = await this.server.request<Form | null>("skein/form", id ? { id } : type ? { type } : {});
+    if (!asked) return;
+    const first = preferDocument(asked, here);
     const dist = vscode.Uri.joinPath(this.context.extensionUri, "dist");
     const panel = vscode.window.createWebviewPanel("skein.form", id ? `Edit ${id}` : "New Skein item", vscode.ViewColumn.Beside, {
       enableScripts: true,
@@ -33,9 +35,9 @@ export class FormView {
           await panel.webview.postMessage({ kind: "form", form });
           return;
         case "type": {
-          const next = await this.server.request<object | null>("skein/form", { type: m.type });
+          const next = await this.server.request<Form | null>("skein/form", { type: m.type });
           if (next) {
-            form = next;
+            form = preferDocument(next, here);
             await panel.webview.postMessage({ kind: "form", form });
           }
           return;
@@ -64,7 +66,7 @@ export class FormView {
     const c = this.server.running;
     if (!c) return "skein: the language server is not running";
     try {
-      return await c.sendRequest<{ uri: string; line: number }>("skein/saveItem", save);
+      return await c.sendRequest<{ uri: string; line: number }>("skein/saveItem", this.server.withProject(save));
     } catch (err) {
       return err && typeof err === "object" && "message" in err ? String((err as { message: unknown }).message) : String(err);
     }

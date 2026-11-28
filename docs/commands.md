@@ -574,7 +574,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: chasingdaylight/skein@v0.2.0
+      - uses: chasingdaylight/skein@v0.2.1
         with:
           root: .        # the project's directory
 ```

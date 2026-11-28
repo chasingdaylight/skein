@@ -2,7 +2,7 @@
 # collects its delivered documents as PDFs, with the coverage, in one archive,
 # engineering-docs.zip, kept as an artifact of the run.
 #
-#   - uses: chasingdaylight/skein@v0.2.0
+#   - uses: chasingdaylight/skein@v0.2.1
 #     with:
 #       root: .          # the project, from the repository's root
 #
@@ -23,7 +23,7 @@ inputs:
     description: The project's directory, from the repository's root
     default: "."
   version:
-    description: The Skein release to use (0.2.0); the action's own tag when empty, else the latest
+    description: The Skein release to use, by its number (as 1.2.3); the action's own tag when empty, else the latest
     default: ""
   skein:
     description: A skein program to use in place of a release (a path), as Skein's own CI does

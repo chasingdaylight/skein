@@ -16,6 +16,8 @@ export class Views {
     private readonly server: Server,
     private readonly open: (id: string) => Promise<void>,
     private readonly extensionUri: vscode.Uri,
+    /** the root of the current project, which the paths of links are from */
+    private readonly root: () => vscode.Uri | undefined,
   ) {}
 
   /** The planning view: a Gantt chart and a board whose drags are written into the items */
@@ -71,6 +73,11 @@ export class Views {
     if (this.plan) await this.sendPlan();
   }
 
+  /** Closes the trace, whose links are of the project that was current */
+  closeTrace(): void {
+    this.trace?.dispose();
+  }
+
   private show(panel: vscode.WebviewPanel | undefined, type: string, title: string, html: string, closed: () => void): vscode.WebviewPanel {
     if (!panel) {
       panel = vscode.window.createWebviewPanel(type, title, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }, { enableScripts: true, localResourceRoots: [] });
@@ -91,9 +98,9 @@ export class Views {
       case "item":
         return this.open(link.id);
       case "file": {
-        const folder = vscode.workspace.workspaceFolders?.[0];
-        if (!folder) return;
-        const uri = vscode.Uri.joinPath(folder.uri, ...link.file.split("/"));
+        const root = this.root();
+        if (!root) return;
+        const uri = vscode.Uri.joinPath(root, ...link.file.split("/"));
         const at = new vscode.Position(link.line - 1, 0);
         await vscode.window.showTextDocument(uri, { selection: new vscode.Range(at, at), viewColumn: vscode.ViewColumn.One });
         return;

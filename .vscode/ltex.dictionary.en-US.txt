@@ -112,3 +112,5 @@ smimesign
 gpgsm
 reauthentication
 wasi
+vscodeignore
+magick

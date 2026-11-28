@@ -10,22 +10,24 @@
 const std = @import("std");
 const Io = std.Io;
 
-const Project = @import("../Project.zig");
 const Workspace = @import("../commands/Workspace.zig");
 const Forge = @import("../forge/Forge.zig");
 const changes = @import("../serve/changes.zig");
-const files = @import("../files.zig");
 const git = @import("../git.zig");
+const places = @import("../places.zig");
 
 pub const dir = "_skein";
 
 /// The largest file the page is given; larger ones are left out
 const largest = 4 << 20;
 
-pub const Outcome = union(enum) { ok: usize, failed: []const u8 };
+/// The project's files the pages carry: how many, and their size in bytes
+pub const Carried = struct { count: usize, bytes: usize };
+
+pub const Outcome = union(enum) { ok: Carried, failed: []const u8 };
 
 /// Writes the edit mode into the site at `out`, whose pages are `pages`
-/// (paths in the site); the number of the project's files it carries
+/// (paths in the site); what of the project's files it carries
 pub fn write(io: Io, arena: std.mem.Allocator, ws: *const Workspace, out: Io.Dir, wasm_path: []const u8, pages: []const []const u8) !Outcome {
     const wasm = Io.Dir.cwd().readFileAlloc(io, wasm_path, arena, .limited(64 << 20)) catch |e| return .{ .failed = try arena.print("--wasm: cannot read '{s}' ({t}); build it with zig build wasm, or take skein-vVERSION-wasm32-wasi.wasm from a release", .{ wasm_path, e }) };
     if (wasm.len < 8 or !std.mem.eql(u8, wasm[0..4], "\x00asm")) return .{ .failed = try arena.print("--wasm: '{s}' is not a WebAssembly module", .{wasm_path}) };
@@ -42,7 +44,7 @@ pub fn write(io: Io, arena: std.mem.Allocator, ws: *const Workspace, out: Io.Dir
         const html = out.readFileAlloc(io, page, arena, .limited(1 << 28)) catch continue;
         try out.writeFile(io, .{ .sub_path = page, .data = try withScripts(arena, page, html) });
     }
-    return .{ .ok = carried.count };
+    return .{ .ok = .{ .count = carried.count, .bytes = carried.json.len } };
 }
 
 /// `html` with the edit mode's scripts, from the page at `page`
@@ -85,31 +87,21 @@ fn forgeConfig(io: Io, arena: std.mem.Allocator, ws: *const Workspace, forge: Fo
     }, .{})});
 }
 
-/// The files `check` and the editing requests read, as a JSON object of
-/// path and text: the configuration and schema, the sources, the places
-/// that cite, the results; text only
+/// The files `check` and the editing requests read (places.zig), as a
+/// JSON object of path and text: the configuration and schema, the
+/// sources' Markdown, the files the citation sets read, the results; text
+/// only, and not the rest of the repository (#304)
 fn projectFiles(io: Io, arena: std.mem.Allocator, ws: *const Workspace) !struct { json: []const u8, count: usize } {
-    var places: std.ArrayList([]const u8) = .empty;
-    try places.append(arena, Project.dir_name);
-    for (ws.project.sources) |s| try places.append(arena, s.path);
-    for (ws.project.citations) |c| try places.append(arena, c.path);
-    for (ws.project.results) |r| try places.append(arena, r);
-    var seen: std.StringHashMapUnmanaged(void) = .empty;
     var out: std.Io.Writer.Allocating = .init(arena);
     const w = &out.writer;
     try w.writeAll("{");
     var count: usize = 0;
-    for (places.items) |place| {
-        // a place that is one file (a results file) or a directory
-        const list: []const []const u8 = files.list(io, arena, ws.root, place, &.{""}) catch &.{place};
-        for (list) |file| {
-            if ((try seen.getOrPut(arena, file)).found_existing) continue;
-            const text = ws.root.readFileAlloc(io, file, arena, .limited(largest)) catch continue;
-            if (!std.unicode.utf8ValidateSlice(text)) continue;
-            if (count > 0) try w.writeAll(",");
-            try w.print("{f}:{f}", .{ std.json.fmt(file, .{}), std.json.fmt(text, .{}) });
-            count += 1;
-        }
+    for (try places.list(io, arena, ws.root, try places.of(arena, &ws.project, .check))) |file| {
+        const text = ws.root.readFileAlloc(io, file, arena, .limited(largest)) catch continue;
+        if (!std.unicode.utf8ValidateSlice(text)) continue;
+        if (count > 0) try w.writeAll(",");
+        try w.print("{f}:{f}", .{ std.json.fmt(file, .{}), std.json.fmt(text, .{}) });
+        count += 1;
     }
     try w.writeAll("}");
     return .{ .json = out.written(), .count = count };
