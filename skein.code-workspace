@@ -19,9 +19,9 @@
     },
     "files.associations": {
       ".local-gitignore": "gitignore",
-      // Jekyll templates: Liquid, which HTML checkers cannot parse
-      "**/site/_layouts/*.html": "liquid",
-      "**/site/_includes/*.html": "liquid",
+      // Zine's layouts (SuperHTML) and pages (SuperMD), as cesiumlang.org's
+      "**/site/layouts/**/*.shtml": "html",
+      "**/site/content/**/*.smd": "markdown",
     },
     "terminal.integrated.automationProfile.windows": {
       "path": "C:\\windows\\system32\\cmd.exe",

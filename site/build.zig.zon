@@ -1,0 +1,23 @@
+// The documentation site, a package of its own: Skein itself fetches
+// nothing (docs/design.md, principle 7), the site's build fetches Zine
+// (#322; emanspeaks, 2026-11-27).
+.{
+    .name = .skein_site,
+    .fingerprint = 0x665d0eb54a76c308,
+    .version = "0.0.0",
+    .minimum_zig_version = "0.17.1",
+    .dependencies = .{
+        .zine = .{
+            .url = "git+https://github.com/kristoff-it/zine?ref=v0.14.1#6cacc90b1dfdc414859683e85e05c93602a4afd1",
+            .hash = "zine-0.14.1-ou6nIFeNFwCxFPt29bP6F-PubAggNwx148VrLX4Oo4zN",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "gen",
+        "layouts",
+        "assets",
+        "zine.ziggy",
+    },
+}

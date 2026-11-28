@@ -1,0 +1,41 @@
+# The tree of the site's pages, in order (#322). A line at the left is a
+# group: its directory on the site, then its title. An indented line is a
+# page of the group above: its path under docs/ without `.md`, then its
+# title in the tree. The overview (index) is the home page. A new page is
+# added here, and to llms.txt; the generator warns of a page not listed.
+guides Guides
+  quickstart Quickstart
+  tutorial-npr7150 Tutorial: NPR 7150.2D
+  tutorial-existing-code Tutorial: existing code
+  tutorial-planning Tutorial: planning
+  examples Examples
+reference Reference
+  writing-items Writing items
+  project-files Project files
+  commands Commands
+  vscode VS Code
+  reviewing Reviewing and approvals
+  web The web interface
+  forge The forge
+  repositories Other repositories
+  results Test results
+  templates Templates
+  importing Importing
+skein Skein itself
+  design Design
+  requirements/readme Requirements
+  requirements/principles Principles
+  requirements/project Project
+  requirements/items Items
+  requirements/checking Checking
+  requirements/reviewing Reviewing
+  requirements/views Views
+  requirements/editing Editing
+  requirements/planning Planning
+  requirements/agents Agents
+  requirements/repositories Repositories
+  requirements/results Results
+  requirements/forge Forge
+  requirements/templates Templates
+  requirements/importing Importing
+  requirements/planned What is to come
