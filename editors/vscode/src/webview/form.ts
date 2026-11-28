@@ -33,7 +33,7 @@ function draw(): void {
   const grid = el("div", "fields");
   if (!f.item) {
     grid.append(field("Type", select(f.types, f.type.name, false, (t) => vscode.postMessage({ kind: "type", type: t }))));
-    grid.append(field("ID", input(v.id, f.type.numbered ? "the next free number" : "lex.comment.line", (x) => (v.id = x))));
+    grid.append(field("ID", input(v.id, f.type.numbered ? "the next free number" : "the item's ID", (x) => (v.id = x))));
     if (!f.itemFiles) grid.append(field("Document", select(f.documents, v.document, false, (x) => (v.document = x))));
   }
   if (f.type.categories.length > 0) grid.append(field("Category", select(f.type.categories, v.category, true, (x) => (v.category = x))));

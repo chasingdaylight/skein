@@ -62,6 +62,8 @@ nav:
         url: /project-files.html
       - title: Commands
         url: /commands.html
+      - title: VS Code
+        url: /vscode.html
       - title: Reviewing and approvals
         url: /reviewing.html
       - title: The web interface

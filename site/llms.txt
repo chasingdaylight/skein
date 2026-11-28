@@ -31,6 +31,7 @@ Reference, each feature in full:
 - [Writing items](writing-items.md): markers, parts, item files, references, citations
 - [Project files](project-files.md): `.skein/config.toml`, item types, link types, profiles
 - [Commands](commands.md): every command, and the CI job
+- [VS Code](vscode.md): the extension: the Items view, forms, trace, coverage, the plan and the graph, and where to find each
 - [Reviewing and approvals](reviewing.md), [The web interface](web.md) (skein serve, editing in a browser), [The forge](forge.md), [Other repositories](repositories.md), [Test results](results.md)
 - [Templates](templates.md): the built-in templates, their options, what they bring along
 - [Importing](importing.md)

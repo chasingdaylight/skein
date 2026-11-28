@@ -8,7 +8,11 @@
   "MD036": false,
   "MD033": {
     "allowed_elements": [
-      "br"
+      "br",
+      // screenshots in a light and a dark theme (docs/vscode.md)
+      "picture",
+      "source",
+      "img"
     ]
   }
 }
