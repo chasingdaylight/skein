@@ -22,7 +22,7 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onStartupFinished",
-    "workspaceContains:.skein/config.toml"
+    "workspaceContains:**/.skein/config.toml"
   ],
   "categories": [
     "Programming Languages",
@@ -163,6 +163,12 @@
         "category": "Skein"
       },
       {
+        "command": "skein.chooseProject",
+        "title": "Choose Project...",
+        "category": "Skein",
+        "icon": "$(folder-library)"
+      },
+      {
         "command": "skein.pickLinked",
         "title": "Go to a Linked Item...",
         "category": "Skein"
@@ -211,6 +217,10 @@
           "when": "false"
         },
         {
+          "command": "skein.chooseProject",
+          "when": "skein.projects"
+        },
+        {
           "command": "skein.pickLinked",
           "when": "false"
         }
@@ -252,6 +262,11 @@
           "command": "skein.showGraph",
           "when": "view == skein.items",
           "group": "navigation@4"
+        },
+        {
+          "command": "skein.chooseProject",
+          "when": "view == skein.items && skein.projects",
+          "group": "navigation@5"
         }
       ],
       "view/item/context": [

@@ -48,8 +48,8 @@ const ItemInfo = struct {
     removed: bool,
 };
 
-pub fn items(s: *Server, a: Allocator, id: json.Value) Server.Error!void {
-    var ws = s.open(a) orelse return s.respond(a, id, null);
+pub fn items(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server.Error!void {
+    var ws = s.open(a, params) orelse return s.respond(a, id, null);
     defer ws.close();
     if (!ws.items_read) return s.respond(a, id, null);
     var out: std.ArrayList(ItemInfo) = .empty;
@@ -102,7 +102,7 @@ pub fn itemAt(s: *Server, a: Allocator, id: json.Value, params: json.Value) Serv
 pub fn trace(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server.Error!void {
     const want = Server.field(params, "id");
     if (want != .string) return s.respondError(a, id, protocol.error_codes.invalid_params, "skein/trace: no id");
-    var ws = s.open(a) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
+    var ws = s.open(a, params) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
     defer ws.close();
     if (!ws.items_read) return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: the project has problems that stop it being read");
     const item = ws.graph.find(want.string) orelse ws.graph.formerly(want.string) orelse
@@ -113,7 +113,7 @@ pub fn trace(s: *Server, a: Allocator, id: json.Value, params: json.Value) Serve
 }
 
 pub fn coverage(s: *Server, a: Allocator, id: json.Value, params: json.Value) Server.Error!void {
-    var ws = s.open(a) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
+    var ws = s.open(a, params) orelse return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: no project");
     defer ws.close();
     if (!ws.items_read) return s.respondError(a, id, protocol.error_codes.invalid_params, "skein: the project has problems that stop it being read");
     const name = Server.field(params, "profile");
@@ -151,7 +151,7 @@ pub fn render(s: *Server, a: Allocator, id: json.Value, params: json.Value) Serv
     const uri = Server.field(Server.field(params, "textDocument"), "uri");
     const want = if (uri == .string) uri else Server.field(params, "uri");
     if (want != .string) return s.respondError(a, id, protocol.error_codes.invalid_params, "skein/render: no uri");
-    var ws = s.open(a) orelse return s.respond(a, id, null);
+    var ws = s.open(a, params) orelse return s.respond(a, id, null);
     defer ws.close();
     if (!ws.items_read) return s.respond(a, id, null);
     const file = try s.fileOf(a, &ws, want.string) orelse return s.respond(a, id, null);

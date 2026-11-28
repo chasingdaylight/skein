@@ -44,6 +44,10 @@ pub const ServerCapabilities = struct {
     renameProvider: RenameOptions = .{},
     codeLensProvider: struct { resolveProvider: bool = false } = .{},
     codeActionProvider: struct { codeActionKinds: []const []const u8 = &.{"quickfix"} } = .{},
+    /// told when the editor's folders change, to find their projects
+    workspace: struct {
+        workspaceFolders: struct { supported: bool = true, changeNotifications: bool = true } = .{},
+    } = .{},
 };
 
 pub const InitializeResult = struct {

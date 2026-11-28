@@ -13,13 +13,13 @@ The server's tools shall be Skein's commands, each with a description and a JSON
 ## In VS Code
 
 %req[vscode.mcp]
-The VS Code extension shall offer `skein mcp`, run from the program it carries or the one `skein.path` names in the workspace's folder, to VS Code's MCP support, so that VS Code's agents have Skein's tools with nothing to configure; in a trusted workspace only, and not when `skein.mcp.enabled` is off. (emanspeaks, 2026-11-22, #181.)
+The VS Code extension shall offer `skein mcp`, run from the program it carries or the one `skein.path` names in the root of each project of the workspace, to VS Code's MCP support, so that VS Code's agents have Skein's tools with nothing to configure; in a trusted workspace only, and not when `skein.mcp.enabled` is off. (emanspeaks, 2026-11-22, #181.)
 
 %req[vscode.chat-context]
 The extension shall contribute a language model tool, `#skeinItem` in chat, that gives the trace of the item under the cursor, or of the item whose ID it is given, for an agent or a user to bring an item and everything linked to it into a chat.
 
 %req[vscode.agent-instructions]
-The command **Skein: Write Agent Instructions** shall run `skein agents` in the workspace's folder, with the file `skein.agents.file` names and as a skill file when `skein.agents.skill` is on, and say what it wrote.
+The command **Skein: Write Agent Instructions** shall run `skein agents` in the root of the current project (%[vscode.projects]), with the file `skein.agents.file` names and as a skill file when `skein.agents.skill` is on, and say what it wrote.
 
 ## Agent instructions
 

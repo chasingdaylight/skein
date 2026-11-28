@@ -56,10 +56,13 @@ For an item file, the link shall be added to its front matter: to the key's arra
 ## The language server
 
 %req[lsp.lifecycle]
-`skein lsp` shall serve the Language Server Protocol on standard input and output: it answers `initialize` with what it can do, refuses requests before that, answers a request it does not know with an error and no more, and ends with status 0 after `shutdown` and `exit`. The project is the one in the directory the editor has open.
+`skein lsp` shall serve the Language Server Protocol on standard input and output: it answers `initialize` with what it can do, refuses requests before that, answers a request it does not know with an error and no more, and ends with status 0 after `shutdown` and `exit`. The projects it serves are those of %[lsp.projects].
+
+%req[lsp.projects]
+The server shall serve every project of the editor's folders: the project a folder is in, and the projects inside it, four levels down (not entering directories whose names start with a dot, nor build outputs); and the project of each document opened, the nearest `.skein/` above it, from then on. A request about a document is about the document's project; one that names no document is about the project it names (`project`, the URI of its root), else the first project found. `skein/projects` shall give each project's name and the URI of its root. When the editor adds or removes folders, the projects are found again. (emanspeaks, 2026-11-27, #307.)
 
 %req[lsp.diagnostics]
-The server shall publish the problems that `skein check` reports as diagnostics, each on its file and line, its warnings as warnings: when it starts, and whenever a document is opened or saved or the editor says files have changed. When a file that had problems has none, its diagnostics are published as empty. The project is read from the files, so a change counts once it is saved.
+The server shall publish the problems that `skein check` reports as diagnostics, for every project it serves, each on its file and line, its warnings as warnings: when it starts, and whenever a document is opened or saved or the editor says files have changed. When a file that had problems has none, its diagnostics are published as empty. The project is read from the files, so a change counts once it is saved.
 
 %req[lsp.definition]
 On the ID of an item, wherever it is written (a reference, a link, a citation in code or tests, or plain text), "go to definition" shall lead to the marker or the file that declares the item. On a marker that names a part by a leading dot, it leads to that part. On `name:id`, it leads into the checkout of that repository, when it has one on disk.
@@ -107,6 +110,9 @@ A VS Code extension on the language server shall be Skein's graphical interface,
 
 %req[vscode.server]
 The VS Code extension shall start `skein lsp` itself, the program it carries or the one `skein.path` names, and restart it when that setting changes or on the command; diagnostics, go to definition, references, hover, completion and rename then work with nothing to configure.
+
+%req[vscode.projects]
+The extension shall work in a workspace any of whose folders is in a project or has one inside it, not only one whose first folder is a project. Where the workspace has several projects, the views, the status bar and the commands are about the project of the active editor's file, else the one last chosen with **Skein: Choose Project...** (the command palette, the Items view's title bar), and the Items view names it. (emanspeaks, 2026-11-27, #307.)
 
 %req[vscode.tree]
 The extension shall show the items in a tree in the sidebar, by source and file, with each item's ID, type and status and its parts under it; choosing an item opens it at its marker. The tree is read again when a file of the project is saved, created or deleted.
