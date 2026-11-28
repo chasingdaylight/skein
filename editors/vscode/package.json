@@ -5,7 +5,6 @@
   "version": "0.2.1",
   "publisher": "chasingdaylight",
   "license": "MIT",
-  "preview": true,
   "icon": "icon.png",
   "repository": {
     "type": "git",

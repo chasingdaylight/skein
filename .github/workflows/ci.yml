@@ -691,8 +691,8 @@ jobs:
       # One package per platform, each with the skein built for it in bin/,
       # and the universal one, without a program, for the platforms that
       # have none. Alpine takes the Linux program, which is static. They are
-      # pre-releases; the mark is set here, since the registries read it
-      # from the package. The extension's code is bundled into
+      # releases, not pre-releases, from v0.2.1 (emanspeaks, 2026-11-27): the
+      # registries read that from the package. The extension's code is bundled into
       # dist/extension.js (vscode:prepublish), so no node_modules go in.
       - name: The VS Code extension
         working-directory: editors/vscode
@@ -704,7 +704,7 @@ jobs:
             mkdir bin
             cp "$GITHUB_WORKSPACE/out/skein-v$VERSION-$target/bin/"skein* bin/
             rm -f bin/*.pdb
-            vsce package --pre-release --target "$platform" \
+            vsce package --target "$platform" \
               --out "$GITHUB_WORKSPACE/dist/skein-vscode-v$VERSION-$platform.vsix"
           done << 'EOF'
           win32-x64 x86_64-windows
@@ -717,7 +717,7 @@ jobs:
           darwin-arm64 aarch64-macos
           EOF
           rm -rf bin
-          vsce package --pre-release \
+          vsce package \
             --out "$GITHUB_WORKSPACE/dist/skein-vscode-v$VERSION-universal.vsix"
           ls -l "$GITHUB_WORKSPACE"/dist/*.vsix
 
